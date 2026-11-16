@@ -1,24 +1,22 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactElement } from "react";
 import { api } from "./shared/api";
 import type { LanguageInfo, Problem, Topic } from "./shared/types";
 import Logo from "./shared/Logo";
 // Module 1 - Quan ly tai khoan va phan quyen
-import { AuthProvider, useAuth } from "./modules/account/auth";
-import LoginModal from "./modules/account/LoginModal";
-import StreakBadge, { StreakToast } from "./modules/account/StreakBadge";
-import { useStreak } from "./modules/account/streak";
+import { AuthProvider, useAuth } from "./view/account/auth";
+import LoginModal from "./view/account/LoginModal";
 // Module 2 - Quan ly bai tap va lo trinh hoc (trang lam bai cua Module 3 mo tu Problems)
-import Problems from "./modules/problem/Problems";
-import AdminPanel from "./modules/problem/admin/AdminPanel";
+import Problems from "./view/problem/Problems";
+import AdminPanel from "./view/problem/admin/AdminPanel";
 // Module 4 - Lich su nop bai va bang xep hang
-import Submissions from "./modules/history/Submissions";
-import MySubmissions from "./modules/history/MySubmissions";
-import Leaderboard from "./modules/history/Leaderboard";
+import Submissions from "./view/history/Submissions";
+import MySubmissions from "./view/history/MySubmissions";
+import Leaderboard from "./view/history/Leaderboard";
 
 
 type Page = "Problems" | "Submissions" | "MySubmissions" | "Leaderboard" | "Admin";
 
-const NAV_ITEMS: { key: Page; label: string; icon: JSX.Element }[] = [
+const NAV_ITEMS: { key: Page; label: string; icon: ReactElement }[] = [
   {
     key: "Problems", label: "Lớp học",
     icon: <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="2" y="2" width="12" height="12" rx="2" /><path d="M2 6h12M6 6v8" /></svg>,
@@ -49,8 +47,8 @@ function AppShell() {
   const [online, setOnline] = useState<boolean | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
-  const isAdmin = user?.role === "ADMIN";
-  const streak = useStreak(user?.username ?? null, reloadKey);
+  // Muc "Quản trị" chi hien voi tai khoan duoc tao bai tap (may chu van kiem tra lai quyen).
+  const isAdmin = user?.canCreateProblem === true;
 
   const loadProblems = useCallback(async () => {
     // Lo trinh la tuy chon: loi khi tai chu de khong duoc lam hong ca trang bai tap.
@@ -70,7 +68,7 @@ function AppShell() {
   }, [user, loadProblems]);
 
   const onSubmitted = useCallback(() => { setReloadKey((k) => k + 1); }, []);
-  // Tra ve Promise de trang quan tri doi tai lai xong moi cho bam tiep (vi tri trong lo trinh phai la so moi).
+  // Tra ve Promise de trang quan tri doi tai lai danh sach xong moi dong hop thoai.
   const onProblemsChanged = useCallback(async () => { await loadProblems().catch(() => undefined); setReloadKey((k) => k + 1); }, [loadProblems]);
 
   function handleLogout() { logout(); setPage("Problems"); setAvatarOpen(false); }
@@ -149,9 +147,6 @@ function AppShell() {
             }} />
           </span>
 
-          {/* Chuoi ngay luyen tap */}
-          <StreakBadge info={streak.info} />
-
           {/* Notification bell */}
           <button style={{ background: "none", border: "none", color: "rgba(255,255,255,0.8)", cursor: "pointer", padding: 4, display: "flex" }}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M4 6a4 4 0 0 1 8 0c0 4 2 5 2 5H2s2-1 2-5" /><path d="M6.5 13a1.5 1.5 0 0 0 3 0" /></svg>
@@ -214,8 +209,6 @@ function AppShell() {
         </div>
       </header>
 
-      <StreakToast value={streak.increasedTo} onClose={streak.dismissIncrease} />
-
       {/* ═══ CONTENT ═══ */}
       <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         {online === false ? (
@@ -229,7 +222,7 @@ function AppShell() {
           <>
             {page === "Problems" && <Problems problems={problems} topics={topics} languages={languages} onSubmitted={onSubmitted} reloadKey={reloadKey} />}
             {page === "Submissions" && <Submissions reloadKey={reloadKey} />}
-            {page === "MySubmissions" && <MySubmissions problems={problems} />}
+            {page === "MySubmissions" && <MySubmissions />}
             {page === "Leaderboard" && <Leaderboard reloadKey={reloadKey} problems={problems} />}
             {page === "Admin" && isAdmin && <AdminPanel onProblemsChanged={onProblemsChanged} problems={problems} topics={topics} />}
           </>

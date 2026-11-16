@@ -18,14 +18,6 @@ CREATE DATABASE IF NOT EXISTS online_judge
     CHARACTER SET utf8mb4
     COLLATE utf8mb4_0900_ai_ci;
 
--- CSDL rieng cho bo kiem thu tich hop (--apitest).
--- Ten BAT BUOC ket thuc bang _test: chuong trinh se tu choi chay kiem thu
--- neu URL khong tro toi mot CSDL co duoi _test, de khong bao gio xoa nham
--- du lieu that.
-CREATE DATABASE IF NOT EXISTS online_judge_test
-    CHARACTER SET utf8mb4
-    COLLATE utf8mb4_0900_ai_ci;
-
 CREATE USER IF NOT EXISTS 'oj_app'@'localhost'
     IDENTIFIED BY 'THAY_MAT_KHAU_NAY';
 
@@ -41,14 +33,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE,
     ON online_judge.*
     TO 'oj_app'@'localhost';
 
--- Bo kiem thu con can DROP de don sach bang giua cac lan chay.
-GRANT SELECT, INSERT, UPDATE, DELETE,
-      CREATE, ALTER, INDEX, REFERENCES, DROP, CREATE VIEW
-    ON online_judge_test.*
-    TO 'oj_app'@'localhost';
-
 -- CREATE VIEW can cho VIEW user_stats o 02_schema.sql
 GRANT CREATE VIEW, SHOW VIEW ON online_judge.* TO 'oj_app'@'localhost';
-GRANT SHOW VIEW ON online_judge_test.* TO 'oj_app'@'localhost';
 
 FLUSH PRIVILEGES;

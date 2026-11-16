@@ -12,27 +12,6 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
-    rollupOptions: {
-      output: {
-        // Tach phan LOI cua CodeMirror ra mot file rieng, cac bo phan tich cu
-        // phap theo ngon ngu van tach theo import() dong trong CodeEditor.tsx.
-        manualChunks: (id) => {
-          const path = id.replace(/\\/g, "/");
-          if (path.includes("node_modules/@codemirror/lang-")) return undefined;
-          if (/node_modules\/@lezer\/(java|cpp|python|go|javascript|rust)\//.test(path)) {
-            return undefined;
-          }
-          if (
-            path.includes("node_modules/@codemirror/") ||
-            path.includes("node_modules/@lezer/") ||
-            path.includes("node_modules/codemirror/")
-          ) {
-            return "codemirror";
-          }
-          return undefined;
-        },
-      },
-    },
   },
   server: {
     port: 5173,

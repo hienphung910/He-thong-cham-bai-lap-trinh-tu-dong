@@ -1,10 +1,9 @@
-# Kịch bản demo chấm bài tự động.
+# Danh sách bài nộp mẫu và verdict đúng của từng bài - dùng để thử bộ chấm bằng tay:
+# nộp file tương ứng trên giao diện web rồi so kết quả với cột cuối.
 #
 # Cú pháp mỗi dòng:
 #   mãBài | username | đường dẫn file (tương đối với data/submissions) | verdict kỳ vọng
 #
-# Cột verdict kỳ vọng là tuỳ chọn: chế độ --selftest sẽ đối chiếu verdict thực tế
-# với cột này rồi báo ĐÚNG/LỆCH, dùng để kiểm tra hệ thống trước khi demo.
 # Dòng bắt đầu bằng # là ghi chú.
 
 # --- P001: Java, đủ 7 loại verdict ---
@@ -23,15 +22,12 @@ P002 | tuanpv  | P002/PrimeWA.java | WA
 P003 | hiennm  | P003/AvgAC.java   | AC
 P003 | tuanpv  | P003/AvgWA.java   | WA
 
-# --- Phần mở rộng: chứng minh hệ thống chấm được 6 ngôn ngữ.
-# --- Máy nào chưa cài g++/Python/Go/Node/Rust thì dòng đó tự động BỎ QUA,
-# --- không ảnh hưởng phần demo Java ở trên.
+# --- Các ngôn ngữ còn lại: C++, Python, JavaScript.
+# --- Máy nào chưa cài g++/Python/Node thì ngôn ngữ đó bị vô hiệu hóa trên giao diện.
 P001 | tuanpv  | P001/sum_ac.cpp   | AC
 P001 | lananh  | P001/sum_ac.py    | AC
 P003 | lananh  | P003/avg_ac.py    | AC
 P001 | tuanpv  | P001/sum_ac.js    | AC
-P001 | hiennm  | P001/sum_ac.go    | AC
-P001 | hiennm  | P001/sum_ac.rs    | AC
 P002 | lananh  | P002/prime_wa.js  | WA
 
 # --- Lớp Lộ trình VNOI: lời giải mẫu C++ cho 26 bài V001..V026.

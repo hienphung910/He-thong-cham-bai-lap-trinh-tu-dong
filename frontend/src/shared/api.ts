@@ -1,6 +1,5 @@
 import type {
   AuthUser,
-  JudgeEvent,
   LanguageInfo,
   LoginResponse,
   NewProblemRequest,
@@ -8,7 +7,6 @@ import type {
   Problem,
   RegisterRequest,
   ScoreRow,
-  Stats,
   Submission,
   SubmitRequest,
   Topic,
@@ -92,86 +90,6 @@ function putJson<T>(path: string, body: unknown): Promise<T> {
   return request<T>(path, { method: "PUT", body: JSON.stringify(body) });
 }
 
-/**
- * Nop bai va nhan ket qua TUNG TEST ngay khi may chu cham xong test do.
- *
- * Vi sao khong dung EventSource co san cua trinh duyet: EventSource chi goi duoc
- * GET, ma nop bai thi phai POST kem ma nguon. Nen o day doc thang than phan hoi
- * bang ReadableStream roi tu tach khung SSE - van dung chuan SSE, chi la tu doc.
- *
- * Loi truoc khi stream bat dau (sai bai, thieu quyen...) van la JSON kem ma HTTP
- * binh thuong, nen xu ly y het cac endpoint khac.
- */
-async function submitStream(
-  body: SubmitRequest,
-  onEvent: (event: JudgeEvent) => void,
-): Promise<void> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (token) headers.Authorization = `Bearer ${token}`;
-
-  const res = await fetch("/api/submit/stream", {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    if (res.status === 401) {
-      setToken(null);
-      onUnauthorized?.();
-    }
-    let message = `Lỗi HTTP ${res.status}`;
-    try {
-      const parsed: unknown = JSON.parse(text);
-      if (parsed && typeof parsed === "object" && "error" in parsed) {
-        message = String((parsed as { error: unknown }).error);
-      }
-    } catch {
-      // khong phai JSON thi giu thong bao mac dinh
-    }
-    throw new Error(message);
-  }
-  if (!res.body) throw new Error("Trình duyệt này không đọc được luồng phản hồi.");
-
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-
-    // Mot khung SSE ket thuc bang dong trong. Phan du giu lai cho lan doc sau,
-    // vi mot goi TCP co the cat doi giua khung.
-    for (;;) {
-      const cut = buffer.indexOf("\n\n");
-      if (cut === -1) break;
-      const frame = buffer.slice(0, cut);
-      buffer = buffer.slice(cut + 2);
-      const parsed = parseFrame(frame);
-      if (parsed) onEvent(parsed);
-    }
-  }
-}
-
-/** Tach mot khung "event: <ten>\ndata: <json>" thanh doi tuong JudgeEvent. */
-function parseFrame(frame: string): JudgeEvent | null {
-  let event = "";
-  let data = "";
-  for (const line of frame.split("\n")) {
-    if (line.startsWith("event:")) event = line.slice(6).trim();
-    else if (line.startsWith("data:")) data += line.slice(5).trim();
-  }
-  if (!event || !data) return null;
-  try {
-    return { type: event, data: JSON.parse(data) } as JudgeEvent;
-  } catch {
-    return null; // khung hong thi bo qua, khong lam sap ca trang
-  }
-}
-
 export const api = {
   // --- xac thuc ---
   register: (body: RegisterRequest) => postJson<{ message: string }>("/api/auth/register", body),
@@ -187,15 +105,13 @@ export const api = {
   submissions: () => request<Submission[]>("/api/submissions"),
   submission: (id: string) => request<Submission>(`/api/submissions/${encodeURIComponent(id)}`),
   scoreboard: () => request<ScoreRow[]>("/api/scoreboard"),
-  stats: () => request<Stats>("/api/stats"),
+  /** Nop bai: may chu cham xong moi tra ve ban ghi bai nop kem ket qua tung test. */
   submit: (body: SubmitRequest) => postJson<Submission>("/api/submit", body),
-  /** Ban stream cua submit: goi onEvent moi khi mot test vua cham xong. */
-  submitStream,
 
   // --- quan tri (backend van kiem tra lai vai tro) ---
   createProblem: (body: NewProblemRequest) =>
     postJson<NewProblemResponse>("/api/admin/problems", body),
-  /** Doi chu de, do kho, vi tri trong lo trinh cua bai da co. */
+  /** Doi chu de va do kho cua bai da co. */
   updateProblem: (id: string, body: UpdateProblemRequest) =>
     putJson<NewProblemResponse>(`/api/admin/problems/${encodeURIComponent(id)}`, body),
 };

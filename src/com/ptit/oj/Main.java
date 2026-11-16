@@ -1,16 +1,12 @@
 package com.ptit.oj;
 
-import com.ptit.oj.account.service.AuthService;
-import com.ptit.oj.account.service.PasswordService;
-import com.ptit.oj.app.console.ConsoleApp;
-import com.ptit.oj.app.service.JudgeService;
-import com.ptit.oj.app.test.IntegrationTests;
-import com.ptit.oj.app.web.ApiServer;
-import com.ptit.oj.common.database.DatabaseConfig;
-import com.ptit.oj.common.database.MySqlDatabaseManager;
-import com.ptit.oj.common.exception.DataAccessException;
-import com.ptit.oj.judge.core.ConsoleJudgeListener;
-import com.ptit.oj.problem.exception.ProblemLoadException;
+import com.ptit.oj.controller.ApiServer;
+import com.ptit.oj.controller.AuthService;
+import com.ptit.oj.controller.JudgeService;
+import com.ptit.oj.dao.DataAccessException;
+import com.ptit.oj.dao.DatabaseConfig;
+import com.ptit.oj.dao.MySqlDatabaseManager;
+import com.ptit.oj.dao.ProblemLoadException;
 
 import java.io.FileDescriptor;
 import java.io.FileOutputStream;
@@ -22,91 +18,41 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**
- * Diem vao chuong trinh.
+ * Diem vao chuong trinh: nap du lieu roi mo may chu web.
  *
- * Cach chay:
- *   java -cp "out;lib/*" com.ptit.oj.Main                -> menu tuong tac (can dang nhap)
- *   java -cp "out;lib/*" com.ptit.oj.Main --demo         -> cham loat bai nop mau (bo nho tam)
- *   java -cp "out;lib/*" com.ptit.oj.Main --selftest     -> cham va doi chieu verdict ky vong
- *   java -cp "out;lib/*" com.ptit.oj.Main --apitest      -> kiem thu tich hop API + MySQL
- *   java -cp "out;lib/*" com.ptit.oj.Main --serve        -> mo giao dien web tai http://localhost:8080
- *   java -cp "out;lib/*" com.ptit.oj.Main --serve=9000   -> chon cong khac
- *   java -cp "out;lib/*" com.ptit.oj.Main --no-db        -> menu console, kho du lieu RAM
- *   java -cp "out;lib/*" com.ptit.oj.Main --serve --no-db -> giao dien web, kho du lieu RAM
- *   java -cp "out;lib/*" com.ptit.oj.Main --data=E:\duong\dan\data
- *   java -cp "out;lib/*" com.ptit.oj.Main --db-url=jdbc:mysql://localhost:3306/online_judge?...
+ * Cach chay (tu thu muc goc cua project, noi co folder data):
+ *   java -cp "out;lib/*" com.ptit.oj.Main --serve           -> http://localhost:8080, luu vao MySQL
+ *   java -cp "out;lib/*" com.ptit.oj.Main --serve=9000      -> chon cong khac
+ *   java -cp out com.ptit.oj.Main --serve --no-db           -> khong can MySQL, du lieu nam trong RAM
  *
- * Cau hinh MySQL lay tu BIEN MOI TRUONG (xem .env.example):
+ * Cau hinh MySQL lay tu BIEN MOI TRUONG hoac file .env (xem .env.example):
  *   OJ_DB_URL / OJ_DB_USER / OJ_DB_PASSWORD
  * Mat khau KHONG BAO GIO nhan qua dong lenh de khong bi luu vao lich su shell.
- *
- * Che do --demo va --selftest dung kho du lieu trong BO NHO nen khong can MySQL
- * va khong lam ban lich su that.
- *
- * Co --no-db mo rong y do tren cho CA menu console va giao dien web: day du tinh
- * nang (dang ky, dang nhap, phan quyen, nop bai, bang xep hang, thong ke, quan tri
- * de bai) nhung tai khoan va lich su nop bai nam trong RAM nen mat khi tat chuong
- * trinh. Lam duoc vi ConsoleApp va ApiServer chi phu thuoc JudgeService chu khong
- * biet gi ve MySQL - doi kho du lieu la doi mot cho duy nhat o day.
  */
 public class Main {
 
     private static final int DEFAULT_PORT = 8080;
 
-    /** Mat khau cua cac tai khoan mau, chi dung lan dau khi bang users con trong. */
+    /** Mat khau cua cac tai khoan mau, chi dung lan dau khi chua co tai khoan nao. */
     private static final String SEED_PASSWORD_ENV = "OJ_SEED_PASSWORD";
     private static final String DEFAULT_SEED_PASSWORD = "ptit@2026";
 
     public static void main(String[] args) {
         forceUtf8Output();
 
-        boolean demoMode = false;
-        boolean selfTest = false;
-        boolean apiTest = false;
-        boolean serveMode = false;
         boolean noDatabase = false;
         int port = DEFAULT_PORT;
-        Path dataDir = Paths.get("data");
-        Path webRoot = Paths.get("frontend", "dist");
-        String databaseUrl = null;
-
         for (String arg : args) {
-            if (arg.equals("--demo")) {
-                demoMode = true;
-            } else if (arg.equals("--selftest")) {
-                selfTest = true;
-            } else if (arg.equals("--apitest")) {
-                apiTest = true;
-            } else if (arg.equals("--serve")) {
-                serveMode = true;
-            } else if (arg.equals("--no-db")) {
+            if (arg.equals("--no-db")) {
                 noDatabase = true;
             } else if (arg.startsWith("--serve=")) {
-                serveMode = true;
-                port = parsePort(arg.substring("--serve=".length()), DEFAULT_PORT);
-            } else if (arg.startsWith("--data=")) {
-                dataDir = Paths.get(arg.substring("--data=".length()));
-            } else if (arg.startsWith("--web=")) {
-                webRoot = Paths.get(arg.substring("--web=".length()));
-            } else if (arg.startsWith("--db-url=")) {
-                databaseUrl = arg.substring("--db-url=".length());
-            } else {
+                port = parsePort(arg.substring("--serve=".length()));
+            } else if (!arg.equals("--serve")) {
                 System.out.println("Tham số không hiểu: " + arg);
             }
         }
 
-        if (apiTest) {
-            if (noDatabase) {
-                // --apitest kiem thu chinh tang JDBC nen bo CSDL di thi khong con gi de do.
-                System.out.println("--apitest kiểm thử chính tầng MySQL nên không dùng được với --no-db.");
-                System.out.println("Muốn chạy mà không cần cơ sở dữ liệu thì dùng: --selftest");
-                System.exit(2);
-                return;
-            }
-            System.exit(IntegrationTests.runAll(dataDir) == 0 ? 0 : 1);
-            return;
-        }
-
+        Path dataDir = Paths.get("data");
         if (!Files.isDirectory(dataDir)) {
             System.out.println("Không tìm thấy thư mục dữ liệu: " + dataDir.toAbsolutePath());
             System.out.println("Hãy chạy chương trình từ thư mục gốc của project (nơi có folder data).");
@@ -114,43 +60,16 @@ public class Main {
         }
 
         try {
-            if (selfTest || demoMode) {
-                // Kho du lieu tam: khong can MySQL, khong dung toi CSDL that.
-                JudgeService service = JudgeService.inMemory(dataDir);
-                service.getAuth().seedSampleUsersIfEmpty(DEFAULT_SEED_PASSWORD);
-                ConsoleApp app = new ConsoleApp(service);
-                app.loadData();
-                app.useAccount(service.findUser("hiennm").orElse(null));
-                if (selfTest) {
-                    int mismatch = app.runSelfTest();
-                    System.exit(mismatch == 0 ? 0 : 1);   // tien cho viec kiem tra tu dong
-                } else {
-                    app.runDemoMode();
-                }
-                return;
-            }
-
             JudgeService service;
             if (noDatabase) {
-                // Day du tinh nang, chi khac cho luu la RAM. Dung PasswordService()
-                // mac dinh (120 000 vong PBKDF2) de dang nhap chay dung nhu ban that.
                 printNoDatabaseBanner();
-                service = JudgeService.inMemory(dataDir, new PasswordService());
+                service = JudgeService.inMemory(dataDir);
             } else {
-                MySqlDatabaseManager database = connectToMySql(databaseUrl);
+                MySqlDatabaseManager database = connectToMySql();
                 if (database == null) return;
                 service = JudgeService.mysql(dataDir, database);
             }
-
-            if (serveMode) {
-                runServer(service, webRoot, port);
-                return;
-            }
-
-            prepareAccounts(service);
-            ConsoleApp app = new ConsoleApp(service);
-            app.loadData();
-            app.runInteractive();
+            runServer(service, Paths.get("frontend", "dist"), port);
         } catch (ProblemLoadException e) {
             System.out.println("Lỗi nạp đề bài: " + e.getMessage());
         } catch (DataAccessException e) {
@@ -162,10 +81,10 @@ public class Main {
      * Doc cau hinh tu bien moi truong, mo ket noi va kiem tra bang SELECT 1.
      * Tra ve null (kem huong dan) neu thieu cau hinh hoac khong ket noi duoc.
      */
-    private static MySqlDatabaseManager connectToMySql(String overrideUrl) {
+    private static MySqlDatabaseManager connectToMySql() {
         DatabaseConfig config;
         try {
-            config = DatabaseConfig.fromEnvironment().withUrl(overrideUrl);
+            config = DatabaseConfig.fromEnvironment();
         } catch (DatabaseConfig.MissingConfigException e) {
             System.out.println(e.getMessage());
             return null;
@@ -185,14 +104,8 @@ public class Main {
         return database;
     }
 
-    /**
-     * Che do web: nap du lieu roi mo may chu HTTP, chay den khi bi dung.
-     *
-     * Nhan san JudgeService chu khong tu tao, nho vay dung duoc cho ca kho MySQL
-     * va kho RAM (--no-db) ma khong phai viet hai ban ham nay.
-     */
+    /** Nap du lieu roi mo may chu HTTP, chay den khi bi dung (Ctrl+C). */
     private static void runServer(JudgeService service, Path webRoot, int port) {
-        service.addJudgeListener(new ConsoleJudgeListener(true));   // log tien trinh cham ra terminal
         service.loadData();
         prepareAccounts(service);
         System.out.printf("Đã nạp %d bài tập, %d tài khoản.%n",
@@ -220,7 +133,7 @@ public class Main {
 
     /**
      * Chuan bi tai khoan cho lan chay dau tien:
-     *   - tao tai khoan mau (neu bang users con hoan toan trong),
+     *   - tao tai khoan mau (neu chua co tai khoan nao),
      *   - tao tai khoan ADMIN va in mat khau DUNG MOT LAN neu phai sinh ngau nhien.
      * Cac lan chay sau khong dat lai mat khau cua ai ca.
      */
@@ -268,14 +181,14 @@ public class Main {
         System.out.println();
     }
 
-    private static int parsePort(String text, int fallback) {
+    private static int parsePort(String text) {
         try {
             int p = Integer.parseInt(text.trim());
             if (p < 1 || p > 65535) throw new NumberFormatException();
             return p;
         } catch (NumberFormatException e) {
-            System.out.println("Cổng không hợp lệ (" + text + "), dùng mặc định " + fallback);
-            return fallback;
+            System.out.println("Cổng không hợp lệ (" + text + "), dùng mặc định " + DEFAULT_PORT);
+            return DEFAULT_PORT;
         }
     }
 

@@ -61,7 +61,7 @@ body {
 }
 
 /*
- * Cac trang quan tri (modules/problem/admin) viet theo bang mau cu. Khong co cac bien nay thi
+ * Cac trang quan tri (view/problem/admin) viet theo bang mau cu. Khong co cac bien nay thi
  * nut "Add Problem", nut luu va nen hop thoai bi trong suot -> tro sang bang mau hien tai.
  */
 :root {
