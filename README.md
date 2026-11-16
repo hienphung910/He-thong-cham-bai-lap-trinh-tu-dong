@@ -286,6 +286,6 @@ Project không kèm bộ kiểm thử tự động. Sau khi sửa code, kiểm t
 
 ## Nhóm phát triển
 
-Bài tập lớn môn Lập trình hướng đối tượng, Học viện Công nghệ Bưu chính Viễn thông (PTIT).
+Bài tập lớn môn Công Nghệ Phần Mềm, Học viện Công nghệ Bưu chính Viễn thông (PTIT).
 
 Thành viên: **hienphung910**, **longnd**, **tm079**, **tienkhoi235**
