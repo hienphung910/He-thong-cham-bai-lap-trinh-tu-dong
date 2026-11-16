@@ -2,7 +2,7 @@
 --  CodeHub - luoc do bang cho MySQL 8
 -- =====================================================================
 --  Day la BAN THAM CHIEU, giong het nhung gi lop
---  com.ptit.oj.database.MySqlSchemaInitializer tu chay luc khoi dong.
+--  com.ptit.oj.common.database.MySqlSchemaInitializer tu chay luc khoi dong.
 --  Chay tay cung duoc (khong bat buoc):
 --
 --      mysql -u oj_app -p online_judge < database/mysql/02_schema.sql

@@ -1,16 +1,16 @@
 package com.ptit.oj;
 
-import com.ptit.oj.core.ConsoleJudgeListener;
-import com.ptit.oj.database.DatabaseConfig;
-import com.ptit.oj.database.MySqlDatabaseManager;
-import com.ptit.oj.exception.DataAccessException;
-import com.ptit.oj.exception.ProblemLoadException;
-import com.ptit.oj.service.AuthService;
-import com.ptit.oj.service.JudgeService;
-import com.ptit.oj.service.PasswordService;
-import com.ptit.oj.test.IntegrationTests;
-import com.ptit.oj.ui.ConsoleApp;
-import com.ptit.oj.web.ApiServer;
+import com.ptit.oj.account.service.AuthService;
+import com.ptit.oj.account.service.PasswordService;
+import com.ptit.oj.app.console.ConsoleApp;
+import com.ptit.oj.app.service.JudgeService;
+import com.ptit.oj.app.test.IntegrationTests;
+import com.ptit.oj.app.web.ApiServer;
+import com.ptit.oj.common.database.DatabaseConfig;
+import com.ptit.oj.common.database.MySqlDatabaseManager;
+import com.ptit.oj.common.exception.DataAccessException;
+import com.ptit.oj.judge.core.ConsoleJudgeListener;
+import com.ptit.oj.problem.exception.ProblemLoadException;
 
 import java.io.FileDescriptor;
 import java.io.FileOutputStream;

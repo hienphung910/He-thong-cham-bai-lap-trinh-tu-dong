@@ -6,8 +6,8 @@
 
   Cau truc thu muc cua bai tap lon duoc GIU NGUYEN:
     - sourceDirectory tro thang vao src/ (khong phai src/main/java),
-    - outputDirectory la out/ (dung thu muc ma run.ps1 / run.sh van dung),
-  nen chay bang Maven hay chay bang script deu cho ket qua giong nhau.
+    - outputDirectory la out/ (dung thu muc ma lenh javac trong README dung),
+  nen bien dich bang Maven hay bang javac deu cho ket qua giong nhau.
 
   Lenh thuong dung:
     mvn -q clean compile          -> bien dich vao out/ va tai lib/mysql-connector-j-*.jar
@@ -65,7 +65,7 @@
         </configuration>
       </plugin>
 
-      <!-- Do thu vien vao lib/ de run.ps1 / run.bat / run.sh chay duoc khong can Maven -->
+      <!-- Do thu vien vao lib/ de chay duoc bang lenh java trong README, khong can Maven -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
