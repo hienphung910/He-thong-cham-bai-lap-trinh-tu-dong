@@ -4,7 +4,7 @@ target/
 *.class
 sources.txt
 
-# Thu vien tai ve (Maven se tai lai, hoac run.ps1 / run.sh tu tai)
+# Thu vien tai ve (Maven se tai lai, hoac tai tay theo README)
 lib/
 
 # Cau hinh moi truong - CHUA MAT KHAU CSDL, khong bao gio dua len git.

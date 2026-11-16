@@ -46,7 +46,7 @@ Backend chỉ dùng API chuẩn của JDK. Máy chủ HTTP, bộ đọc/ghi JSON
 | Backend | Java 11, `com.sun.net.httpserver`, JDBC |
 | Cơ sở dữ liệu | MySQL 8 (InnoDB, `utf8mb4`), hoặc lưu trong bộ nhớ khi chạy không có CSDL |
 | Frontend | React 19, TypeScript 5, Vite 7, Tailwind CSS 4, CodeMirror 6 |
-| Công cụ | Maven (tùy chọn), script PowerShell / Bash |
+| Công cụ | Maven (tùy chọn) |
 
 ## Kiến trúc
 
@@ -64,24 +64,68 @@ flowchart LR
     Svc --> Disk[("data/problems<br/>đề bài + test")]
 ```
 
-Console và web cùng gọi một tầng nghiệp vụ là `JudgeService`. Kho dữ liệu được truyền vào qua constructor (`JudgeService.mysql()` hoặc `JudgeService.inMemory()`), nên đổi giữa MySQL và bộ nhớ không phải sửa tầng nghiệp vụ hay giao diện. Câu SQL chỉ nằm trong hai package `repository` và `database`.
+Console và web cùng gọi một tầng nghiệp vụ là `JudgeService`. Kho dữ liệu được truyền vào qua constructor (`JudgeService.mysql()` hoặc `JudgeService.inMemory()`), nên đổi giữa MySQL và bộ nhớ không phải sửa tầng nghiệp vụ hay giao diện. Câu SQL chỉ nằm trong các package `repository` của từng module và `common/database`.
 
 `ProcessRunner` chạy code thí sinh trong tiến trình con. Một luồng ghi stdin, hai luồng đọc stdout và stderr để tiến trình không bị treo khi bộ đệm đầy. Chương trình chạy quá giờ bị dừng cưỡng bức, và output bị cắt ở 1 MB.
 
+### Cấu trúc theo module
+
+Mã nguồn chia theo 4 module chức năng của báo cáo phân tích thiết kế, backend và frontend dùng chung một bộ tên thư mục:
+
+| Module trong báo cáo | Backend `src/com/ptit/oj/` | Frontend `frontend/src/modules/` |
+|---|---|---|
+| 1. Quản lý tài khoản và phân quyền | `account/` | `account/` |
+| 2. Quản lý bài tập và lộ trình học | `problem/` | `problem/` |
+| 3. Nộp bài và chấm tự động | `judge/` | `judge/` |
+| 4. Xem lịch sử nộp bài và bảng xếp hạng | `history/` | `history/` |
+
+Hai thư mục còn lại của backend không thuộc riêng module nào: `common/` là nền tảng mà cả 4 module dùng, `app/` ghép 4 module lại thành chương trình chạy được. Chiều phụ thuộc là `common` ← `account` ← `problem` ← `judge` ← `history` ← `app`.
+
 ```
 src/com/ptit/oj
-├── model/        Entity, User → Student / Teacher / Admin, Problem, Topic, Submission, Verdict
-├── language/     Language (abstract) → 6 ngôn ngữ, LanguageRegistry
-├── compare/      OutputComparator → Exact / Token / Line / Float, ComparatorFactory
-├── runner/       ProcessRunner
-├── core/         Judge, JudgeListener → ConsoleJudgeListener / StatisticsListener
-├── database/     DatabaseConfig, MySqlDatabaseManager, MySqlSchemaInitializer
-├── repository/   Repository<T> (bản In-memory và MySQL), ProblemLoader / ProblemWriter, TopicLoader
-├── service/      JudgeService, AuthService, PasswordService, SessionService,
-│                 ProblemAdminService, ScoreboardService, StatisticsService
-├── web/          ApiServer, Json, SseJudgeListener
-├── ui/           ConsoleApp
-└── test/         IntegrationTests
+├── Main.java            Điểm vào: đọc tham số dòng lệnh, chọn kho MySQL hay bộ nhớ
+├── common/              Dùng chung cho cả 4 module
+│   ├── model/           Entity
+│   ├── repository/      Repository<T>, InMemoryRepository<T>
+│   ├── database/        DatabaseConfig, MySqlDatabaseManager, MySqlSchemaInitializer
+│   ├── web/             Json, ApiException
+│   ├── exception/       DataAccessException
+│   └── util/            TextUtils
+├── account/             Module 1
+│   ├── model/           User → Student / Teacher / Admin, Credentials
+│   ├── repository/      UserRepository (bản MySQL và In-memory)
+│   └── service/         AuthService, PasswordService, SessionService
+├── problem/             Module 2
+│   ├── model/           Problem, TestCase, Topic, ProblemDraft
+│   ├── repository/      ProblemLoader, ProblemWriter, TopicLoader
+│   ├── service/         ProblemAdminService
+│   └── exception/       ProblemLoadException
+├── judge/               Module 3
+│   ├── model/           Submission, JudgeResult, TestCaseResult, Verdict
+│   ├── language/        Language (abstract) → 6 ngôn ngữ, LanguageRegistry
+│   ├── compare/         OutputComparator → Exact / Token / Line / Float, ComparatorFactory
+│   ├── runner/          ProcessRunner
+│   ├── core/            Judge, JudgeListener → ConsoleJudgeListener / StatisticsListener
+│   ├── web/             SseJudgeListener
+│   └── exception/       JudgeException, CompileErrorException
+├── history/             Module 4
+│   ├── repository/      SubmissionRepository (bản MySQL và In-memory)
+│   └── service/         ScoreboardService, StatisticsService
+└── app/                 Ghép 4 module
+    ├── web/             ApiServer (REST API + phục vụ file tĩnh)
+    ├── service/         JudgeService (điểm vào nghiệp vụ dùng chung)
+    ├── console/         ConsoleApp
+    └── test/            IntegrationTests
+
+frontend/src
+├── main.tsx, App.tsx    Khung ứng dụng: thanh tiêu đề, điều hướng, menu tài khoản
+├── shared/              api.ts, types.ts, ui.tsx, Logo.tsx
+└── modules/
+    ├── account/         auth.tsx, LoginModal.tsx (đăng nhập / đăng ký), streak.ts, StreakBadge.tsx
+    ├── problem/         Problems.tsx (lộ trình + danh sách bài), learningPath.ts,
+    │                    admin/ AdminPanel.tsx, ProblemEditor.tsx, ProblemMetaEditor.tsx
+    ├── judge/           ProblemDetail.tsx (làm bài + kết quả chấm), CodeEditor.tsx
+    └── history/         Submissions.tsx (trạng thái), MySubmissions.tsx (bài nộp của tôi), Leaderboard.tsx
 ```
 
 ## Bắt đầu nhanh
@@ -93,12 +137,38 @@ Cần có JDK 11+ và Node.js 20.19+. MySQL 8 chỉ cần khi muốn lưu dữ l
 ```bash
 git clone https://github.com/hienphung910/Online-Judge.git
 cd Online-Judge
-powershell -ExecutionPolicy Bypass -File run-web.ps1 -NoDb    # Linux / macOS: ./run-web.sh --no-db
 ```
+
+1. Biên dịch backend vào thư mục `out/`:
+
+   ```bash
+   javac -encoding UTF-8 -d out $(find src -name "*.java")
+   ```
+
+   Trên PowerShell:
+
+   ```powershell
+   javac -encoding UTF-8 -d out (Get-ChildItem -Recurse -Filter *.java src).FullName
+   ```
+
+2. Build giao diện web vào `frontend/dist/`:
+
+   ```bash
+   cd frontend
+   npm install
+   npm run build
+   cd ..
+   ```
+
+3. Khởi động máy chủ từ thư mục gốc của project:
+
+   ```bash
+   java "-Dfile.encoding=UTF-8" -cp out com.ptit.oj.Main --serve --no-db
+   ```
 
 Mở http://localhost:8080. Mật khẩu tài khoản `admin` được in ra terminal; muốn tự đặt thì gán biến môi trường `OJ_ADMIN_PASSWORD` trước khi chạy. Ở chế độ này tài khoản và lịch sử nộp bài nằm trong RAM nên sẽ mất khi tắt máy chủ.
 
-Script tự tải MySQL Connector/J vào `lib/`, biên dịch backend, build frontend rồi khởi động máy chủ.
+Nếu máy chủ báo `Unable to establish loopback connection` dù cổng không bận (gặp trên Windows với JDK 17), thêm `"-Djdk.net.unixdomain.tmpdir=C:\Users\Public"` vào ngay sau `java`.
 
 ### Chạy với MySQL
 
@@ -114,15 +184,21 @@ Script tự tải MySQL Connector/J vào `lib/`, biên dịch backend, build fro
    cp .env.example .env    # PowerShell: Copy-Item .env.example .env
    ```
 
-3. Chạy `run-web.ps1` (hoặc `./run-web.sh`). Bảng và view được tạo tự động khi khởi động. Lần chạy đầu, hệ thống tạo tài khoản `admin` và 4 tài khoản mẫu.
+3. Tải MySQL Connector/J 8.4.0 vào thư mục `lib/`. Có Maven thì chạy lệnh dưới; không có thì tải file `mysql-connector-j-8.4.0.jar` từ Maven Central rồi chép vào `lib/`:
 
-### Script
+   ```bash
+   mvn -q dependency:copy-dependencies -DoutputDirectory=lib -DincludeScope=runtime
+   ```
 
-| | Windows PowerShell | Windows cmd | Linux / macOS |
-|---|---|---|---|
-| Giao diện web | `run-web.ps1 [-Port 9000] [-NoDb]` | `run-web.bat` | `./run-web.sh [9000] [--no-db]` |
-| Giao diện console | `run.ps1 [--no-db]` | `run.bat` | `./run.sh` |
-| Toàn bộ kiểm thử | `run-tests.ps1` | `run-tests.bat` | `./run-tests.sh` |
+4. Biên dịch backend và build giao diện như mục trên, rồi khởi động máy chủ với cả `lib/` trong classpath (Linux / macOS dùng `:` thay cho `;`):
+
+   ```bash
+   java "-Dfile.encoding=UTF-8" -cp "out;lib/*" com.ptit.oj.Main --serve
+   ```
+
+   Bảng và view được tạo tự động khi khởi động. Lần chạy đầu, hệ thống tạo tài khoản `admin` và 4 tài khoản mẫu.
+
+### Tham số dòng lệnh
 
 Tham số của backend (`java -cp "out;lib/*" com.ptit.oj.Main ...`; Linux / macOS dùng `:` thay cho `;`):
 
@@ -194,13 +270,14 @@ Lược đồ CSDL gồm ba bảng `users`, `submissions`, `test_case_results` (
 ## Kiểm thử
 
 ```bash
-powershell -ExecutionPolicy Bypass -File run-tests.ps1
+java "-Dfile.encoding=UTF-8" -cp out com.ptit.oj.Main --selftest
+java "-Dfile.encoding=UTF-8" -cp "out;lib/*" com.ptit.oj.Main --apitest
 ```
 
-Script lần lượt biên dịch backend, chạy `--selftest`, `--apitest` và build frontend; có bước nào lỗi thì trả exit code khác 0.
+Hai lệnh trả exit code khác 0 khi có lỗi. Chạy sau khi đã biên dịch backend; `npm run build` trong `frontend/` kiểm tra thêm phần giao diện.
 
 - `--selftest` chấm 43 bài nộp mẫu (17 bài thử đủ 6 verdict và nhiều ngôn ngữ, cùng lời giải mẫu C++ của 26 bài đầu tiên lớp VNOI, mỗi chặng một bài), rồi đối chiếu với verdict kỳ vọng trong `data/submissions/demo-plan.txt`. Không cần MySQL.
-- `--apitest` chạy kiểm thử tích hợp trên MySQL thật qua HTTP: đăng ký, đăng nhập, phân quyền, mật khẩu không lưu dạng plaintext, chặn path traversal, không lộ test ẩn, transaction và khoá ngoại, dữ liệu còn nguyên sau khi khởi động lại. Bộ kiểm thử chỉ chạy trên CSDL có tên kết thúc bằng `_test`, và làm việc trên bản sao đề bài nên không ảnh hưởng dữ liệu thật. Nếu chưa cấu hình `OJ_TEST_DB_*`, bước này được bỏ qua.
+- `--apitest` chạy kiểm thử tích hợp trên MySQL thật qua HTTP: đăng ký, đăng nhập, phân quyền, mật khẩu không lưu dạng plaintext, chặn path traversal, không lộ test ẩn, transaction và khoá ngoại, dữ liệu còn nguyên sau khi khởi động lại. Bộ kiểm thử chỉ chạy trên CSDL có tên kết thúc bằng `_test`, và làm việc trên bản sao đề bài nên không ảnh hưởng dữ liệu thật. Cần cấu hình `OJ_TEST_DB_*` trước khi chạy.
 
 ## Thiết kế hướng đối tượng
 
@@ -221,7 +298,6 @@ Script lần lượt biên dịch backend, chạy `--selftest`, `--apitest` và 
 - Chưa có sandbox: code thí sinh chạy bằng quyền người dùng hiện tại, nên máy chủ chỉ mở trên localhost. Hướng phát triển: chạy trong container hoặc dùng cgroups / Job Object.
 - Giới hạn bộ nhớ chỉ áp chính xác cho Java (`-Xmx`) và JavaScript; các ngôn ngữ còn lại chỉ phát hiện MLE khi runtime báo hết bộ nhớ.
 - Bài được chấm tuần tự để số đo thời gian ổn định; có thể chuyển sang hàng đợi và nhiều worker.
-- Trang Kỳ thi là bản demo, dữ liệu lưu trong `localStorage` của trình duyệt và chưa có API backend.
 - Chưa sửa được nội dung đề, bộ test, chưa xoá bài và chưa đổi mật khẩu qua giao diện; lộ trình (`topics.txt`) vẫn sửa tay.
 - Phiên đăng nhập lưu trong RAM; chưa có connection pool và phân trang cho lịch sử nộp bài.
 - Bộ test lớp VNOI được giữ nhỏ cho repo gọn (khoảng 1 MB mỗi bài với V001–V026, dưới 100 KB mỗi bài với V027–V300), nên ở nhiều bài cách làm trâu viết bằng C++ vẫn kịp giới hạn thời gian; Java và Python thì thường không.
