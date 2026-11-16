@@ -1,6 +1,6 @@
 # CodeHub
 
-Hệ thống chấm bài lập trình tự động: backend Java thuần, giao diện web React, chấm được 6 ngôn ngữ và trả kết quả theo thời gian thực.
+Hệ thống chấm bài lập trình tự động: backend Java thuần, giao diện web React, chấm được 4 ngôn ngữ và trả kết quả của từng test.
 
 ![Java](https://img.shields.io/badge/Java-11+-ED8B00?logo=openjdk&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
@@ -9,28 +9,27 @@ Hệ thống chấm bài lập trình tự động: backend Java thuần, giao d
 
 ## Giới thiệu
 
-CodeHub là nền tảng luyện lập trình theo kiểu Codeforces. Người dùng nộp mã nguồn; hệ thống biên dịch, chạy trên bộ test với giới hạn thời gian và bộ nhớ, so sánh output với đáp án rồi trả verdict AC / WA / TLE / MLE / RE / CE cho từng test ngay khi chấm xong. Hệ thống có sẵn hai lớp học: lớp Nhập môn (10 chủ đề, 300 bài cho người mới bắt đầu) và lớp Lộ trình VNOI (26 chặng lập trình thi đấu theo [lộ trình tổng quát của VNOI Wiki](https://wiki.vnoi.info/roadmap/general-roadmap), tổng cộng 300 bài).
+CodeHub là nền tảng luyện lập trình theo kiểu Codeforces. Người dùng nộp mã nguồn; hệ thống biên dịch, chạy trên bộ test với giới hạn thời gian và bộ nhớ, so sánh output với đáp án rồi trả verdict AC / WA / TLE / MLE / RE / CE cho từng test. Hệ thống có sẵn hai lớp học: lớp Nhập môn (10 chủ đề, 300 bài cho người mới bắt đầu) và lớp Lộ trình VNOI (26 chặng lập trình thi đấu theo [lộ trình tổng quát của VNOI Wiki](https://wiki.vnoi.info/roadmap/general-roadmap), tổng cộng 300 bài).
 
 Backend chỉ dùng API chuẩn của JDK. Máy chủ HTTP, bộ đọc/ghi JSON, băm mật khẩu và quản lý phiên đều do nhóm tự viết. Thư viện ngoài duy nhất là MySQL Connector/J; dữ liệu được truy cập bằng JDBC, không qua framework hay ORM.
 
 ## Tính năng
 
 ### Chấm bài
-- Hỗ trợ 6 ngôn ngữ: Java, C++, Python, Go, JavaScript, Rust. Thêm ngôn ngữ mới chỉ cần viết một lớp con `Language`.
+- Hỗ trợ 4 ngôn ngữ: Java, C++, Python, JavaScript. Thêm ngôn ngữ mới chỉ cần viết một lớp con `Language`.
 - Đủ 6 verdict, chấm điểm từng phần theo test.
-- Kết quả được đẩy về trình duyệt qua Server-Sent Events, test nào chấm xong là hiện ngay.
+- Chấm xong, trang làm bài hiện verdict chung, điểm và bảng kết quả từng test (verdict, thời gian chạy, điểm, thông báo).
 - 4 kiểu so sánh output: chính xác, theo token, theo dòng (cho bài vẽ hình), số thực có sai số.
 - Test ẩn không bao giờ được gửi xuống trình duyệt, và thông báo WA không làm lộ đáp án.
 
 ### Học tập
 - Hai lớp học, mỗi lớp có lộ trình riêng: lớp Nhập môn gồm 10 chủ đề từ nhập/xuất đến mảng, xâu và sắp xếp; lớp Lộ trình VNOI gồm 26 chặng từ đệ quy, đồ thị đến luồng và quy hoạch động nâng cao. Có theo dõi tiến độ từng chặng, nút *Học tiếp* và *Bài tiếp theo*.
 - Lớp Nhập môn có 300 bài mã `K001` đến `K300`; lớp VNOI có 300 bài mã `V001` đến `V300`, mỗi chặng từ 6 đến 16 bài, xếp từ dễ đến khó. Mỗi bài có test ví dụ, test ẩn và lời giải mẫu C++ trong `data/submissions/`.
-- Lọc bài theo độ khó, đếm chuỗi ngày luyện tập, bảng xếp hạng và thống kê verdict.
-- Trình soạn code CodeMirror 6 tô màu cú pháp cho cả 6 ngôn ngữ; bộ phân tích của từng ngôn ngữ chỉ được tải khi cần.
+- Lọc bài theo độ khó, tìm bài theo mã hoặc tên, bảng xếp hạng.
 
 ### Quản trị
 - Tạo bài tập trên web: đề, giới hạn, kiểu so sánh, test ví dụ và test ẩn. Bài được ghi vào thư mục tạm rồi mới đổi tên thành thư mục thật, nên không có bài nào bị ghi dở. Bài mới dùng được ngay, không cần khởi động lại máy chủ.
-- Sắp xếp lộ trình: đổi chủ đề, độ khó và vị trí của từng bài.
+- Sắp xếp lộ trình: đổi chủ đề và độ khó của từng bài.
 - Ba vai trò Học sinh / Giảng viên / Quản trị. Backend kiểm tra quyền ở từng request, kể cả khi giao diện đã ẩn nút.
 
 ### Bảo mật
@@ -45,18 +44,17 @@ Backend chỉ dùng API chuẩn của JDK. Máy chủ HTTP, bộ đọc/ghi JSON
 |---|---|
 | Backend | Java 11, `com.sun.net.httpserver`, JDBC |
 | Cơ sở dữ liệu | MySQL 8 (InnoDB, `utf8mb4`), hoặc lưu trong bộ nhớ khi chạy không có CSDL |
-| Frontend | React 19, TypeScript 5, Vite 7, Tailwind CSS 4, CodeMirror 6 |
+| Frontend | React 19, TypeScript 5, Vite 7, Tailwind CSS 4 |
 | Công cụ | Maven (tùy chọn) |
 
 ## Kiến trúc
 
 ```mermaid
 flowchart LR
-    Web["Giao diện web<br/>React + TypeScript"] -- "REST / SSE" --> Api[ApiServer]
-    Console[ConsoleApp] --> Svc
+    Web["Giao diện web<br/>React + TypeScript"] -- "REST" --> Api[ApiServer]
     Api --> Svc[JudgeService]
     Svc --> Judge
-    Judge --> Lang["Language<br/>Java · C++ · Python · Go · JS · Rust"]
+    Judge --> Lang["Language<br/>Java · C++ · Python · JavaScript"]
     Judge --> Cmp["OutputComparator<br/>exact · token · lines · float"]
     Svc --> Repo["Repository#lt;T#gt;"]
     Repo --> MySQL[("MySQL 8")]
@@ -64,73 +62,67 @@ flowchart LR
     Svc --> Disk[("data/problems<br/>đề bài + test")]
 ```
 
-Console và web cùng gọi một tầng nghiệp vụ là `JudgeService`. Kho dữ liệu được truyền vào qua constructor (`JudgeService.mysql()` hoặc `JudgeService.inMemory()`), nên đổi giữa MySQL và bộ nhớ không phải sửa tầng nghiệp vụ hay giao diện. Câu SQL chỉ nằm trong các package `repository` của từng module và `common/database`.
+`ApiServer` chỉ gọi tầng nghiệp vụ qua một lớp duy nhất là `JudgeService`. Kho dữ liệu được truyền vào qua constructor (`JudgeService.mysql()` hoặc `JudgeService.inMemory()`), nên đổi giữa MySQL và bộ nhớ không phải sửa tầng nghiệp vụ hay giao diện. Câu SQL chỉ nằm trong package `dao`.
 
 `ProcessRunner` chạy code thí sinh trong tiến trình con. Một luồng ghi stdin, hai luồng đọc stdout và stderr để tiến trình không bị treo khi bộ đệm đầy. Chương trình chạy quá giờ bị dừng cưỡng bức, và output bị cắt ở 1 MB.
 
-### Cấu trúc theo module
+### Cấu trúc theo MVC
 
-Mã nguồn chia theo 4 module chức năng của báo cáo phân tích thiết kế, backend và frontend dùng chung một bộ tên thư mục:
+Mã nguồn chia theo mô hình MVC, mỗi tầng một thư mục, khớp với mục 5.3 của báo cáo phân tích thiết kế:
 
-| Module trong báo cáo | Backend `src/com/ptit/oj/` | Frontend `frontend/src/modules/` |
+| Tầng | Thư mục | Chứa gì |
 |---|---|---|
-| 1. Quản lý tài khoản và phân quyền | `account/` | `account/` |
-| 2. Quản lý bài tập và lộ trình học | `problem/` | `problem/` |
-| 3. Nộp bài và chấm tự động | `judge/` | `judge/` |
-| 4. Xem lịch sử nộp bài và bảng xếp hạng | `history/` | `history/` |
+| Model (lớp thực thể) | `src/com/ptit/oj/model/` | Dữ liệu của hệ thống: người dùng, bài tập, bài nộp, kết quả chấm |
+| Controller (tầng điều khiển) | `src/com/ptit/oj/controller/` | `ApiServer` nhận yêu cầu từ giao diện, các lớp `…Service` xử lí nghiệp vụ, `judge/` là bộ chấm |
+| DAO (tầng truy cập dữ liệu) | `src/com/ptit/oj/dao/` | Đọc ghi MySQL, bộ nhớ và thư mục `data/` |
+| View (tầng giao diện) | `frontend/src/view/` | Các trang React, mỗi chức năng một thư mục |
 
-Hai thư mục còn lại của backend không thuộc riêng module nào: `common/` là nền tảng mà cả 4 module dùng, `app/` ghép 4 module lại thành chương trình chạy được. Chiều phụ thuộc là `common` ← `account` ← `problem` ← `judge` ← `history` ← `app`.
+Chiều phụ thuộc là `view` → `controller` → `dao` → `model`. Giao diện chỉ nói chuyện với backend qua REST API của `ApiServer`. Có một ngoại lệ: `Submission` giữ ngôn ngữ của bài nộp dưới dạng đối tượng `Language`, mà `Language` biết biên dịch và chạy mã nguồn nên nằm trong `controller/judge/`.
 
 ```
 src/com/ptit/oj
-├── Main.java            Điểm vào: đọc tham số dòng lệnh, chọn kho MySQL hay bộ nhớ
-├── common/              Dùng chung cho cả 4 module
-│   ├── model/           Entity
-│   ├── repository/      Repository<T>, InMemoryRepository<T>
-│   ├── database/        DatabaseConfig, MySqlDatabaseManager, MySqlSchemaInitializer
-│   ├── web/             Json, ApiException
-│   ├── exception/       DataAccessException
-│   └── util/            TextUtils
-├── account/             Module 1
-│   ├── model/           User → Student / Teacher / Admin, Credentials
-│   ├── repository/      UserRepository (bản MySQL và In-memory)
-│   └── service/         AuthService, PasswordService, SessionService
-├── problem/             Module 2
-│   ├── model/           Problem, TestCase, Topic, ProblemDraft
-│   ├── repository/      ProblemLoader, ProblemWriter, TopicLoader
-│   ├── service/         ProblemAdminService
-│   └── exception/       ProblemLoadException
-├── judge/               Module 3
-│   ├── model/           Submission, JudgeResult, TestCaseResult, Verdict
-│   ├── language/        Language (abstract) → 6 ngôn ngữ, LanguageRegistry
-│   ├── compare/         OutputComparator → Exact / Token / Line / Float, ComparatorFactory
-│   ├── runner/          ProcessRunner
-│   ├── core/            Judge, JudgeListener → ConsoleJudgeListener / StatisticsListener
-│   ├── web/             SseJudgeListener
-│   └── exception/       JudgeException, CompileErrorException
-├── history/             Module 4
-│   ├── repository/      SubmissionRepository (bản MySQL và In-memory)
-│   └── service/         ScoreboardService, StatisticsService
-└── app/                 Ghép 4 module
-    ├── web/             ApiServer (REST API + phục vụ file tĩnh)
-    ├── service/         JudgeService (điểm vào nghiệp vụ dùng chung)
-    ├── console/         ConsoleApp
-    └── test/            IntegrationTests
+├── Main.java            Điểm vào: chọn kho MySQL hay bộ nhớ rồi mở máy chủ web
+├── model/               Entity, User → Student / Teacher / Admin, Credentials,
+│                        Problem, TestCase, Topic, ProblemDraft,
+│                        Submission, JudgeResult, TestCaseResult, Verdict
+├── dao/                 Repository<T>, InMemoryRepository<T>,
+│                        UserRepository, SubmissionRepository (mỗi cái có bản MySQL và In-memory),
+│                        ProblemLoader, ProblemWriter, TopicLoader (đề bài và lộ trình trên ổ đĩa),
+│                        DatabaseConfig, MySqlDatabaseManager, MySqlSchemaInitializer,
+│                        DataAccessException, ProblemLoadException, TextUtils
+└── controller/          ApiServer (REST API + phục vụ file tĩnh), Json, ApiException,
+    │                    JudgeService (điểm vào nghiệp vụ dùng chung),
+    │                    AuthService, PasswordService, SessionService,
+    │                    ProblemAdminService, ScoreboardService
+    └── judge/           Judge, ProcessRunner,
+                         Language (abstract) → 4 ngôn ngữ, LanguageRegistry,
+                         OutputComparator → Exact / Token / Line / Float, ComparatorFactory
 
 frontend/src
 ├── main.tsx, App.tsx    Khung ứng dụng: thanh tiêu đề, điều hướng, menu tài khoản
 ├── shared/              api.ts, types.ts, ui.tsx, Logo.tsx
-└── modules/
-    ├── account/         auth.tsx, LoginModal.tsx (đăng nhập / đăng ký), streak.ts, StreakBadge.tsx
+└── view/
+    ├── account/         auth.tsx, LoginModal.tsx (đăng nhập / đăng ký)
     ├── problem/         Problems.tsx (lộ trình + danh sách bài), learningPath.ts,
     │                    admin/ AdminPanel.tsx, ProblemEditor.tsx, ProblemMetaEditor.tsx
-    ├── judge/           ProblemDetail.tsx (làm bài + kết quả chấm), CodeEditor.tsx
+    ├── judge/           ProblemDetail.tsx (làm bài + kết quả chấm), CodeEditor.tsx, TestTable.tsx
     └── history/         Submissions.tsx (trạng thái), MySubmissions.tsx (bài nộp của tôi), Leaderboard.tsx
 ```
 
+Bốn module của báo cáo nằm ở các tệp sau:
+
+| Module trong báo cáo | `model/` | `dao/` | `controller/` | `view/` |
+|---|---|---|---|---|
+| 1. Quản lý tài khoản và phân quyền | `User`, `Student`, `Teacher`, `Admin`, `Credentials` | `UserRepository` và hai bản cài đặt | `AuthService`, `PasswordService`, `SessionService` | `account/` |
+| 2. Quản lý bài tập và lộ trình học | `Problem`, `TestCase`, `Topic`, `ProblemDraft` | `ProblemLoader`, `ProblemWriter`, `TopicLoader` | `ProblemAdminService` | `problem/` |
+| 3. Nộp bài và chấm tự động | `Submission`, `JudgeResult`, `TestCaseResult`, `Verdict` | | `judge/` | `judge/` |
+| 4. Xem lịch sử nộp bài và bảng xếp hạng | | `SubmissionRepository` và hai bản cài đặt | `ScoreboardService` | `history/` |
+
+`ApiServer` và `JudgeService` phục vụ cả bốn module.
+
 ## Bắt đầu nhanh
 
-Cần có JDK 11+ và Node.js 20.19+. MySQL 8 chỉ cần khi muốn lưu dữ liệu lâu dài. Muốn chấm các ngôn ngữ khác Java thì cài thêm toolchain tương ứng (g++, Python 3, Go, Node.js, Rust); ngôn ngữ nào thiếu toolchain sẽ tự được đánh dấu là không khả dụng.
+Cần có JDK 11+ và Node.js 20.19+. MySQL 8 chỉ cần khi muốn lưu dữ liệu lâu dài. Muốn chấm các ngôn ngữ khác Java thì cài thêm toolchain tương ứng (g++, Python 3, Node.js); ngôn ngữ nào thiếu toolchain sẽ tự được đánh dấu là không khả dụng.
 
 ### Chạy thử không cần MySQL
 
@@ -172,7 +164,7 @@ Nếu máy chủ báo `Unable to establish loopback connection` dù cổng khôn
 
 ### Chạy với MySQL
 
-1. Sửa mật khẩu `THAY_MAT_KHAU_NAY` trong `database/mysql/01_create_database.sql`, rồi chạy file này bằng tài khoản quản trị MySQL. Script tạo CSDL `online_judge`, `online_judge_test` và tài khoản `oj_app` với quyền tối thiểu:
+1. Sửa mật khẩu `THAY_MAT_KHAU_NAY` trong `database/mysql/01_create_database.sql`, rồi chạy file này bằng tài khoản quản trị MySQL. Script tạo CSDL `online_judge` và tài khoản `oj_app` với quyền tối thiểu:
 
    ```bash
    mysql -u root -p < database/mysql/01_create_database.sql
@@ -204,12 +196,10 @@ Tham số của backend (`java -cp "out;lib/*" com.ptit.oj.Main ...`; Linux / ma
 
 | Tham số | Chức năng |
 |---|---|
-| *(không có)* | Menu console, yêu cầu đăng nhập |
-| `--serve[=port]` | REST API và giao diện web, mặc định cổng 8080 |
-| `--no-db` | Lưu dữ liệu trong bộ nhớ thay vì MySQL; dùng được với cả console lẫn `--serve` |
-| `--demo` / `--selftest` | Chấm bộ bài nộp mẫu; `--selftest` đối chiếu với verdict kỳ vọng và trả exit code |
-| `--apitest` | Kiểm thử tích hợp với MySQL |
-| `--data=`, `--web=`, `--db-url=` | Đổi thư mục dữ liệu, thư mục frontend, URL CSDL |
+| `--serve[=port]` | Mở REST API và giao diện web, mặc định cổng 8080 |
+| `--no-db` | Lưu tài khoản và lịch sử nộp bài trong bộ nhớ thay vì MySQL |
+
+Chương trình phải được chạy từ thư mục gốc của project: đề bài đọc từ `data/`, giao diện đọc từ `frontend/dist/`.
 
 ## Cấu hình
 
@@ -217,8 +207,7 @@ Các biến được đọc từ biến môi trường hoặc file `.env` (biế
 
 | Biến | Ý nghĩa |
 |---|---|
-| `OJ_DB_URL`, `OJ_DB_USER`, `OJ_DB_PASSWORD` | Kết nối tới CSDL chính |
-| `OJ_TEST_DB_URL`, `OJ_TEST_DB_USER`, `OJ_TEST_DB_PASSWORD` | Kết nối CSDL kiểm thử; tên CSDL bắt buộc kết thúc bằng `_test` |
+| `OJ_DB_URL`, `OJ_DB_USER`, `OJ_DB_PASSWORD` | Kết nối tới CSDL |
 | `OJ_ADMIN_PASSWORD` | Mật khẩu admin lần đầu; bỏ trống thì hệ thống tự sinh và in ra một lần |
 | `OJ_SEED_PASSWORD` | Mật khẩu của 4 tài khoản mẫu |
 
@@ -233,19 +222,17 @@ Trừ 4 endpoint công khai, mọi request phải gửi header `Authorization: B
 | POST | `/api/auth/register` | công khai | Đăng ký tài khoản học sinh |
 | POST | `/api/auth/login` | công khai | Đăng nhập, trả về token |
 | POST | `/api/auth/logout` | đăng nhập | Huỷ token |
-| GET | `/api/auth/me` | đăng nhập | Thông tin tài khoản và số bài đã giải |
+| GET | `/api/auth/me` | đăng nhập | Thông tin tài khoản đang đăng nhập |
 | GET | `/api/problems` | đăng nhập | Danh sách bài kèm đề, chủ đề, độ khó và test ví dụ |
 | GET | `/api/topics` | đăng nhập | Lộ trình học theo thứ tự |
 | GET | `/api/submissions` | đăng nhập | Lịch sử nộp: học sinh chỉ thấy của mình |
 | GET | `/api/submissions/{id}` | chủ bài / GV / admin | Chi tiết từng test và mã nguồn |
 | GET | `/api/scoreboard` | đăng nhập | Bảng xếp hạng |
-| GET | `/api/stats` | đăng nhập | Thống kê verdict |
-| POST | `/api/submit` | đăng nhập | Nộp bài, chờ chấm xong rồi trả kết quả |
-| POST | `/api/submit/stream` | đăng nhập | Nộp bài, nhận kết quả từng test qua SSE |
+| POST | `/api/submit` | đăng nhập | Nộp bài; chấm xong trả về bài nộp kèm kết quả từng test |
 | POST | `/api/admin/problems` | admin | Tạo bài tập |
-| PUT | `/api/admin/problems/{id}` | admin | Đổi chủ đề, độ khó, vị trí trong lộ trình |
+| PUT | `/api/admin/problems/{id}` | admin | Đổi chủ đề và độ khó của bài |
 
-`/api/submit/stream` phát lần lượt các sự kiện `started` → `compiled` → `test` (mỗi test một sự kiện) → `finished` → `done`. Lỗi đầu vào được trả bằng mã HTTP 4xx trước khi mở luồng. Mã lỗi: `400` dữ liệu sai, `401` chưa đăng nhập, `403` không đủ quyền, `404` không tìm thấy, `409` trùng tên đăng nhập hoặc mã bài, `500` lỗi nội bộ (chi tiết chỉ ghi vào log máy chủ).
+Mã lỗi: `400` dữ liệu sai, `401` chưa đăng nhập, `403` không đủ quyền, `404` không tìm thấy, `409` trùng tên đăng nhập hoặc mã bài, `500` lỗi nội bộ (chi tiết chỉ ghi vào log máy chủ).
 
 ## Định dạng đề bài
 
@@ -269,36 +256,31 @@ Lược đồ CSDL gồm ba bảng `users`, `submissions`, `test_case_results` (
 
 ## Kiểm thử
 
-```bash
-java "-Dfile.encoding=UTF-8" -cp out com.ptit.oj.Main --selftest
-java "-Dfile.encoding=UTF-8" -cp "out;lib/*" com.ptit.oj.Main --apitest
-```
+Project không kèm bộ kiểm thử tự động. Sau khi sửa code, kiểm tra theo ba bước:
 
-Hai lệnh trả exit code khác 0 khi có lỗi. Chạy sau khi đã biên dịch backend; `npm run build` trong `frontend/` kiểm tra thêm phần giao diện.
-
-- `--selftest` chấm 43 bài nộp mẫu (17 bài thử đủ 6 verdict và nhiều ngôn ngữ, cùng lời giải mẫu C++ của 26 bài đầu tiên lớp VNOI, mỗi chặng một bài), rồi đối chiếu với verdict kỳ vọng trong `data/submissions/demo-plan.txt`. Không cần MySQL.
-- `--apitest` chạy kiểm thử tích hợp trên MySQL thật qua HTTP: đăng ký, đăng nhập, phân quyền, mật khẩu không lưu dạng plaintext, chặn path traversal, không lộ test ẩn, transaction và khoá ngoại, dữ liệu còn nguyên sau khi khởi động lại. Bộ kiểm thử chỉ chạy trên CSDL có tên kết thúc bằng `_test`, và làm việc trên bản sao đề bài nên không ảnh hưởng dữ liệu thật. Cần cấu hình `OJ_TEST_DB_*` trước khi chạy.
+- Biên dịch backend bằng lệnh `javac` ở mục [Bắt đầu nhanh](#bắt-đầu-nhanh); không được có lỗi.
+- Trong `frontend/`: `npx tsc --noEmit` kiểm tra kiểu, `npm run build` build giao diện.
+- Chạy máy chủ với `--no-db` rồi thử bộ chấm bằng tay: `data/submissions/demo-plan.txt` liệt kê 41 bài nộp mẫu (đủ 6 verdict, nhiều ngôn ngữ) kèm verdict đúng của từng bài.
 
 ## Thiết kế hướng đối tượng
 
 | Nguyên lý / mẫu | Áp dụng |
 |---|---|
 | Kế thừa & đa hình | `User` → `Student` / `Teacher` / `Admin`; quyền lấy từ `canCreateProblem()` thay vì `if` theo vai trò |
-| Trừu tượng | `Language`, `User`, `Entity` là abstract class; `OutputComparator`, `Repository<T>`, `JudgeListener` là interface |
+| Trừu tượng | `Language`, `User`, `Entity` là abstract class; `OutputComparator`, `Repository<T>` là interface |
 | Strategy | `OutputComparator`: đổi cách so sánh mà không sửa `Judge` |
 | Factory | `ComparatorFactory`, `LanguageRegistry`, `JudgeService.mysql()` / `inMemory()` |
-| Observer | `JudgeListener` với 3 bản cài đặt: in console, thống kê, đẩy SSE; thêm mới không sửa `Judge` |
 | Repository + Generic | `Repository<T extends Entity>`, hai bản cài đặt In-memory và MySQL thay thế được cho nhau |
 | Dependency Injection | `JudgeService` nhận kho dữ liệu qua constructor |
-| Đóng gói | Field `private`, danh sách trả về dạng chỉ đọc, `Credentials` bất biến và không in hash ra ngoài |
+| Đóng gói | Field `private`, danh sách trả về dạng chỉ đọc, `Credentials` bất biến |
 | Đa luồng | Luồng đọc/ghi riêng cho tiến trình con, `ConcurrentHashMap` cho phiên, chấm tuần tự để đo thời gian ổn định |
 
 ## Hạn chế và hướng phát triển
 
 - Chưa có sandbox: code thí sinh chạy bằng quyền người dùng hiện tại, nên máy chủ chỉ mở trên localhost. Hướng phát triển: chạy trong container hoặc dùng cgroups / Job Object.
 - Giới hạn bộ nhớ chỉ áp chính xác cho Java (`-Xmx`) và JavaScript; các ngôn ngữ còn lại chỉ phát hiện MLE khi runtime báo hết bộ nhớ.
-- Bài được chấm tuần tự để số đo thời gian ổn định; có thể chuyển sang hàng đợi và nhiều worker.
-- Chưa sửa được nội dung đề, bộ test, chưa xoá bài và chưa đổi mật khẩu qua giao diện; lộ trình (`topics.txt`) vẫn sửa tay.
+- Bài được chấm tuần tự để số đo thời gian ổn định, và người nộp phải chờ chấm xong mới thấy kết quả; có thể chuyển sang hàng đợi, nhiều worker và đẩy kết quả từng test theo thời gian thực.
+- Chưa sửa được nội dung đề, bộ test, chưa xoá bài và chưa đổi mật khẩu qua giao diện; lộ trình (`topics.txt`) và thứ tự bài trong chủ đề (`order`) vẫn sửa tay.
 - Phiên đăng nhập lưu trong RAM; chưa có connection pool và phân trang cho lịch sử nộp bài.
 - Bộ test lớp VNOI được giữ nhỏ cho repo gọn (khoảng 1 MB mỗi bài với V001–V026, dưới 100 KB mỗi bài với V027–V300), nên ở nhiều bài cách làm trâu viết bằng C++ vẫn kịp giới hạn thời gian; Java và Python thì thường không.
 

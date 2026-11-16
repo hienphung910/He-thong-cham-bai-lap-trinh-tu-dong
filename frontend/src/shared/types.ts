@@ -22,7 +22,6 @@ export interface AuthUser {
   role: RoleCode;
   roleName: string;
   canCreateProblem: boolean;
-  solvedCount: number;
 }
 
 export interface LoginResponse {
@@ -42,7 +41,6 @@ export interface LanguageInfo {
   name: string;
   extension: string;
   available: boolean;
-  memoryLimitNote: string;
 }
 
 export interface Sample {
@@ -62,7 +60,7 @@ export interface Problem {
   topic: string;
   /** 1 = De, 2 = Vua, 3 = Kho, 0 = chua danh gia. */
   difficulty: number;
-  /** Thu tu hoc trong chu de (tu 1); 0 = chua xep, dung sau cac bai da xep theo ma bai. */
+  /** Thu tu hoc trong chu de (tu 1); 0 = khong khai bao, dung sau cac bai co thu tu va xep theo ma bai. */
   order: number;
   /** Chi gom test vi du - test an khong bao gio duoc gui xuong trinh duyet. */
   samples: Sample[];
@@ -124,67 +122,12 @@ export interface ScoreRow {
   perProblem: { problemId: string; score: number }[];
 }
 
-export interface Stats {
-  totalSubmissions: number;
-  byVerdict: Partial<Record<VerdictCode, number>>;
-}
-
 /** Nguoi nop duoc backend lay tu token, client khong gui username nua. */
 export interface SubmitRequest {
   problemId: string;
   language: string;
   code: string;
 }
-
-/* ------------------------------------------------------------------------- *
- * Su kien do POST /api/submit/stream day ve theo chuan Server-Sent Events.
- * Khop 1-1 voi SseJudgeListener.java ben backend.
- * ------------------------------------------------------------------------- */
-
-export interface JudgeStartedEvent {
-  submissionId: string;
-  problemId: string;
-  language: string;
-  /** Tong so test, biet ngay tu dau de ve duoc thanh tien trinh. */
-  total: number;
-}
-
-export interface CompiledEvent {
-  success: boolean;
-  /** Nguyen van thong bao cua trinh bien dich khi that bai. */
-  message: string;
-}
-
-/** Mot test vua cham xong - den ngay khi no chay xong, khong cho ca loat. */
-export interface LiveTestEvent {
-  index: number;
-  total: number;
-  id: string;
-  sample: boolean;
-  verdict: VerdictCode;
-  runtimeMs: number;
-  points: number;
-  message: string;
-}
-
-export interface JudgeFinishedEvent {
-  verdict: VerdictCode;
-  passed: number;
-  total: number;
-  score: number;
-}
-
-/**
- * Union co the phan biet duoc: TypeScript se bat loi neu quen xu ly mot nhanh,
- * nen them su kien moi o backend la trinh bien dich nhac ngay o frontend.
- */
-export type JudgeEvent =
-  | { type: "started"; data: JudgeStartedEvent }
-  | { type: "compiled"; data: CompiledEvent }
-  | { type: "test"; data: LiveTestEvent }
-  | { type: "finished"; data: JudgeFinishedEvent }
-  | { type: "done"; data: Submission }
-  | { type: "error"; data: { error: string } };
 
 export interface NewTestInput {
   name: string;
@@ -206,15 +149,10 @@ export interface NewProblemRequest {
   tests: NewTestInput[];
 }
 
-/**
- * PUT /api/admin/problems/{id}: doi cho cua bai trong lo trinh.
- * position tinh tu 1 trong chu de dich (khong tinh chinh bai nay);
- * 0 = giu cho cu, hoac xep cuoi neu doi sang chu de khac.
- */
+/** PUT /api/admin/problems/{id}: doi chu de va do kho cua bai da co. */
 export interface UpdateProblemRequest {
   topic: string;
   difficulty: number;
-  position: number;
 }
 
 export interface NewProblemResponse {
