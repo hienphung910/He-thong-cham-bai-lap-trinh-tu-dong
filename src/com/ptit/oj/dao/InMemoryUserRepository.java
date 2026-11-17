@@ -7,16 +7,15 @@ import com.ptit.oj.model.Verdict;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 /**
  * Kho tai khoan trong bo nho - dung cho che do --no-db: khong can MySQL,
- * du lieu mat khi tat may chu.
+ * du lieu mat khi tat chuong trinh.
  */
 public class InMemoryUserRepository extends InMemoryRepository<User> implements UserRepository {
 
-    private final Map<String, Credentials> credentials = new LinkedHashMap<>();
+    private Map<String, Credentials> credentials = new LinkedHashMap<>();
     private SubmissionRepository submissions;   // de tinh solvedCount
 
     /** Gan sau vi hai kho tham chieu vong nhau (user can dem AC tu submission). */
@@ -25,33 +24,33 @@ public class InMemoryUserRepository extends InMemoryRepository<User> implements 
     }
 
     @Override
-    public synchronized Optional<User> findByUsername(String username) {
-        if (username == null) return Optional.empty();
+    public User findByUsername(String username) {
+        if (username == null) return null;
         String needle = username.trim();
         for (User u : findAll()) {
-            if (u.getUsername().equalsIgnoreCase(needle)) return Optional.of(u);
+            if (u.getUsername().equalsIgnoreCase(needle)) return u;
         }
-        return Optional.empty();
+        return null;
     }
 
     @Override
-    public synchronized boolean existsByUsername(String username) {
-        return findByUsername(username).isPresent();
+    public boolean existsByUsername(String username) {
+        return findByUsername(username) != null;
     }
 
     @Override
-    public synchronized void saveWithCredentials(User user, Credentials creds) {
+    public void saveWithCredentials(User user, Credentials creds) {
         save(user);
         credentials.put(user.getId(), creds);
     }
 
     @Override
-    public synchronized Optional<Credentials> findCredentials(String userId) {
-        return Optional.ofNullable(credentials.get(userId));
+    public Credentials findCredentials(String userId) {
+        return credentials.get(userId);
     }
 
     @Override
-    public synchronized Map<String, Integer> solvedCountByUser() {
+    public Map<String, Integer> solvedCountByUser() {
         Map<String, Integer> result = new LinkedHashMap<>();
         for (User u : findAll()) {
             result.put(u.getId(), solvedProblemIds(u.getId()).size());
@@ -73,7 +72,7 @@ public class InMemoryUserRepository extends InMemoryRepository<User> implements 
     }
 
     @Override
-    public synchronized boolean deleteById(String id) {
+    public boolean deleteById(String id) {
         credentials.remove(id);
         return super.deleteById(id);
     }

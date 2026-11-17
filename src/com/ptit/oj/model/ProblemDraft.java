@@ -21,14 +21,14 @@ public class ProblemDraft {
     private double totalPoints = 100;
     private String topic = "";
     private int difficulty = 0;
-    private final List<TestDraft> tests = new ArrayList<>();
+    private List<TestDraft> tests = new ArrayList<>();
 
     /** Mot bo test trong ban thao. */
     public static class TestDraft {
-        private final String name;
-        private final String input;
-        private final String output;
-        private final boolean sample;
+        private String name;
+        private String input;
+        private String output;
+        private boolean sample;
 
         public TestDraft(String name, String input, String output, boolean sample) {
             this.name = name;

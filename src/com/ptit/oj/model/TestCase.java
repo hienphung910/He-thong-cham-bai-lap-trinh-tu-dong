@@ -3,10 +3,10 @@ package com.ptit.oj.model;
 /** Mot bo test: input + output mong doi + diem. */
 public class TestCase extends Entity {
 
-    private final String input;
-    private final String expectedOutput;
-    private final double points;
-    private final boolean sample;
+    private String input;
+    private String expectedOutput;
+    private double points;
+    private boolean sample;
 
     public TestCase(String id, String input, String expectedOutput, double points, boolean sample) {
         super(id);

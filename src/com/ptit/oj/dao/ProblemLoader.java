@@ -3,15 +3,16 @@ package com.ptit.oj.dao;
 import com.ptit.oj.model.Problem;
 import com.ptit.oj.model.TestCase;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Properties;
 
@@ -28,7 +29,7 @@ import java.util.Properties;
  */
 public class ProblemLoader {
 
-    private final Path problemsDir;
+    private Path problemsDir;
 
     public ProblemLoader(Path problemsDir) {
         this.problemsDir = problemsDir;
@@ -40,18 +41,24 @@ public class ProblemLoader {
             throw new ProblemLoadException("Không thấy thư mục đề bài: " + problemsDir.toAbsolutePath());
         }
         List<Problem> problems = new ArrayList<>();
-        try (DirectoryStream<Path> dirs = Files.newDirectoryStream(problemsDir, Files::isDirectory)) {
-            for (Path dir : dirs) {
-                // Bo qua thu muc tam do ProblemWriter dang dung de ghi bai moi,
-                // va cac thu muc an cua he thong / IDE.
-                String name = dir.getFileName().toString();
-                if (name.startsWith(ProblemWriter.TEMP_PREFIX) || name.startsWith(".")) continue;
-                problems.add(load(dir));
-            }
-        } catch (IOException e) {
-            throw new ProblemLoadException("Lỗi đọc thư mục đề bài", e);
+        File[] dirs = problemsDir.toFile().listFiles();
+        if (dirs == null) {
+            throw new ProblemLoadException("Lỗi đọc thư mục đề bài: " + problemsDir.toAbsolutePath());
         }
-        problems.sort((a, b) -> a.getId().compareTo(b.getId()));
+        for (File dir : dirs) {
+            if (!dir.isDirectory()) continue;
+            // Bo qua thu muc tam do ProblemWriter dang dung de ghi bai moi,
+            // va cac thu muc an cua he thong / IDE.
+            String name = dir.getName();
+            if (name.startsWith(ProblemWriter.TEMP_PREFIX) || name.startsWith(".")) continue;
+            problems.add(load(dir.toPath()));
+        }
+        Collections.sort(problems, new Comparator<Problem>() {
+            @Override
+            public int compare(Problem a, Problem b) {
+                return a.getId().compareTo(b.getId());
+            }
+        });
         return problems;
     }
 
@@ -107,18 +114,25 @@ public class ProblemLoader {
     private List<Path> listInputs(Path testsDir) {
         if (!Files.isDirectory(testsDir)) return Collections.emptyList();
         List<Path> inputs = new ArrayList<>();
-        try (DirectoryStream<Path> files = Files.newDirectoryStream(testsDir, "*.in")) {
-            for (Path f : files) inputs.add(f);
-        } catch (IOException e) {
-            throw new ProblemLoadException("Lỗi đọc thư mục test " + testsDir, e);
+        File[] files = testsDir.toFile().listFiles();
+        if (files == null) {
+            throw new ProblemLoadException("Lỗi đọc thư mục test " + testsDir);
+        }
+        for (File f : files) {
+            if (f.getName().toLowerCase().endsWith(".in")) inputs.add(f.toPath());
         }
         // Test vi du (sample*) chay truoc, sau do den cac test an, moi nhom sap theo ten.
-        inputs.sort((a, b) -> {
-            String na = a.getFileName().toString().toLowerCase();
-            String nb = b.getFileName().toString().toLowerCase();
-            int ra = na.startsWith("sample") ? 0 : 1;
-            int rb = nb.startsWith("sample") ? 0 : 1;
-            return ra != rb ? Integer.compare(ra, rb) : na.compareTo(nb);
+        Collections.sort(inputs, new Comparator<Path>() {
+            @Override
+            public int compare(Path a, Path b) {
+                String nameA = a.getFileName().toString().toLowerCase();
+                String nameB = b.getFileName().toString().toLowerCase();
+                boolean sampleA = nameA.startsWith("sample");
+                boolean sampleB = nameB.startsWith("sample");
+                if (sampleA && !sampleB) return -1;
+                if (!sampleA && sampleB) return 1;
+                return nameA.compareTo(nameB);
+            }
         });
         return inputs;
     }

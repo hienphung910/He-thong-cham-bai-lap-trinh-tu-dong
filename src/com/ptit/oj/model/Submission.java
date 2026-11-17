@@ -9,11 +9,11 @@ import java.util.UUID;
 /** Mot lan nop bai cua nguoi dung. */
 public class Submission extends Entity {
 
-    private final Problem problem;
-    private final User author;
-    private final Language language;
-    private final String fileName;        // ten file ma nguon, vi du Main.java
-    private final LocalDateTime submittedAt;
+    private Problem problem;
+    private User author;
+    private Language language;
+    private String fileName;        // ten file ma nguon, vi du Main.java
+    private LocalDateTime submittedAt;
     private String sourceCode;
     private JudgeResult result;           // duoc gan sau khi cham
 
@@ -34,7 +34,7 @@ public class Submission extends Entity {
         this.submittedAt = submittedAt;
     }
 
-    /** Ma bai nop dang SUB-<UUID>: khong trung nhau ke ca sau khi khoi dong lai may chu. */
+    /** Ma bai nop dang SUB-<UUID>: khong trung nhau ke ca sau khi khoi dong lai chuong trinh. */
     public static String newId() {
         return "SUB-" + UUID.randomUUID().toString().replace("-", "").toUpperCase(Locale.ROOT);
     }

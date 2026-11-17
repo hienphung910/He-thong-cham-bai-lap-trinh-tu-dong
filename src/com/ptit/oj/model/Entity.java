@@ -5,7 +5,7 @@ import java.util.Objects;
 /** Lop cha truu tuong cho moi thuc the co ma dinh danh trong he thong. */
 public abstract class Entity {
 
-    private final String id;
+    private String id;
 
     protected Entity(String id) {
         if (id == null || id.trim().isEmpty()) {

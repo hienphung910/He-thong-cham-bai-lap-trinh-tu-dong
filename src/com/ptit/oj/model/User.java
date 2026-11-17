@@ -8,8 +8,8 @@ public abstract class User extends Entity {
     public static final String ROLE_TEACHER = "TEACHER";
     public static final String ROLE_ADMIN = "ADMIN";
 
-    private final String username;
-    private final String fullName;
+    private String username;
+    private String fullName;
 
     protected User(String id, String username, String fullName) {
         super(id);

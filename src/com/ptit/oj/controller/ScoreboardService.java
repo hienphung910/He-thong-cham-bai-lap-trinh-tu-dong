@@ -6,6 +6,8 @@ import com.ptit.oj.model.Submission;
 import com.ptit.oj.model.User;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -17,8 +19,8 @@ import java.util.Map;
  */
 public class ScoreboardService {
 
-    private final Repository<Submission> submissions;
-    private final Repository<Problem> problems;
+    private Repository<Submission> submissions;
+    private Repository<Problem> problems;
 
     public ScoreboardService(Repository<Submission> submissions, Repository<Problem> problems) {
         this.submissions = submissions;
@@ -27,11 +29,11 @@ public class ScoreboardService {
 
     /** Mot dong trong bang xep hang. */
     public static class Row {
-        private final User user;
-        private final Map<String, Double> bestPerProblem;
-        private final int attempts;
-        private final int solved;
-        private final double total;
+        private User user;
+        private Map<String, Double> bestPerProblem;
+        private int attempts;
+        private int solved;
+        private double total;
 
         Row(User user, Map<String, Double> bestPerProblem, int attempts, int solved, double total) {
             this.user = user;
@@ -67,8 +69,11 @@ public class ScoreboardService {
         for (Submission s : submissions.findAll()) {
             if (!s.isJudged()) continue;
             User u = s.getAuthor();
-            best.putIfAbsent(u, new LinkedHashMap<>());
-            attempts.merge(u, 1, Integer::sum);
+            if (!best.containsKey(u)) {             // lan dau gap nguoi nay
+                best.put(u, new LinkedHashMap<>());
+                attempts.put(u, 0);
+            }
+            attempts.put(u, attempts.get(u) + 1);
 
             String pid = s.getProblem().getId();
             double score = s.getResult().getScore();
@@ -84,18 +89,24 @@ public class ScoreboardService {
             int solved = 0;
             for (Map.Entry<String, Double> p : e.getValue().entrySet()) {
                 total += p.getValue();
-                Problem problem = problems.findById(p.getKey()).orElse(null);
+                Problem problem = problems.findById(p.getKey());
                 if (problem != null && p.getValue() >= problem.getMaxPoints() - SCORE_EPSILON) solved++;
             }
-            rows.add(new Row(e.getKey(), e.getValue(), attempts.getOrDefault(e.getKey(), 0), solved, total));
+            rows.add(new Row(e.getKey(), e.getValue(), attempts.get(e.getKey()), solved, total));
         }
 
-        rows.sort((a, b) -> {
-            int byScore = Double.compare(b.getTotal(), a.getTotal());
-            if (byScore != 0) return byScore;
-            int byAttempts = Integer.compare(a.getAttempts(), b.getAttempts());  // it lan nop hon thi xep truoc
-            if (byAttempts != 0) return byAttempts;
-            return a.getUser().getUsername().compareTo(b.getUser().getUsername());
+        // Tong diem giam dan; bang diem thi it lan nop hon xep truoc; van bang thi theo ten dang nhap.
+        Collections.sort(rows, new Comparator<Row>() {
+            @Override
+            public int compare(Row a, Row b) {
+                if (a.getTotal() != b.getTotal()) {
+                    return Double.compare(b.getTotal(), a.getTotal());
+                }
+                if (a.getAttempts() != b.getAttempts()) {
+                    return Integer.compare(a.getAttempts(), b.getAttempts());
+                }
+                return a.getUser().getUsername().compareTo(b.getUser().getUsername());
+            }
         });
         return rows;
     }

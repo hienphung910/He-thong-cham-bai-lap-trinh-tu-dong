@@ -99,7 +99,7 @@ public class MySqlSchemaInitializer {
         "SELECT COUNT(*) FROM information_schema.views "
       + "WHERE table_schema = DATABASE() AND table_name = 'user_stats'";
 
-    private final MySqlDatabaseManager database;
+    private MySqlDatabaseManager database;
 
     public MySqlSchemaInitializer(MySqlDatabaseManager database) {
         this.database = database;

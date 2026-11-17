@@ -6,30 +6,30 @@ import com.ptit.oj.dao.ProblemWriter;
 import com.ptit.oj.dao.Repository;
 import com.ptit.oj.model.Problem;
 import com.ptit.oj.model.ProblemDraft;
+import com.ptit.oj.model.Topic;
 import com.ptit.oj.model.User;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Predicate;
-import java.util.regex.Pattern;
 
 /**
  * Nghiep vu quan tri de bai: kiem tra hop le -> ghi ra o dia -> nap vao bo nho.
  *
- * Tang web chi viec doc JSON roi goi createProblem(); moi luat kiem tra nam o day
- * nen du goi tu dau thi du lieu cung duoc bao ve giong het.
+ * Giao dien chi viec gom du lieu vao ProblemDraft roi goi createProblem(); moi luat
+ * kiem tra nam o day nen du goi tu dau thi du lieu cung duoc bao ve giong het.
  */
 public class ProblemAdminService {
 
     /** Ma bai: chi chu IN HOA, so, gach duoi va gach ngang -> khong the thanh duong dan. */
-    private static final Pattern ID_PATTERN = Pattern.compile("[A-Z0-9_-]{1,32}");
+    private static final String ID_PATTERN = "[A-Z0-9_-]{1,32}";
     /** Ten test: chu thuong/hoa, so, gach duoi, gach ngang. Khong co dau cham hay dau gach cheo. */
-    private static final Pattern TEST_NAME_PATTERN = Pattern.compile("[A-Za-z0-9_-]{1,64}");
+    private static final String TEST_NAME_PATTERN = "[A-Za-z0-9_-]{1,64}";
 
     private static final long MIN_TIME_LIMIT_MS = 100;
     private static final long MAX_TIME_LIMIT_MS = 60_000;
@@ -41,38 +41,41 @@ public class ProblemAdminService {
     private static final int MAX_STATEMENT = 200_000;
     private static final int MAX_TEST_CHARS = 1_000_000;
 
-    private final Repository<Problem> problems;
-    private final ProblemWriter writer;
-    private final ProblemLoader loader;
-    /** Hoi JudgeService xem ma chu de co trong lo trinh khong (lo trinh nap sau constructor). */
-    private final Predicate<String> topicExists;
+    private Repository<Problem> problems;
+    private ProblemWriter writer;
+    private ProblemLoader loader;
+    /** Lo trinh hoc cua JudgeService (cung mot danh sach, duoc nap sau constructor). */
+    private List<Topic> topics;
 
-    public ProblemAdminService(Repository<Problem> problems, Path problemsDir, Predicate<String> topicExists) {
+    public ProblemAdminService(Repository<Problem> problems, Path problemsDir, List<Topic> topics) {
         this.problems = problems;
         this.writer = new ProblemWriter(problemsDir);
         this.loader = new ProblemLoader(problemsDir);
-        this.topicExists = topicExists;
+        this.topics = topics;
     }
 
-    /** Loi nghiep vu kem ma HTTP goi y (400 sai du lieu, 403 thieu quyen, 409 trung ma bai). */
-    public static class ProblemAdminException extends RuntimeException {
-        private final int httpStatus;
-
-        public ProblemAdminException(int httpStatus, String message) {
-            super(message);
-            this.httpStatus = httpStatus;
+    /** Ma chu de co trong lo trinh hay khong. */
+    private boolean topicExists(String id) {
+        for (Topic t : topics) {
+            if (t.getId().equals(id)) return true;
         }
+        return false;
+    }
 
-        public int getHttpStatus() { return httpStatus; }
+    /** Loi nghiep vu khi tao hoac sua bai tap; giao dien hien nguyen van thong bao nay. */
+    public static class ProblemAdminException extends RuntimeException {
+        public ProblemAdminException(String message) {
+            super(message);
+        }
     }
 
     /**
      * Tao bai tap moi. Chi tai khoan co canCreateProblem() == true moi duoc goi
-     * (tang web da chan truoc, day la lop chan thu hai - khong tin giao dien).
+     * (giao dien da an menu Quan tri, day la lop chan thu hai - khong tin giao dien).
      */
-    public synchronized Problem createProblem(User actor, ProblemDraft draft) {
+    public Problem createProblem(User actor, ProblemDraft draft) {
         if (actor == null || !actor.canCreateProblem()) {
-            throw new ProblemAdminException(403, "Chỉ tài khoản quản trị mới được tạo bài tập");
+            throw new ProblemAdminException("Chỉ tài khoản quản trị mới được tạo bài tập");
         }
         validate(draft);
 
@@ -80,7 +83,7 @@ public class ProblemAdminService {
         try {
             dir = writer.write(draft);
         } catch (IOException e) {
-            throw new ProblemAdminException(500, "Không ghi được bài tập ra ổ đĩa: " + e.getMessage());
+            throw new ProblemAdminException("Không ghi được bài tập ra ổ đĩa: " + e.getMessage());
         }
 
         // Nap lai tu chinh file vua ghi: bao dam thu muc tren o dia va du lieu
@@ -91,13 +94,15 @@ public class ProblemAdminService {
     }
 
     /** Doi chu de va do kho cua mot bai DA CO; cac dong khac cua problem.properties giu nguyen. */
-    public synchronized Problem updateProblemMeta(User actor, String rawId, String rawTopic, int difficulty) {
+    public Problem updateProblemMeta(User actor, String rawId, String rawTopic, int difficulty) {
         if (actor == null || !actor.canCreateProblem()) {
-            throw new ProblemAdminException(403, "Chỉ tài khoản quản trị mới được sửa bài tập");
+            throw new ProblemAdminException("Chỉ tài khoản quản trị mới được sửa bài tập");
         }
         String id = normalizeId(rawId);
-        Problem current = problems.findById(id)
-                .orElseThrow(() -> new ProblemAdminException(404, "Không có bài " + id));
+        Problem current = problems.findById(id);
+        if (current == null) {
+            throw new ProblemAdminException("Không có bài " + id);
+        }
         String topic = validateTopic(rawTopic);
         validateDifficulty(difficulty);
 
@@ -114,7 +119,7 @@ public class ProblemAdminService {
             problems.save(problem);
             return problem;
         } catch (IOException e) {
-            throw new ProblemAdminException(500, "Không ghi được bài tập ra ổ đĩa: " + e.getMessage());
+            throw new ProblemAdminException("Không ghi được bài tập ra ổ đĩa: " + e.getMessage());
         }
     }
 
@@ -124,30 +129,28 @@ public class ProblemAdminService {
         String id = normalizeId(d.getId());
         d.setId(id);
 
-        if (problems.findById(id).isPresent() || writer.exists(id)) {
-            throw new ProblemAdminException(409, "Mã bài " + id + " đã tồn tại");
+        if (problems.findById(id) != null || writer.exists(id)) {
+            throw new ProblemAdminException("Mã bài " + id + " đã tồn tại");
         }
 
         d.setTitle(requireText(d.getTitle(), "Tên bài", MAX_TITLE));
         d.setStatement(requireText(d.getStatement(), "Nội dung đề", MAX_STATEMENT));
 
         if (d.getTimeLimitMs() < MIN_TIME_LIMIT_MS || d.getTimeLimitMs() > MAX_TIME_LIMIT_MS) {
-            throw new ProblemAdminException(400,
-                    "Giới hạn thời gian phải từ " + MIN_TIME_LIMIT_MS + " đến " + MAX_TIME_LIMIT_MS + " ms");
+            throw new ProblemAdminException("Giới hạn thời gian phải từ " + MIN_TIME_LIMIT_MS + " đến " + MAX_TIME_LIMIT_MS + " ms");
         }
         if (d.getMemoryLimitMb() < MIN_MEMORY_MB || d.getMemoryLimitMb() > MAX_MEMORY_MB) {
-            throw new ProblemAdminException(400,
-                    "Giới hạn bộ nhớ phải từ " + MIN_MEMORY_MB + " đến " + MAX_MEMORY_MB + " MB");
+            throw new ProblemAdminException("Giới hạn bộ nhớ phải từ " + MIN_MEMORY_MB + " đến " + MAX_MEMORY_MB + " MB");
         }
         if (!(d.getTotalPoints() > 0) || d.getTotalPoints() > MAX_TOTAL_POINTS) {
-            throw new ProblemAdminException(400, "Tổng điểm phải lớn hơn 0 và tối đa " + (long) MAX_TOTAL_POINTS);
+            throw new ProblemAdminException("Tổng điểm phải lớn hơn 0 và tối đa " + (long) MAX_TOTAL_POINTS);
         }
 
         String comparator = d.getComparator() == null ? "token" : d.getComparator().trim();
         try {
             ComparatorFactory.create(comparator);       // nem neu kieu so sanh khong ho tro
         } catch (IllegalArgumentException e) {
-            throw new ProblemAdminException(400, e.getMessage());
+            throw new ProblemAdminException(e.getMessage());
         }
         d.setComparator(comparator);
 
@@ -155,10 +158,10 @@ public class ProblemAdminService {
         validateDifficulty(d.getDifficulty());
 
         if (d.getTests().isEmpty()) {
-            throw new ProblemAdminException(400, "Bài tập phải có ít nhất một test");
+            throw new ProblemAdminException("Bài tập phải có ít nhất một test");
         }
         if (d.getTests().size() > MAX_TESTS) {
-            throw new ProblemAdminException(400, "Tối đa " + MAX_TESTS + " test cho một bài");
+            throw new ProblemAdminException("Tối đa " + MAX_TESTS + " test cho một bài");
         }
 
         Set<String> seen = new LinkedHashSet<>();
@@ -170,44 +173,41 @@ public class ProblemAdminService {
     /** Tra ve ma chu de da cat khoang trang; "" = chua phan loai (nhom "Bai khac"). */
     private String validateTopic(String rawTopic) {
         String topic = rawTopic == null ? "" : rawTopic.trim();
-        if (!topic.isEmpty() && !topicExists.test(topic)) {
-            throw new ProblemAdminException(400, "Chủ đề \"" + topic + "\" không có trong lộ trình (data/topics.txt)");
+        if (!topic.isEmpty() && !topicExists(topic)) {
+            throw new ProblemAdminException("Chủ đề \"" + topic + "\" không có trong lộ trình (data/topics.txt)");
         }
         return topic;
     }
 
     private void validateDifficulty(int difficulty) {
         if (difficulty < 0 || difficulty > 3) {
-            throw new ProblemAdminException(400, "Độ khó phải là 1 (Dễ), 2 (Vừa), 3 (Khó) hoặc 0 (chưa đánh giá)");
+            throw new ProblemAdminException("Độ khó phải là 1 (Dễ), 2 (Vừa), 3 (Khó) hoặc 0 (chưa đánh giá)");
         }
     }
 
     private void validateTest(ProblemDraft.TestDraft t, Set<String> seen) {
         String name = t.getName() == null ? "" : t.getName().trim();
         if (name.isEmpty()) {
-            throw new ProblemAdminException(400, "Tên test không được để trống");
+            throw new ProblemAdminException("Tên test không được để trống");
         }
         // Chan truoc cac dang duong dan de thong bao loi noi dung ro rang.
         if (name.contains("..") || name.contains("/") || name.contains("\\")) {
-            throw new ProblemAdminException(400, "Tên test \"" + name + "\" chứa ký tự đường dẫn");
+            throw new ProblemAdminException("Tên test \"" + name + "\" chứa ký tự đường dẫn");
         }
-        if (!TEST_NAME_PATTERN.matcher(name).matches()) {
-            throw new ProblemAdminException(400,
-                    "Tên test \"" + name + "\" chỉ được gồm chữ, số, gạch dưới hoặc gạch ngang");
+        if (!name.matches(TEST_NAME_PATTERN)) {
+            throw new ProblemAdminException("Tên test \"" + name + "\" chỉ được gồm chữ, số, gạch dưới hoặc gạch ngang");
         }
         // He thong file cua Windows khong phan biet hoa thuong -> "01" va "01" phai coi la trung.
         if (!seen.add(name.toLowerCase(Locale.ROOT))) {
-            throw new ProblemAdminException(400, "Tên test \"" + name + "\" bị trùng");
+            throw new ProblemAdminException("Tên test \"" + name + "\" bị trùng");
         }
 
         boolean looksSample = name.toLowerCase(Locale.ROOT).startsWith("sample");
         if (!t.isSample() && looksSample) {
-            throw new ProblemAdminException(400,
-                    "Test ẩn không được đặt tên bắt đầu bằng \"sample\" (tên này dành cho test ví dụ)");
+            throw new ProblemAdminException("Test ẩn không được đặt tên bắt đầu bằng \"sample\" (tên này dành cho test ví dụ)");
         }
         if (t.isSample() && !looksSample) {
-            throw new ProblemAdminException(400,
-                    "Test ví dụ phải có tên bắt đầu bằng \"sample\", ví dụ sample01");
+            throw new ProblemAdminException("Test ví dụ phải có tên bắt đầu bằng \"sample\", ví dụ sample01");
         }
 
         requireText(t.getInput(), "Input của test " + name, MAX_TEST_CHARS);
@@ -217,14 +217,13 @@ public class ProblemAdminService {
     private String normalizeId(String rawId) {
         String id = rawId == null ? "" : rawId.trim().toUpperCase(Locale.ROOT);
         if (id.isEmpty()) {
-            throw new ProblemAdminException(400, "Thiếu mã bài");
+            throw new ProblemAdminException("Thiếu mã bài");
         }
         if (id.contains("..") || id.contains("/") || id.contains("\\")) {
-            throw new ProblemAdminException(400, "Mã bài chứa ký tự đường dẫn không hợp lệ");
+            throw new ProblemAdminException("Mã bài chứa ký tự đường dẫn không hợp lệ");
         }
-        if (!ID_PATTERN.matcher(id).matches()) {
-            throw new ProblemAdminException(400,
-                    "Mã bài chỉ được gồm chữ in hoa, số, gạch dưới hoặc gạch ngang (tối đa 32 ký tự)");
+        if (!id.matches(ID_PATTERN)) {
+            throw new ProblemAdminException("Mã bài chỉ được gồm chữ in hoa, số, gạch dưới hoặc gạch ngang (tối đa 32 ký tự)");
         }
         return id;
     }
@@ -232,10 +231,10 @@ public class ProblemAdminService {
     private String requireText(String value, String label, int max) {
         String v = value == null ? "" : value;
         if (v.trim().isEmpty()) {
-            throw new ProblemAdminException(400, label + " không được để trống");
+            throw new ProblemAdminException(label + " không được để trống");
         }
         if (v.length() > max) {
-            throw new ProblemAdminException(400, label + " quá dài (tối đa " + max + " ký tự)");
+            throw new ProblemAdminException(label + " quá dài (tối đa " + max + " ký tự)");
         }
         return v;
     }

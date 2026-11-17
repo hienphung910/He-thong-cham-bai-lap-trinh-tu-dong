@@ -14,7 +14,7 @@ public abstract class Language {
 
     private static final long COMPILE_TIME_LIMIT_MS = 20_000;
 
-    protected final ProcessRunner runner = new ProcessRunner();
+    protected ProcessRunner runner = new ProcessRunner();
     private Boolean availableCache;
 
     public abstract String getName();
@@ -35,7 +35,7 @@ public abstract class Language {
     public long getStartupOverheadMs() { return 0; }
 
     /**
-     * Ten file dung de luu ma nguon thi sinh dan tren web.
+     * Ten file dung de luu ma nguon nguoi dung nop.
      * Mac dinh la "solution" + duoi file; Java ghi de vi ten file phai trung ten class.
      */
     public String defaultFileName(String sourceCode) {
@@ -64,8 +64,8 @@ public abstract class Language {
      * Chay lenh bien dich (hoac lenh kiem tra cu phap) va quy ket qua ve CompileResult:
      * ma thoat khac 0 thi coi la loi, thong bao lay tu stderr cua trinh bien dich.
      */
-    protected CompileResult runCompiler(Path workDir, String... command) throws IOException, InterruptedException {
-        ExecutionResult r = runner.run(Arrays.asList(command), workDir, "", COMPILE_TIME_LIMIT_MS);
+    protected CompileResult runCompiler(Path workDir, List<String> command) throws IOException, InterruptedException {
+        ExecutionResult r = runner.run(command, workDir, "", COMPILE_TIME_LIMIT_MS);
         if (r.isTimedOut()) return CompileResult.fail("Biên dịch quá lâu (> 20s)");
         if (r.getExitCode() != 0) {
             String message = r.getStderr().isEmpty() ? r.getStdout() : r.getStderr();
