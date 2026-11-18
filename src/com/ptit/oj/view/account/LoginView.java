@@ -80,9 +80,6 @@ public class LoginView extends JFrame implements ActionListener {
             dispose();
         } catch (RuntimeException ex) {
             Ui.error(this, ex);
-            // Sai thi xoa mat khau va dua con tro ve o mat khau de nhap lai (ngoai le 8a).
-            txtPassword.setText("");
-            txtPassword.requestFocusInWindow();
         }
     }
 
