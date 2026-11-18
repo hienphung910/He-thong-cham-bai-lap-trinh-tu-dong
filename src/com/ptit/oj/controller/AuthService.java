@@ -21,8 +21,11 @@ import java.util.UUID;
  */
 public class AuthService {
 
-    private static final int MAX_FULL_NAME = 100;
-    private static final int MAX_CODE = 40;
+    // Gioi han do dai khop voi cot trong bang users (02_schema.sql),
+    // de loi "qua dai" duoc bao ro rang thay vi loi SQL.
+    private static final int MAX_FULL_NAME = 100;      // full_name    VARCHAR(150)
+    private static final int MAX_STUDENT_CODE = 30;    // student_code VARCHAR(30)
+    private static final int MAX_CLASS_NAME = 50;      // class_name   VARCHAR(50)
 
     private UserRepository users;
     private PasswordService passwords;
@@ -64,8 +67,8 @@ public class AuthService {
         passwords.validate(rawPassword);
 
         String cleanFullName = requireText(fullName, "Họ tên", MAX_FULL_NAME);
-        String cleanCode = optionalText(studentCode, "Mã sinh viên", MAX_CODE);
-        String cleanClass = optionalText(className, "Lớp", MAX_CODE);
+        String cleanCode = optionalText(studentCode, "Mã sinh viên", MAX_STUDENT_CODE);
+        String cleanClass = optionalText(className, "Lớp", MAX_CLASS_NAME);
 
         if (users.existsByUsername(cleanUsername)) {
             throw new AuthException("Tên đăng nhập \"" + cleanUsername + "\" đã tồn tại");
