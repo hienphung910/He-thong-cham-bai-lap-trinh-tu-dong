@@ -4,7 +4,7 @@ package com.ptit.oj.controller.judge;
  * FACTORY METHOD: tao Strategy so sanh tu chuoi cau hinh trong file de bai.
  * Cu phap: "exact" | "token" | "lines" | "float" | "float:1e-9"
  */
-public final class ComparatorFactory {
+public class ComparatorFactory {
 
     private ComparatorFactory() { }
 

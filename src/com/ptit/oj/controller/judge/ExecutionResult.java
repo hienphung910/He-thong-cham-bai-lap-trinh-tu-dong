@@ -3,11 +3,11 @@ package com.ptit.oj.controller.judge;
 /** Ket qua thuc thi mot tien trinh con: ma thoat, stdout, stderr, thoi gian. */
 public class ExecutionResult {
 
-    private final int exitCode;
-    private final String stdout;
-    private final String stderr;
-    private final long elapsedMs;
-    private final boolean timedOut;
+    private int exitCode;
+    private String stdout;
+    private String stderr;
+    private long elapsedMs;
+    private boolean timedOut;
 
     public ExecutionResult(int exitCode, String stdout, String stderr, long elapsedMs, boolean timedOut) {
         this.exitCode = exitCode;

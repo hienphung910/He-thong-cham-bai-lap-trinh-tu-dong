@@ -7,7 +7,7 @@ package com.ptit.oj.dao;
  * Neu file test, file demo-plan hoac file input duoc tao bang Notepad thi ky tu BOM
  * se dinh vao dau chuoi, lam lech ket qua so sanh hoac lam lenh dau tien khong hop le.
  */
-public final class TextUtils {
+public class TextUtils {
 
     /** Ky tu BOM sau khi da duoc giai ma sang UTF-16. */
     private static final char BOM = 0xFEFF;

@@ -3,7 +3,6 @@ package com.ptit.oj.dao;
 import com.ptit.oj.model.Entity;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Interface kho du lieu dung GENERIC: dung chung cho Problem, Submission, User...
@@ -13,7 +12,8 @@ public interface Repository<T extends Entity> {
 
     void save(T entity);
 
-    Optional<T> findById(String id);
+    /** Tra ve null neu khong co thuc the mang ma nay. */
+    T findById(String id);
 
     List<T> findAll();
 

@@ -20,6 +20,3 @@ __pycache__/
 .vscode/
 *.iml
 
-# Frontend
-frontend/node_modules/
-frontend/dist/

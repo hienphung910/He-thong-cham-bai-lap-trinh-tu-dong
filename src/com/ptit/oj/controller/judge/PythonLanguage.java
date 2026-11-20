@@ -33,7 +33,7 @@ public class PythonLanguage extends Language {
 
     @Override
     public CompileResult compile(Path source, Path workDir) throws IOException, InterruptedException {
-        return runCompiler(workDir, interpreter, "-m", "py_compile", source.toString());
+        return runCompiler(workDir, Arrays.asList(interpreter, "-m", "py_compile", source.toString()));
     }
 
     @Override

@@ -9,7 +9,7 @@ package com.ptit.oj.controller.judge;
  */
 public class FloatComparator extends TokenComparator {
 
-    private final double epsilon;
+    private double epsilon;
 
     public FloatComparator(double epsilon) {
         this.epsilon = epsilon;

@@ -17,7 +17,7 @@ public class Admin extends User {
     @Override
     public String getRoleCode() { return ROLE_ADMIN; }
 
-    /** Chi Admin duoc tao de bai - backend kiem tra lai o moi endpoint /api/admin/*. */
+    /** Chi Admin duoc tao de bai - ProblemAdminService kiem tra lai truoc khi ghi. */
     @Override
     public boolean canCreateProblem() { return true; }
 }

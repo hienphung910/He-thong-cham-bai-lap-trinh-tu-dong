@@ -2,7 +2,6 @@ package com.ptit.oj.controller.judge;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Noi duy nhat biet danh sach ngon ngu duoc ho tro.
@@ -10,7 +9,7 @@ import java.util.Optional;
  */
 public class LanguageRegistry {
 
-    private final List<Language> languages = Arrays.asList(
+    private List<Language> languages = Arrays.asList(
             new JavaLanguage(),
             new CppLanguage(),
             new PythonLanguage(),
@@ -20,11 +19,11 @@ public class LanguageRegistry {
         return languages;
     }
 
-    /** Tim ngon ngu theo ten, khong phan biet hoa thuong. */
-    public Optional<Language> byName(String name) {
+    /** Tim ngon ngu theo ten, khong phan biet hoa thuong. Tra ve null neu khong co. */
+    public Language byName(String name) {
         for (Language l : languages) {
-            if (l.getName().equalsIgnoreCase(name)) return Optional.of(l);
+            if (l.getName().equalsIgnoreCase(name)) return l;
         }
-        return Optional.empty();
+        return null;
     }
 }

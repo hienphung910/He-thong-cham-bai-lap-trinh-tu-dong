@@ -23,7 +23,7 @@ public class JavaScriptLanguage extends Language {
 
     @Override
     public CompileResult compile(Path source, Path workDir) throws IOException, InterruptedException {
-        return runCompiler(workDir, "node", "--check", source.toString());
+        return runCompiler(workDir, Arrays.asList("node", "--check", source.toString()));
     }
 
     @Override

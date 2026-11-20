@@ -36,7 +36,8 @@ public class JavaLanguage extends Language {
 
     @Override
     public CompileResult compile(Path source, Path workDir) throws IOException, InterruptedException {
-        return runCompiler(workDir, "javac", "-encoding", "UTF-8", "-d", workDir.toString(), source.toString());
+        return runCompiler(workDir,
+                Arrays.asList("javac", "-encoding", "UTF-8", "-d", workDir.toString(), source.toString()));
     }
 
     @Override

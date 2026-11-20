@@ -12,7 +12,7 @@ import java.util.Locale;
  *
  * Nguyen tac:
  *  - KHONG giu mot Connection dung chung toan cuc. Moi thao tac tu mo mot ket noi
- *    roi dong ngay bang try-with-resources, nen HttpServer chay nhieu thread song song
+ *    roi dong ngay bang try-with-resources, nen luong cham bai va luong giao dien
  *    khong bao gio dam nhau tren cung mot ket noi.
  *  - KHONG BAO GIO ghi mat khau ra log hay ra thong bao loi (xem maskUrl()).
  *  - Moi SQLException duoc boc thanh DataAccessException voi thong bao tieng Viet
@@ -20,9 +20,9 @@ import java.util.Locale;
  */
 public class MySqlDatabaseManager {
 
-    private final String url;
-    private final String user;
-    private final String password;
+    private String url;
+    private String user;
+    private String password;
 
     public MySqlDatabaseManager(String url, String user, String password) {
         if (url == null || url.trim().isEmpty()) {

@@ -19,7 +19,7 @@ import java.util.Map;
  * Bien moi truong that LUON duoc uu tien hon file `.env`, va `.env` da nam trong
  * .gitignore nen mat khau khong bao gio bi day len git.
  */
-public final class DatabaseConfig {
+public class DatabaseConfig {
 
     public static final String ENV_URL = "OJ_DB_URL";
     public static final String ENV_USER = "OJ_DB_USER";
@@ -33,9 +33,9 @@ public final class DatabaseConfig {
 
     private static Map<String, String> dotEnv;
 
-    private final String url;
-    private final String user;
-    private final String password;
+    private String url;
+    private String user;
+    private String password;
 
     private DatabaseConfig(String url, String user, String password) {
         this.url = url;
@@ -84,7 +84,7 @@ public final class DatabaseConfig {
      * Doc file `.env` mot lan. Cu phap don gian: KEY=VALUE, bo qua dong trong va dong
      * bat dau bang '#'. Khong ho tro chuoi nhieu dong - du dung cho vai bien cau hinh.
      */
-    private static synchronized Map<String, String> dotEnv() {
+    private static Map<String, String> dotEnv() {
         if (dotEnv != null) return dotEnv;
         dotEnv = new LinkedHashMap<>();
         Path file = Path.of(".env");

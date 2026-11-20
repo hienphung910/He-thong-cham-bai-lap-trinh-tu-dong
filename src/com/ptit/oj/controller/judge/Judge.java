@@ -7,13 +7,12 @@ import com.ptit.oj.model.TestCase;
 import com.ptit.oj.model.TestCaseResult;
 import com.ptit.oj.model.Verdict;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Stream;
 
 /**
  * Bo cham bai - lop trung tam cua he thong.
@@ -26,7 +25,7 @@ import java.util.stream.Stream;
  */
 public class Judge {
 
-    private final ProcessRunner runner = new ProcessRunner();
+    private ProcessRunner runner = new ProcessRunner();
 
     /** Cham mot bai nop va gan ket qua vao chinh bai nop do. */
     public JudgeResult judge(Submission submission) {
@@ -128,17 +127,19 @@ public class Judge {
 
     /** Xoa thu muc lam viec tam (bao gom file .class / .exe da sinh ra). */
     private void deleteRecursively(Path dir) {
-        if (dir == null || !Files.exists(dir)) return;
-        try (Stream<Path> walk = Files.walk(dir)) {
-            walk.sorted(Comparator.reverseOrder()).forEach(p -> {
-                try {
-                    Files.deleteIfExists(p);
-                } catch (IOException ignored) {
-                    // file .exe co the con bi khoa tren Windows -> bo qua
-                }
-            });
-        } catch (IOException ignored) {
-            // khong xoa duoc thi de OS don dep thu muc temp
+        if (dir == null) return;
+        deleteRecursively(dir.toFile());
+    }
+
+    /** Xoa cac muc con truoc roi moi xoa chinh no. */
+    private void deleteRecursively(File file) {
+        File[] children = file.listFiles();         // null neu day la file thuong
+        if (children != null) {
+            for (File child : children) {
+                deleteRecursively(child);
+            }
         }
+        // File .exe co the con bi khoa tren Windows: khong xoa duoc thi de he dieu hanh don thu muc temp.
+        file.delete();
     }
 }
