@@ -7,6 +7,8 @@ import Logo from "./shared/Logo";
 import { AuthProvider, useAuth } from "./view/account/auth";
 import LoginModal from "./view/account/LoginModal";
 import MyAccount from "./view/account/MyAccount";
+import StreakBadge, { StreakToast } from "./view/account/StreakBadge";
+import { useStreak } from "./view/account/streak";
 import Problems from "./view/problem/Problems";
 import AdminPanel from "./view/problem/admin/AdminPanel";
 import Submissions from "./view/history/Submissions";
@@ -34,10 +36,10 @@ import Accounts from "./view/admin/Accounts";
 import Organizations from "./view/admin/Organizations";
 import SystemAdmin from "./view/admin/SystemAdmin";
 import AuditLogs from "./view/admin/AuditLogs";
-import ModuleMap from "./view/ModuleMap";
 
 /**
- * Thanh dieu huong ben trai, chia theo nhom. Truong "role" gioi han ai thay muc do:
+ * Menu tren thanh do tren cung, chia theo nhom: thanh chi hien ten nhom, re chuot vao
+ * nhom nao thi xo xuong cac trang cua nhom do. Truong "role" gioi han ai thay muc do:
  * "staff" = giang vien va quan tri, "admin" = chi quan tri. Day chi la an / hien tren
  * giao dien - may chu van kiem tra lai quyen o tung request.
  */
@@ -106,7 +108,6 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
       { key: "Audit", label: "Nhật ký hoạt động", role: "admin" },
     ],
   },
-  { title: "Giới thiệu", items: [{ key: "ModuleMap", label: "Sơ đồ 40 module" }] },
 ];
 
 function AppShell() {
@@ -115,6 +116,8 @@ function AppShell() {
   /** Ma bai can mo san khi chuyen sang trang Lop hoc (bam tu mot duong link toi bai). */
   const [openProblemId, setOpenProblemId] = useState<string | null>(null);
   const [avatarOpen, setAvatarOpen] = useState(false);
+  /** Ten nhom menu dang xo xuong (dang re chuot vao); null = khong nhom nao mo. */
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
 
   const [problems, setProblems] = useState<Problem[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
@@ -123,6 +126,9 @@ function AppShell() {
   const [reloadKey, setReloadKey] = useState(0);
   const [unread, setUnread] = useState(0);
   const [announcement, setAnnouncement] = useState("");
+
+  // Chuoi ngay luyen tap (ngon lua tren header), tinh lai moi khi vua nop bai xong.
+  const streak = useStreak(user?.username ?? null, reloadKey);
 
   const isAdmin = user?.role === "ADMIN";
   const isStaff = user?.role === "ADMIN" || user?.role === "TEACHER";
@@ -168,7 +174,7 @@ function AppShell() {
   // Tra ve Promise de trang quan tri doi tai lai danh sach xong moi dong hop thoai.
   const onProblemsChanged = useCallback(async () => { await loadProblems().catch(() => undefined); setReloadKey((k) => k + 1); }, [loadProblems]);
 
-  const go = useCallback((next: PageKey) => { setOpenProblemId(null); setPage(next); }, []);
+  const go = useCallback((next: PageKey) => { setOpenProblemId(null); setOpenGroup(null); setPage(next); }, []);
   const openProblem = useCallback((id: string) => { setOpenProblemId(id); setPage("Problems"); }, []);
 
   function handleLogout() { logout(); setPage("Problems"); setAvatarOpen(false); }
@@ -196,6 +202,55 @@ function AppShell() {
             <span style={{ fontSize: 18, fontWeight: 800, color: "#fff", letterSpacing: "-0.01em" }}>CodeHub</span>
           </div>
 
+          {/* ═══ MENU: chi hien ten nhom, re chuot vao thi xo xuong cac trang con ═══ */}
+          <nav style={{ display: "flex", height: "100%", marginLeft: 24 }}>
+            {NAV_GROUPS.map((group) => {
+              const items = group.items.filter((item) => allowed(item.key));
+              if (items.length === 0) return null;
+              const active = items.some((item) => item.key === page);     // dang o mot trang cua nhom nay
+              const open = openGroup === group.title;
+              return (
+                // onMouseLeave dat o khung bao ca ten nhom lan danh sach con: chuot di tu ten nhom
+                // xuong danh sach van nam trong khung nen menu khong bi dong.
+                <div key={group.title} style={{ position: "relative", height: "100%" }}
+                  onMouseEnter={() => setOpenGroup(group.title)} onMouseLeave={() => setOpenGroup(null)}>
+                  <button onClick={() => setOpenGroup(open ? null : group.title)} style={{
+                    height: "100%", padding: "0 14px", border: "none", cursor: "pointer", whiteSpace: "nowrap",
+                    background: active || open ? "rgba(255,255,255,0.18)" : "transparent",
+                    color: "#fff", fontSize: 13.5, fontWeight: active ? 700 : 500,
+                  }}>
+                    {group.title}
+                    {group.title === "Cộng đồng" && unread > 0 && <span style={{ marginLeft: 5, fontSize: 11, color: "#FFEB3B" }}>({unread})</span>}
+                    <span style={{ marginLeft: 5, fontSize: 9, opacity: 0.8 }}>▼</span>
+                  </button>
+                  {open && (
+                    <div style={{
+                      position: "absolute", top: "100%", left: 0, minWidth: 210, padding: 6, zIndex: 200,
+                      background: "#fff", border: "1px solid #E0E0E0", borderRadius: "0 0 10px 10px",
+                      boxShadow: "0 8px 30px rgba(0,0,0,0.14)",
+                    }}>
+                      {items.map((item) => {
+                        const current = page === item.key;
+                        return (
+                          <button key={item.key} onClick={() => go(item.key)} style={{
+                            ...MENU_ITEM, fontWeight: current ? 700 : 500, whiteSpace: "nowrap",
+                            background: current ? "var(--color-red-light)" : "none",
+                            color: current ? "var(--color-red)" : "#424242",
+                          }}
+                            onMouseEnter={(e) => { if (!current) e.currentTarget.style.background = "#F5F5F5"; }}
+                            onMouseLeave={(e) => { if (!current) e.currentTarget.style.background = "none"; }}>
+                            {item.label}
+                            {item.key === "Notifications" && unread > 0 && <span style={{ marginLeft: 6, fontSize: 11, color: "var(--color-red)" }}>({unread})</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </nav>
+
           <div style={{ flex: 1 }} />
 
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -205,6 +260,9 @@ function AppShell() {
               background: online === false ? "#ff5252" : online ? "#69f0ae" : "rgba(255,255,255,0.4)",
               animation: online === null ? "livePulse 1.4s infinite" : "none",
             }} />
+
+            {/* Chuoi ngay luyen tap: bam vao ngon lua de xem chi tiet */}
+            <StreakBadge info={streak.info} />
 
             {/* Chuong thong bao (Module 29) */}
             <button onClick={() => go("Notifications")} title="Thông báo"
@@ -244,6 +302,9 @@ function AppShell() {
           </div>
         </header>
 
+        {/* Loi chuc mung bat len khi chuoi ngay luyen tap vua tang sau mot lan nop bai */}
+        <StreakToast value={streak.increasedTo} onClose={streak.dismissIncrease} />
+
         {/* Thong bao chung do quan tri vien dat (Module 39) */}
         {announcement && (
           <div style={{ padding: "6px 20px", background: "#FFF8E1", borderBottom: "1px solid #FFE082", fontSize: 13, color: "#8D6E00", flexShrink: 0 }}>
@@ -252,33 +313,6 @@ function AppShell() {
         )}
 
         <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-          {/* ═══ THANH DIEU HUONG BEN TRAI ═══ */}
-          <nav style={{ width: 212, flexShrink: 0, background: "#fff", borderRight: "1px solid #E0E0E0", overflow: "auto", padding: "10px 8px 20px" }}>
-            {NAV_GROUPS.map((group) => {
-              const items = group.items.filter((item) => allowed(item.key));
-              if (items.length === 0) return null;
-              return (
-                <div key={group.title} style={{ marginBottom: 10 }}>
-                  <div style={{ padding: "6px 10px 4px", fontSize: 10.5, fontWeight: 700, color: "#9E9E9E", textTransform: "uppercase", letterSpacing: "0.08em" }}>{group.title}</div>
-                  {items.map((item) => {
-                    const active = page === item.key;
-                    return (
-                      <button key={item.key} onClick={() => go(item.key)} style={{
-                        width: "100%", textAlign: "left", padding: "7px 10px", border: "none", borderRadius: 6, cursor: "pointer",
-                        fontSize: 13, fontWeight: active ? 700 : 500,
-                        background: active ? "var(--color-red-light)" : "transparent",
-                        color: active ? "var(--color-red)" : "#424242",
-                      }}>
-                        {item.label}
-                        {item.key === "Notifications" && unread > 0 && <span style={{ marginLeft: 6, fontSize: 11, color: "var(--color-red)" }}>({unread})</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </nav>
-
           {/* ═══ NOI DUNG ═══ */}
           <main style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
             {online === false ? (
@@ -318,7 +352,6 @@ function AppShell() {
                 {page === "Organizations" && <Organizations />}
                 {page === "System" && <SystemAdmin onSettingsChanged={loadHeader} />}
                 {page === "Audit" && <AuditLogs />}
-                {page === "ModuleMap" && <ModuleMap allowed={allowed} />}
               </>
             )}
           </main>

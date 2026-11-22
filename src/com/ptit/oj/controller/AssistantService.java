@@ -38,8 +38,13 @@ public class AssistantService {
      * (neu co) va tu khoa trong cau hoi.
      */
     public List<String> hint(Problem problem, User student, String code, String question) {
-        List<String> lines = new ArrayList<>();
+        // Cau hoi co tu khoa nhan ra duoc thi chi tra loi dung cau do, de khung chat
+        // khong lap lai nhan xet ve lan nop gan nhat o moi cau tra loi.
+        List<String> answers = questionAdvice(problem, question == null ? "" : question);
+        if (!answers.isEmpty()) return answers;
 
+        // Khong co cau hoi (hoac hoi cau chua co luat): nhan xet theo lan nop gan nhat va ma nguon.
+        List<String> lines = new ArrayList<>();
         Submission last = null;
         for (Submission s : judge.getSubmissionsOf(student)) {      // moi nhat truoc
             if (s.getProblem().getId().equals(problem.getId()) && s.isJudged()) {
@@ -49,7 +54,6 @@ public class AssistantService {
         }
         lines.add(verdictAdvice(problem, last));
         lines.addAll(codeAdvice(code == null ? "" : code, last));
-        lines.addAll(questionAdvice(problem, question == null ? "" : question));
         return lines;
     }
 

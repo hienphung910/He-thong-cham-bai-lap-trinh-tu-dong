@@ -113,6 +113,7 @@ export default function Problems({
         nextProblem={next}
         onNext={() => next && setSelectedId(next.id)}
         onBack={() => setSelectedId(null)}
+        onOpen={(id) => setSelectedId(id)}
         onSubmitted={onSubmitted}
       />
     );

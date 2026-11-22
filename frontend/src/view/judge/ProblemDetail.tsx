@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { api } from "../../shared/api";
 import CodeEditor from "./CodeEditor";
 import TestTable from "./TestTable";
+import SubmitInsight from "./SubmitInsight";
+import AssistantPopup from "./AssistantPopup";
 import { DIFFICULTY_META } from "../problem/learningPath";
 import type { LanguageInfo, Problem, Submission } from "../../shared/types";
 
@@ -13,9 +15,11 @@ const TEMPLATES: Record<string, string> = {
 };
 
 export default function ProblemDetail({
-  problem, languages, onBack, onSubmitted, topicName, nextProblem, onNext,
+  problem, languages, onBack, onSubmitted, topicName, nextProblem, onNext, onOpen,
 }: {
   problem: Problem; languages: LanguageInfo[]; onBack: () => void; onSubmitted: () => void;
+  /** Mo mot bai khac ngay tai day (bam vao bai duoc goi y sau khi nop). */
+  onOpen: (problemId: string) => void;
   /** Ten chu de cua bai trong lo trinh hoc. */
   topicName?: string;
   /** Bai ke tiep theo lo trinh (null neu day la bai cuoi). */
@@ -28,6 +32,8 @@ export default function ProblemDetail({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<Submission | null>(null);
+  /** So lan da nop trong trang nay - moi lan tang thi tro ly pop-up tu nhan xet mot lan. */
+  const [submitCount, setSubmitCount] = useState(0);
 
   const langNames = useMemo(() => languages.map((l) => l.name), [languages]);
   const unavailable = useMemo(() => languages.filter((l) => !l.available).map((l) => l.name), [languages]);
@@ -41,6 +47,7 @@ export default function ProblemDetail({
     setBusy(true);
     try {
       setResult(await api.submit({ problemId: problem.id, language, code }));
+      setSubmitCount((c) => c + 1);
       onSubmitted();
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     finally { setBusy(false); }
@@ -241,7 +248,13 @@ export default function ProblemDetail({
             {tests.length > 0 && <TestTable tests={tests} showMessage={tests.some((t) => t.message !== "")} />}
           </div>
         )}
+
+        {/* ═══ THONG KE DIEM YEU SAU KHI NOP ═══ */}
+        {result && !error && <SubmitInsight problem={problem} result={result} onOpen={onOpen} />}
       </div>
+
+      {/* ═══ TRO LY POP-UP ═══ */}
+      <AssistantPopup problem={problem} code={code} autoAskKey={submitCount} />
     </div>
   );
 }

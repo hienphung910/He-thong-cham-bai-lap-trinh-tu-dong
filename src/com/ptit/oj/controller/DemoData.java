@@ -90,7 +90,7 @@ public class DemoData {
                 "Hỏi đáp về bài tập, không đăng lời giải hoàn chỉnh của bài đang trong kỳ thi.", "");
         for (User u : judge.getUsers()) {
             community.notifyUser(u.getId(), "Chào mừng đến với CodeHub",
-                    "Xem lớp học, bài tập được giao và kỳ thi ở thanh bên trái.");
+                    "Xem lớp học, bài tập được giao và kỳ thi ở menu Học tập trên cùng.");
         }
 
         if (sampleSubmissions && students.size() >= 3) {

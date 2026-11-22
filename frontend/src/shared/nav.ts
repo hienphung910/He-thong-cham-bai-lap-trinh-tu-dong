@@ -1,6 +1,6 @@
 import { createContext, useContext } from "react";
 
-/** Ten cac trang cua ung dung - cung la khoa trong thanh dieu huong ben trai (xem App.tsx). */
+/** Ten cac trang cua ung dung - cung la khoa cua cac muc trong menu tren cung (xem App.tsx). */
 export type PageKey =
   | "Problems" | "Classrooms" | "Courses" | "Assignments" | "Contests" | "Meetings"
   | "Playground" | "CpTools" | "StressTest" | "Assistant"
@@ -8,8 +8,7 @@ export type PageKey =
   | "Forum" | "Chat" | "Notifications"
   | "Submissions" | "MySubmissions" | "Leaderboard"
   | "Dashboard" | "TeachingAssistant" | "Parents"
-  | "Admin" | "Accounts" | "Organizations" | "System" | "Audit"
-  | "ModuleMap";
+  | "Admin" | "Accounts" | "Organizations" | "System" | "Audit";
 
 interface Nav {
   /** Chuyen sang trang khac. */
