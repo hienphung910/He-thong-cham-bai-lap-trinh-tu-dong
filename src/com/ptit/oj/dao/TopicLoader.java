@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Doc lo trinh hoc tu data/topics.txt. Moi dong mot chu de, theo dung thu tu hoc:
@@ -26,9 +27,9 @@ import java.util.Set;
 public class TopicLoader {
 
     /** Ma chu de: chu thuong khong dau, so va gach ngang -> an toan khi dat trong URL / properties. */
-    public static final String ID_PATTERN = "[a-z0-9-]{1,40}";
+    public static final Pattern ID_PATTERN = Pattern.compile("[a-z0-9-]{1,40}");
 
-    private Path file;
+    private final Path file;
 
     public TopicLoader(Path file) {
         this.file = file;
@@ -59,7 +60,7 @@ public class TopicLoader {
             String group = parts.length > 3 ? parts[3].trim() : "";
             String where = file.getFileName() + " dòng " + lineNo;
 
-            if (!id.matches(ID_PATTERN)) {
+            if (!ID_PATTERN.matcher(id).matches()) {
                 throw new ProblemLoadException(where + ": mã chủ đề \"" + id
                         + "\" chỉ được gồm chữ thường không dấu, số và gạch ngang");
             }

@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Kho lich su nop bai luu trong MySQL 8.
@@ -30,7 +31,7 @@ import java.util.Map;
  *    transaction: hoac ca hai cung vao, hoac rollback sach. Khong bao gio ton tai
  *    bai nop thieu mat ket qua test.
  *  - Khi doc lai, bai nop duoc dung lai thanh doi tuong Submission + JudgeResult
- *    day du, nen ScoreboardService / giao dien khong can biet du lieu tu dau ra.
+ *    day du, nen ScoreboardService / ApiServer khong can biet du lieu tu dau ra.
  *  - Neu de bai da bi xoa khoi o dia, van dung lai duoc mot Problem tu ban chup
  *    (problem_title, max_points, danh sach test da cham) de lich su cu khong vo.
  *
@@ -49,10 +50,10 @@ public class MySqlSubmissionRepository implements SubmissionRepository {
             "id, user_id, problem_id, problem_title, language, file_name, source_code, "
           + "submitted_at, verdict, score, max_points, max_runtime_ms, judge_time_ms, global_message";
 
-    private MySqlDatabaseManager database;
-    private Repository<Problem> problems;
-    private UserRepository users;
-    private LanguageRegistry languages;
+    private final MySqlDatabaseManager database;
+    private final Repository<Problem> problems;
+    private final UserRepository users;
+    private final LanguageRegistry languages;
 
     public MySqlSubmissionRepository(MySqlDatabaseManager database,
                                      Repository<Problem> problems,
@@ -181,13 +182,10 @@ public class MySqlSubmissionRepository implements SubmissionRepository {
     // ------------------------------------------------------------------ doc
 
     @Override
-    public Submission findById(String id) {
-        if (id == null) return null;
+    public Optional<Submission> findById(String id) {
+        if (id == null) return Optional.empty();
         List<Submission> found = query("SELECT " + COLUMNS + " FROM submissions WHERE id = ?", id);
-        if (found.isEmpty()) {
-            return null;
-        }
-        return found.get(0);
+        return found.isEmpty() ? Optional.empty() : Optional.of(found.get(0));
     }
 
     @Override
@@ -242,29 +240,20 @@ public class MySqlSubmissionRepository implements SubmissionRepository {
 
         List<Submission> list = new ArrayList<>(rows.size());
         for (Row r : rows) {
-            List<TestRow> testRows = testsBySubmission.get(r.id);
-            if (testRows == null) {
-                testRows = new ArrayList<>();      // bai nop khong co ket qua test nao (vi du CE)
-            }
-            Submission s = build(r, testRows);
+            Submission s = build(r, testsBySubmission.getOrDefault(r.id, Collections.emptyList()));
             if (s != null) list.add(s);
         }
         return list;
     }
 
     private Submission build(Row row, List<TestRow> testRows) {
-        User author = users.findById(row.userId);
+        User author = users.findById(row.userId).orElse(null);
         if (author == null) return null;        // tai khoan da bi xoa -> bo qua dong nay
 
-        Problem problem = problems.findById(row.problemId);
-        if (problem == null) {
-            problem = rebuildProblem(row, testRows);
-        }
+        Problem problem = problems.findById(row.problemId)
+                .orElseGet(() -> rebuildProblem(row, testRows));
 
-        Language language = languages.byName(row.language);
-        if (language == null) {
-            language = languages.all().get(0);
-        }
+        Language language = languages.byName(row.language).orElseGet(() -> languages.all().get(0));
 
         Submission s = new Submission(row.id, problem, author, language, row.fileName, row.submittedAt);
         s.setSourceCode(row.sourceCode);
@@ -334,12 +323,7 @@ public class MySqlSubmissionRepository implements SubmissionRepository {
                         t.runtimeMs = rs.getLong("runtime_ms");
                         t.earnedPoints = toDouble(rs.getBigDecimal("earned_points"));
                         t.message = orEmpty(rs.getString("message"));
-                        List<TestRow> list = byId.get(sid);
-                        if (list == null) {
-                            list = new ArrayList<>();
-                            byId.put(sid, list);
-                        }
-                        list.add(t);
+                        byId.computeIfAbsent(sid, k -> new ArrayList<>()).add(t);
                     }
                 }
             } catch (SQLException e) {
@@ -374,7 +358,7 @@ public class MySqlSubmissionRepository implements SubmissionRepository {
     }
 
     /** Mot dong cua bang submissions, doc thoi ra khoi ResultSet. */
-    private static class Row {
+    private static final class Row {
         private String id;
         private String userId;
         private String problemId;
@@ -390,7 +374,7 @@ public class MySqlSubmissionRepository implements SubmissionRepository {
     }
 
     /** Mot dong cua bang test_case_results. */
-    private static class TestRow {
+    private static final class TestRow {
         private String testCaseId;
         private boolean sample;
         private Verdict verdict;

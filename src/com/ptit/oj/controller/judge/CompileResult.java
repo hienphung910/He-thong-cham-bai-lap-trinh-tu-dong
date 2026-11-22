@@ -3,8 +3,8 @@ package com.ptit.oj.controller.judge;
 /** Ket qua bien dich: thanh cong hay khong + thong bao loi cua compiler. */
 public class CompileResult {
 
-    private boolean success;
-    private String message;
+    private final boolean success;
+    private final String message;
 
     private CompileResult(boolean success, String message) {
         this.success = success;

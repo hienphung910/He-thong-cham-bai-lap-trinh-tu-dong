@@ -7,8 +7,8 @@ import java.util.List;
 /** Tong hop ket qua cham cua mot bai nop. */
 public class JudgeResult {
 
-    private Submission submission;
-    private List<TestCaseResult> testResults = new ArrayList<>();
+    private final Submission submission;
+    private final List<TestCaseResult> testResults = new ArrayList<>();
     private Verdict globalVerdict;      // CE / IE: loi chung, khong chay test nao
     private String globalMessage = "";
     private long judgeTimeMs;

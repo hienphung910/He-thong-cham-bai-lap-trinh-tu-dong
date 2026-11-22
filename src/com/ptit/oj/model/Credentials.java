@@ -7,11 +7,11 @@ package com.ptit.oj.model;
  * Day la doi tuong gia tri (immutable) nen truyen qua lai giua service va
  * repository ma khong so bi sua trom.
  */
-public class Credentials {
+public final class Credentials {
 
-    private String hashBase64;
-    private String saltBase64;
-    private int iterations;
+    private final String hashBase64;
+    private final String saltBase64;
+    private final int iterations;
 
     public Credentials(String hashBase64, String saltBase64, int iterations) {
         if (hashBase64 == null || hashBase64.isEmpty()) {

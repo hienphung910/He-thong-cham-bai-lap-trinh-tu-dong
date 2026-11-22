@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Kho tai khoan luu trong MySQL 8.
@@ -38,7 +39,7 @@ public class MySqlUserRepository implements UserRepository {
             "id, username, full_name, role, student_code, class_name, department, "
           + "password_hash, password_salt, password_iterations, created_at";
 
-    private MySqlDatabaseManager database;
+    private final MySqlDatabaseManager database;
 
     public MySqlUserRepository(MySqlDatabaseManager database) {
         this.database = database;
@@ -50,12 +51,12 @@ public class MySqlUserRepository implements UserRepository {
     @Override
     public void save(User user) {
         if (user == null) throw new IllegalArgumentException("Không được lưu entity null");
-        Credentials existing = findCredentials(user.getId());
-        if (existing == null) {
+        Optional<Credentials> existing = findCredentials(user.getId());
+        if (!existing.isPresent()) {
             throw new DataAccessException("Tài khoản " + user.getUsername()
                     + " chưa có mật khẩu - hãy dùng saveWithCredentials()");
         }
-        saveWithCredentials(user, existing);
+        saveWithCredentials(user, existing.get());
     }
 
     @Override
@@ -107,21 +108,21 @@ public class MySqlUserRepository implements UserRepository {
     // ------------------------------------------------------------------ doc
 
     @Override
-    public User findById(String id) {
-        if (id == null) return null;
+    public Optional<User> findById(String id) {
+        if (id == null) return Optional.empty();
         return queryOne("SELECT " + COLUMNS + " FROM users WHERE id = ?", id);
     }
 
     /** Collation utf8mb4_0900_ai_ci lo viec so sanh khong phan biet hoa thuong. */
     @Override
-    public User findByUsername(String username) {
-        if (username == null) return null;
+    public Optional<User> findByUsername(String username) {
+        if (username == null) return Optional.empty();
         return queryOne("SELECT " + COLUMNS + " FROM users WHERE username = ?", username.trim());
     }
 
     @Override
     public boolean existsByUsername(String username) {
-        return findByUsername(username) != null;
+        return findByUsername(username).isPresent();
     }
 
     @Override
@@ -150,17 +151,17 @@ public class MySqlUserRepository implements UserRepository {
     }
 
     @Override
-    public Credentials findCredentials(String userId) {
-        if (userId == null) return null;
+    public Optional<Credentials> findCredentials(String userId) {
+        if (userId == null) return Optional.empty();
         String sql = "SELECT password_hash, password_salt, password_iterations FROM users WHERE id = ?";
         try (Connection c = database.open(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, userId);
             try (ResultSet rs = ps.executeQuery()) {
-                if (!rs.next()) return null;
-                return new Credentials(
+                if (!rs.next()) return Optional.empty();
+                return Optional.of(new Credentials(
                         rs.getString("password_hash"),
                         rs.getString("password_salt"),
-                        rs.getInt("password_iterations"));
+                        rs.getInt("password_iterations")));
             }
         } catch (SQLException e) {
             throw new DataAccessException("Không đọc được thông tin xác thực", e);
@@ -184,15 +185,11 @@ public class MySqlUserRepository implements UserRepository {
 
     // ------------------------------------------------------------- tien ich
 
-    /** Tra ve tai khoan dau tien cua ket qua truy van, hoac null neu khong co dong nao. */
-    private User queryOne(String sql, String param) {
+    private Optional<User> queryOne(String sql, String param) {
         try (Connection c = database.open(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, param);
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return map(rs);
-                }
-                return null;
+                return rs.next() ? Optional.of(map(rs)) : Optional.empty();
             }
         } catch (SQLException e) {
             throw new DataAccessException("Không đọc được tài khoản", e);

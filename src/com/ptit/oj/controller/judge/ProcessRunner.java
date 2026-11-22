@@ -26,7 +26,16 @@ public class ProcessRunner {
 
         long start = System.nanoTime();
 
-        StdinFeeder feeder = new StdinFeeder(process.getOutputStream(), stdin);
+        Thread feeder = new Thread(() -> {
+            try (OutputStream os = process.getOutputStream()) {
+                if (stdin != null) os.write(stdin.getBytes(StandardCharsets.UTF_8));
+                os.flush();
+            } catch (IOException ignored) {
+                // tien trinh co the ket thuc som, khong doc het stdin -> bo qua
+            }
+        });
+        feeder.setDaemon(true);
+
         StreamCollector out = new StreamCollector(process.getInputStream());
         StreamCollector err = new StreamCollector(process.getErrorStream());
 
@@ -50,37 +59,10 @@ public class ProcessRunner {
         return new ExecutionResult(exitCode, out.getText(), err.getText(), elapsedMs, !finished);
     }
 
-    /** Thread ghi du lieu vao (stdin) cho tien trinh con roi dong luong lai. */
-    private static class StdinFeeder extends Thread {
-        private OutputStream os;
-        private String stdin;
-
-        StdinFeeder(OutputStream os, String stdin) {
-            this.os = os;
-            this.stdin = stdin;
-            setDaemon(true);
-        }
-
-        @Override
-        public void run() {
-            try {
-                if (stdin != null) os.write(stdin.getBytes(StandardCharsets.UTF_8));
-                os.flush();
-            } catch (IOException ignored) {
-                // tien trinh co the ket thuc som, khong doc het stdin -> bo qua
-            }
-            try {
-                os.close();         // dong stdin de chuong trinh cua thi sinh biet da het du lieu
-            } catch (IOException ignored) {
-                // tien trinh da ket thuc -> bo qua
-            }
-        }
-    }
-
     /** Thread doc mot luong den EOF, gioi han dung luong. */
     private static class StreamCollector extends Thread {
-        private InputStream in;
-        private ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        private final InputStream in;
+        private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 
         StreamCollector(InputStream in) {
             this.in = in;

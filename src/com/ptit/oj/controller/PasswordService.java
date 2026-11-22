@@ -26,16 +26,16 @@ import java.util.Base64;
 public class PasswordService {
 
     public static final int MIN_PASSWORD_LENGTH = 8;
-    /** Chan tren de khong ai bat chuong trinh bam mot chuoi khong lo. */
+    /** Chan tren de mot request khong the bat may chu bam mot chuoi khong lo. */
     public static final int MAX_PASSWORD_LENGTH = 128;
 
     private static final String ALGORITHM = "PBKDF2WithHmacSHA256";
     private static final int SALT_BYTES = 16;
     private static final int KEY_BITS = 256;
 
-    private SecureRandom random = new SecureRandom();
+    private final SecureRandom random = new SecureRandom();
     /** So vong lap PBKDF2: cang lon thi do mat khau cang cham. */
-    private int iterations = 120_000;
+    private final int iterations = 120_000;
 
     /** Kiem tra do dai mat khau truoc khi bam. Nem IllegalArgumentException neu sai. */
     public void validate(String rawPassword) {
@@ -76,7 +76,7 @@ public class PasswordService {
             expected = Base64.getDecoder().decode(stored.getHashBase64());
             salt = Base64.getDecoder().decode(stored.getSaltBase64());
         } catch (IllegalArgumentException e) {
-            return false;   // ban ghi hong -> coi nhu sai mat khau, khong lam sap chuong trinh
+            return false;   // ban ghi hong -> coi nhu sai mat khau, khong lam sap may chu
         }
         byte[] actual = pbkdf2(rawPassword.toCharArray(), salt, stored.getIterations());
         try {
@@ -84,6 +84,13 @@ public class PasswordService {
         } finally {
             Arrays.fill(actual, (byte) 0);
         }
+    }
+
+    /** Sinh mat khau ngau nhien manh - dung cho tai khoan admin khoi tao lan dau. */
+    public String generateRandomPassword() {
+        byte[] bytes = new byte[18];
+        random.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
     private byte[] pbkdf2(char[] password, byte[] salt, int rounds) {

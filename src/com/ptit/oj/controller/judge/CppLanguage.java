@@ -19,8 +19,8 @@ public class CppLanguage extends Language {
 
     @Override
     public CompileResult compile(Path source, Path workDir) throws IOException, InterruptedException {
-        return runCompiler(workDir, Arrays.asList("g++", "-O2", "-std=c++17",
-                "-o", executablePath(source, workDir).toString(), source.toString()));
+        return runCompiler(workDir, "g++", "-O2", "-std=c++17",
+                "-o", executablePath(source, workDir).toString(), source.toString());
     }
 
     @Override
