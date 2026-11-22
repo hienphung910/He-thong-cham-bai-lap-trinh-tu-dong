@@ -22,6 +22,11 @@ import java.util.regex.Pattern;
 /**
  * Nghiep vu quan tri de bai: kiem tra hop le -> ghi ra o dia -> nap vao bo nho.
  *
+ * Hai kho bai:
+ *  - KHO CHUNG (Problem.getOwner() rong): chi quan tri vien tao va sua.
+ *  - KHO RIENG cua tung giang vien (owner = ten dang nhap): giang vien tu tao, chi sua bai cua minh.
+ * Quyen sua lay tu User.canEditProblem(), khong viet if theo vai tro o day.
+ *
  * Tang web chi viec doc JSON roi goi createProblem(); moi luat kiem tra nam o day
  * nen du goi tu dau thi du lieu cung duoc bao ve giong het.
  */
@@ -70,11 +75,15 @@ public class ProblemAdminService {
     /**
      * Tao bai tap moi. Chi tai khoan co canCreateProblem() == true moi duoc goi
      * (tang web da chan truoc, day la lop chan thu hai - khong tin giao dien).
+     * Bai cua quan tri vien vao kho chung; bai cua giang vien vao kho rieng cua giang vien do.
      */
     public synchronized Problem createProblem(User actor, ProblemDraft draft) {
         if (actor == null || !actor.canCreateProblem()) {
-            throw new ProblemAdminException(403, "Chỉ tài khoản quản trị mới được tạo bài tập");
+            throw new ProblemAdminException(403, "Chỉ giảng viên hoặc quản trị viên mới được tạo bài tập");
         }
+        // Chu bai lay tu tai khoan dang dang nhap, khong bao gio lay tu du lieu client gui len.
+        boolean admin = User.ROLE_ADMIN.equals(actor.getRoleCode());
+        draft.setOwner(admin ? "" : actor.getUsername());
         validate(draft);
 
         Path dir;
@@ -93,12 +102,8 @@ public class ProblemAdminService {
 
     /** Doi chu de va do kho cua mot bai DA CO; cac dong khac cua problem.properties giu nguyen. */
     public synchronized Problem updateProblemMeta(User actor, String rawId, String rawTopic, int difficulty) {
-        if (actor == null || !actor.canCreateProblem()) {
-            throw new ProblemAdminException(403, "Chỉ tài khoản quản trị mới được sửa bài tập");
-        }
-        String id = normalizeId(rawId);
-        Problem current = problems.findById(id)
-                .orElseThrow(() -> new ProblemAdminException(404, "Không có bài " + id));
+        Problem current = findForEdit(actor, rawId);
+        String id = current.getId();
         String topic = validateTopic(rawTopic);
         validateDifficulty(difficulty);
 
@@ -123,10 +128,7 @@ public class ProblemAdminService {
 
     /** Them mot test vao bai DA CO. Diem moi test duoc chia deu lai khi nap lai bai. */
     public synchronized Problem addTest(User actor, String rawId, ProblemDraft.TestDraft test) {
-        if (actor == null || !actor.canCreateProblem()) {
-            throw new ProblemAdminException(403, "Chỉ tài khoản quản trị mới được sửa bộ test");
-        }
-        Problem current = findExisting(rawId);
+        Problem current = findForEdit(actor, rawId);
         if (current.getTestCases().size() >= MAX_TESTS) {
             throw new ProblemAdminException(400, "Tối đa " + MAX_TESTS + " test cho một bài");
         }
@@ -145,10 +147,7 @@ public class ProblemAdminService {
 
     /** Xoa mot test cua bai da co; bai phai con lai it nhat mot test. */
     public synchronized Problem deleteTest(User actor, String rawId, String testName) {
-        if (actor == null || !actor.canCreateProblem()) {
-            throw new ProblemAdminException(403, "Chỉ tài khoản quản trị mới được sửa bộ test");
-        }
-        Problem current = findExisting(rawId);
+        Problem current = findForEdit(actor, rawId);
         boolean exists = false;
         for (TestCase tc : current.getTestCases()) {
             if (tc.getId().equals(testName)) exists = true;
@@ -166,9 +165,20 @@ public class ProblemAdminService {
         return reload(current.getId());
     }
 
-    private Problem findExisting(String rawId) {
+    /**
+     * Tim bai va kiem tra actor co quyen sua bai do khong. Moi ham sua bai (va ham xem test an)
+     * deu di qua day, nen giang vien khong the dung vao kho chung hay kho cua nguoi khac.
+     */
+    public synchronized Problem findForEdit(User actor, String rawId) {
         String id = normalizeId(rawId);
-        return problems.findById(id).orElseThrow(() -> new ProblemAdminException(404, "Không có bài " + id));
+        Problem problem = problems.findById(id)
+                .orElseThrow(() -> new ProblemAdminException(404, "Không có bài " + id));
+        if (actor == null || !actor.canEditProblem(problem)) {
+            throw new ProblemAdminException(403, problem.isShared()
+                    ? "Bài " + id + " thuộc kho bài chung, chỉ quản trị viên mới sửa được"
+                    : "Bài " + id + " nằm trong kho riêng của giảng viên khác");
+        }
+        return problem;
     }
 
     /** Nap lai bai tu o dia de bo nho luon khop voi thu muc tests/. */

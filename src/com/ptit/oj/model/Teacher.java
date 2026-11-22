@@ -17,6 +17,13 @@ public class Teacher extends User {
     @Override
     public String getRoleCode() { return ROLE_TEACHER; }
 
-    // Khong ghi de canCreateProblem(): tu khi co vai tro ADMIN thi chi Admin
-    // moi duoc tao de bai, giang vien chi xem duoc toan bo lich su nop.
+    /** Giang vien tao duoc bai, nhung bai do nam trong KHO RIENG cua giang vien (xem Problem.getOwner()). */
+    @Override
+    public boolean canCreateProblem() { return true; }
+
+    /** Giang vien chi sua duoc bai do chinh minh tao; bai kho chung va bai cua nguoi khac thi khong. */
+    @Override
+    public boolean canEditProblem(Problem problem) {
+        return getUsername().equals(problem.getOwner());
+    }
 }

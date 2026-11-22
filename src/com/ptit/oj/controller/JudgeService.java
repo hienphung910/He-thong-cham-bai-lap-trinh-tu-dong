@@ -122,6 +122,15 @@ public class JudgeService {
 
     public List<Problem> getProblems() { return problems.findAll(); }
 
+    /** Chi cac bai cua kho chung - lo trinh hoc, thong ke va goi y bai khong tinh bai kho rieng. */
+    public List<Problem> getSharedProblems() {
+        List<Problem> shared = new ArrayList<>();
+        for (Problem p : problems.findAll()) {
+            if (p.isShared()) shared.add(p);
+        }
+        return shared;
+    }
+
     /** Cac chu de theo dung thu tu hoc. */
     public List<Topic> getTopics() { return Collections.unmodifiableList(topics); }
 
@@ -136,24 +145,29 @@ public class JudgeService {
         return id == null ? Optional.empty() : problems.findById(id.trim().toUpperCase());
     }
 
-    /** Tao bai tap moi - chi tai khoan ADMIN goi duoc (kiem tra trong ProblemAdminService). */
+    /** Tao bai tap moi: quan tri vien tao vao kho chung, giang vien tao vao kho rieng (kiem tra trong ProblemAdminService). */
     public Problem createProblem(User actor, ProblemDraft draft) {
         return problemAdmin.createProblem(actor, draft);
     }
 
-    /** Doi chu de va do kho cua bai da co - chi ADMIN. */
+    /** Doi chu de va do kho cua bai da co - quan tri vien, hoac giang vien voi bai cua minh. */
     public Problem updateProblemMeta(User actor, String problemId, String topic, int difficulty) {
         return problemAdmin.updateProblemMeta(actor, problemId, topic, difficulty);
     }
 
-    /** Them mot test vao bai da co - chi ADMIN (Module 7). */
+    /** Them mot test vao bai da co - quan tri vien, hoac giang vien voi bai cua minh (Module 7). */
     public Problem addTest(User actor, String problemId, ProblemDraft.TestDraft test) {
         return problemAdmin.addTest(actor, problemId, test);
     }
 
-    /** Xoa mot test cua bai da co - chi ADMIN (Module 7). */
+    /** Xoa mot test cua bai da co - quan tri vien, hoac giang vien voi bai cua minh (Module 7). */
     public Problem deleteTest(User actor, String problemId, String testName) {
         return problemAdmin.deleteTest(actor, problemId, testName);
+    }
+
+    /** Lay bai de sua / xem test an; nem 403 neu actor khong co quyen sua bai nay. */
+    public Problem findProblemForEdit(User actor, String problemId) {
+        return problemAdmin.findForEdit(actor, problemId);
     }
 
     // --------------------------------------------- nop bai va cham tu dong (Module 3)

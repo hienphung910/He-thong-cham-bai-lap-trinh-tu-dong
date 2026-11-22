@@ -36,7 +36,9 @@ Backend chỉ dùng API chuẩn của JDK. Máy chủ HTTP, bộ đọc/ghi JSON
 - Giảng viên tạo lớp, gắn lớp vào một tổ chức và một khóa học. Học sinh tham gia bằng mã lớp; giảng viên cũng thêm, xoá được học sinh và trợ giảng.
 - Khóa học có giáo trình là danh sách bài giảng, mỗi bài giảng kèm các bài tập luyện. Tài liệu học tập là văn bản hoặc đường link.
 - Giao bài cho lớp kèm hạn nộp. Tiến độ của từng học sinh tính từ lịch sử nộp bài, giảng viên xem được bảng tiến độ cả lớp.
+- Mỗi giảng viên có một kho bài riêng: tự tạo bài, sửa bộ test, đổi chủ đề và độ khó của bài mình. Bài kho riêng không hiện ở lộ trình chung. Học sinh mở được bài khi giảng viên đưa nó vào kỳ thi, bài tập giao hoặc bài giảng. Giảng viên không sửa được kho bài chung và không dùng được bài trong kho của giảng viên khác. Bài kho riêng tính điểm trong kỳ thi chứa nó, còn bảng xếp hạng chung, điểm thưởng và thống kê kỹ năng chỉ tính kho bài chung.
 - Kỳ thi tính điểm kiểu ICPC: xếp theo số bài giải được, bằng nhau thì ai ít phút phạt hơn đứng trước, mỗi lần nộp sai cộng 20 phút. Trang kỳ thi có thanh thời gian để xem lại bảng xếp hạng tại một phút bất kỳ.
+- Kỳ thi thuộc về người tạo. Người tạo và quản trị viên thêm, bớt bài hoặc xoá kỳ thi; giảng viên khác chỉ xem.
 - Danh bạ phụ huynh và báo cáo học tập soạn sẵn để gửi về gia đình.
 - Trang tổng quan cho giảng viên: số tài khoản, lượt nộp theo ngày, phân bố verdict, năm bài được nộp nhiều nhất.
 
@@ -63,12 +65,12 @@ Backend chỉ dùng API chuẩn của JDK. Máy chủ HTTP, bộ đọc/ghi JSON
 - Diễn đàn: đăng chủ đề, trả lời, gắn chủ đề với một bài tập.
 
 ### Quản trị
-- Tạo bài tập trên web: đề, giới hạn, kiểu so sánh, test ví dụ và test ẩn. Bài được ghi vào thư mục tạm rồi mới đổi tên thành thư mục thật, nên không có bài nào bị ghi dở. Bài mới dùng được ngay, không cần khởi động lại máy chủ.
+- Tạo bài tập cho kho bài chung trên web: đề, giới hạn, kiểu so sánh, test ví dụ và test ẩn. Bài được ghi vào thư mục tạm rồi mới đổi tên thành thư mục thật, nên không có bài nào bị ghi dở. Bài mới dùng được ngay, không cần khởi động lại máy chủ.
 - Sắp xếp lộ trình: đổi chủ đề và độ khó của từng bài.
 - Quản lý bộ test: xem toàn bộ test của một bài (kể cả test ẩn), thêm và xoá từng test.
-- Tạo tài khoản giảng viên, học sinh, quản trị. Quản lý tổ chức.
-- Cấu hình hệ thống: thông báo chung hiện ở đầu mọi trang, bật hoặc tắt việc học sinh tự đăng ký.
-- Ba vai trò Học sinh / Giảng viên / Quản trị. Backend kiểm tra quyền ở từng request, kể cả khi giao diện đã ẩn nút.
+- Tạo tài khoản giảng viên, học sinh, quản trị. Tài khoản quản trị chỉ tạo được ở đây. Quản lý tổ chức.
+- Cấu hình hệ thống: thông báo chung hiện ở đầu mọi trang, bật hoặc tắt việc tự đăng ký.
+- Ba vai trò Học sinh / Giảng viên / Quản trị. Khi đăng ký, người dùng chọn Học sinh hoặc Giảng viên; máy chủ từ chối mọi yêu cầu đăng ký vai trò Quản trị. Backend kiểm tra quyền ở từng request, kể cả khi giao diện đã ẩn nút.
 
 ### Bảo mật
 - Mật khẩu băm bằng PBKDF2-HMAC-SHA256 (120 000 vòng, salt riêng cho từng tài khoản) và so sánh trong thời gian hằng số.
@@ -97,13 +99,13 @@ Cột "Ở đâu" ghi đường đi trên menu của giao diện.
 
 | # | Module | Ở đâu | Mức độ |
 |---|---|---|---|
-| 1 | User & Account Management | Trang đăng nhập; Cá nhân → Tài khoản của tôi; Quản trị → Tài khoản, giảng viên | Chạy thật |
+| 1 | User & Account Management | Trang đăng nhập và đăng ký (chọn Học sinh hoặc Giảng viên); Cá nhân → Tài khoản của tôi; Quản trị → Tài khoản, giảng viên | Chạy thật |
 | 2 | Organization Management | Quản trị → Tổ chức | Chạy thật |
 | 3 | Classroom Management | Học tập → Lớp của tôi | Chạy thật |
 | 4 | Course Management | Học tập → Khóa học, tài liệu | Chạy thật |
 | 5 | Curriculum & Learning Path | Học tập → Lớp học (lộ trình) | Chạy thật |
-| 6 | Problem Management | Quản trị → Bài tập và bộ test | Chạy thật |
-| 7 | Testcase Management | Quản trị → Bài tập và bộ test, nút Test | Chạy thật |
+| 6 | Problem Management | Quản trị → Kho bài chung và bộ test; Giảng dạy → Kho bài của tôi | Chạy thật |
+| 7 | Testcase Management | Nút Test ở hai trang của module 6 | Chạy thật |
 | 8 | Judge Engine | Trang làm bài | Chạy thật |
 | 9 | Submission Management | Lịch sử → Trạng thái, Bài nộp | Chạy thật |
 | 10 | Online IDE | Công cụ → IDE trực tuyến | Chạy thật |
@@ -138,7 +140,7 @@ Cột "Ở đâu" ghi đường đi trên menu của giao diện.
 | 39 | System Administration | Quản trị → Hệ thống | Chạy thật |
 | 40 | Security & Audit Management | Quản trị → Nhật ký hoạt động | Chạy thật |
 
-Nhóm Giảng dạy chỉ hiện với giảng viên và quản trị viên, nhóm Quản trị chỉ hiện với quản trị viên.
+Nhóm Giảng dạy chỉ hiện với giảng viên và quản trị viên, nhóm Quản trị chỉ hiện với quản trị viên. Mục Kho bài của tôi chỉ hiện với giảng viên.
 
 ## Công nghệ
 
@@ -183,6 +185,8 @@ Ví dụ với yêu cầu tạo lớp học: trình duyệt gửi `POST /api/cla
 | Tài khoản, bài nộp, kết quả từng test | MySQL | Bộ nhớ |
 | Đề bài và test | `data/problems/` | `data/problems/` |
 | Lớp học, khóa học, bài tập giao, buổi học, kỳ thi, thông báo, chat, diễn đàn, giao dịch, cấu hình, nhật ký | Bộ nhớ | Bộ nhớ |
+
+Bài của kho chung và bài kho riêng của giảng viên nằm cùng thư mục `data/problems/`. Bài kho riêng có thêm dòng `owner=<tên đăng nhập>` trong `problem.properties`, nên khởi động lại máy chủ vẫn biết bài của ai.
 
 Dữ liệu ở dòng cuối mất khi tắt máy chủ. Mỗi lần khởi động, `DemoData` tạo lại một bộ dữ liệu mẫu: một tổ chức, hai khóa học, một lớp với các tài khoản mẫu, một bài tập giao, một buổi học và hai kỳ thi. Ở chế độ `--no-db`, `DemoData` tạo thêm 24 bài nộp mẫu để các trang phân tích và xem lại kỳ thi có số liệu ngay. Các bài này không qua bộ chấm và có dòng "BÀI NỘP MẪU" trong phần thông báo. Muốn tắt, đổi `seed(noDatabase)` thành `seed(false)` trong `Main.java`.
 
@@ -382,25 +386,25 @@ Trừ 4 endpoint công khai, mọi request phải gửi header `Authorization: B
 |---|---|---|---|
 | GET | `/api/health` | công khai | Trạng thái máy chủ |
 | GET | `/api/languages` | công khai | Danh sách ngôn ngữ và trạng thái toolchain |
-| POST | `/api/auth/register` | công khai | Đăng ký tài khoản học sinh (bị từ chối khi quản trị viên tắt tự đăng ký) |
+| POST | `/api/auth/register` | công khai | Đăng ký tài khoản. `role` là `STUDENT` (mặc định) hoặc `TEACHER`, giá trị khác bị từ chối. Cả hai bị từ chối khi quản trị viên tắt tự đăng ký |
 | POST | `/api/auth/login` | công khai | Đăng nhập, trả về token |
 | POST | `/api/auth/logout` | đăng nhập | Huỷ token |
 | GET | `/api/auth/me` | đăng nhập | Thông tin tài khoản đang đăng nhập |
 | POST | `/api/auth/password` | đăng nhập | Đổi mật khẩu của chính mình |
-| GET | `/api/problems` | đăng nhập | Danh sách bài kèm đề, chủ đề, độ khó và test ví dụ |
+| GET | `/api/problems` | đăng nhập | Các bài người gọi được thấy, kèm đề, chủ đề, độ khó, chủ bài và test ví dụ. Gồm kho chung, kho của mình và bài kho riêng đã nằm trong kỳ thi, bài tập giao hoặc bài giảng |
 | GET | `/api/topics` | đăng nhập | Lộ trình học theo thứ tự |
 | GET | `/api/submissions` | đăng nhập | Lịch sử nộp: học sinh chỉ thấy của mình |
 | GET | `/api/submissions/{id}` | chủ bài / GV / admin | Chi tiết từng test và mã nguồn |
 | GET | `/api/scoreboard` | đăng nhập | Bảng xếp hạng |
 | POST | `/api/submit` | đăng nhập | Nộp bài; chấm xong trả về bài nộp kèm kết quả từng test |
-| POST | `/api/admin/problems` | admin | Tạo bài tập |
-| PUT | `/api/admin/problems/{id}` | admin | Đổi chủ đề và độ khó của bài |
-| GET, POST | `/api/admin/problems/{id}/tests` | admin | Xem toàn bộ test của bài, thêm một test |
-| DELETE | `/api/admin/problems/{id}/tests/{tên}` | admin | Xoá một test |
+| POST | `/api/admin/problems` | GV / admin | Tạo bài tập. Bài của admin vào kho chung, bài của giảng viên vào kho riêng của người đó |
+| PUT | `/api/admin/problems/{id}` | admin; GV với bài của mình | Đổi chủ đề và độ khó của bài |
+| GET, POST | `/api/admin/problems/{id}/tests` | admin; GV với bài của mình | Xem toàn bộ test của bài, thêm một test |
+| DELETE | `/api/admin/problems/{id}/tests/{tên}` | admin; GV với bài của mình | Xoá một test |
 
 ### Module mở rộng
 
-"Quản lý lớp" là quản trị viên, giảng viên phụ trách hoặc trợ giảng của lớp đó. "Thành viên lớp" gồm người quản lý lớp và học sinh của lớp.
+"Quản lý lớp" là quản trị viên, giảng viên phụ trách hoặc trợ giảng của lớp đó. "Thành viên lớp" gồm người quản lý lớp và học sinh của lớp. Ở các endpoint nhận danh sách mã bài (kỳ thi, bài tập giao, bài giảng), giảng viên chỉ dùng được bài kho chung và bài trong kho của mình.
 
 | Method | Endpoint | Quyền | Mô tả |
 |---|---|---|---|
@@ -434,7 +438,9 @@ Trừ 4 endpoint công khai, mọi request phải gửi header `Authorization: B
 | GET, PUT | `/api/meetings/{id}/attendance` | quản lý lớp | Xem, sửa điểm danh |
 | GET | `/api/recordings`, `/api/recordings/{id}` | thành viên lớp | Bản ghi buổi học |
 | GET | `/api/contests`, `/api/contests/{id}?minute=N`, `/api/contests/{id}/events` | đăng nhập | Danh sách kỳ thi; bảng xếp hạng tại phút N; diễn biến nộp bài |
-| POST, DELETE | `/api/contests`, `/api/contests/{id}` | GV / admin | Tạo, xoá kỳ thi |
+| POST | `/api/contests` | GV / admin | Tạo kỳ thi; người tạo là chủ kỳ thi |
+| POST, DELETE | `/api/contests/{id}/problems`, `/api/contests/{id}/problems/{mã bài}` | người tạo / admin | Thêm, bớt một bài của kỳ thi |
+| DELETE | `/api/contests/{id}` | người tạo / admin | Xoá kỳ thi |
 | GET | `/api/analytics/me` | đăng nhập | Hồ sơ học tập của mình |
 | GET | `/api/analytics/users/{username}` | GV / admin | Hồ sơ học tập của một học sinh |
 | GET | `/api/dashboard` | GV / admin | Số liệu toàn hệ thống |
@@ -466,7 +472,7 @@ Mỗi bài là một thư mục trong `data/problems/`:
 ```
 P001/
 ├── problem.properties   id, title, timeLimitMs, memoryLimitMb, comparator, totalPoints,
-│                        topic, difficulty, order (ba khoá cuối tùy chọn)
+│                        topic, difficulty, order, owner (bốn khoá cuối tùy chọn)
 ├── statement.txt        nội dung đề
 └── tests/
     ├── sample01.in / sample01.out   test ví dụ (tên bắt đầu bằng "sample"), hiển thị cho người dùng
@@ -474,6 +480,7 @@ P001/
 ```
 
 - `comparator`: `exact`, `token` (mặc định), `lines`, `float` hoặc `float:1e-9`.
+- `owner`: tên đăng nhập của giảng viên sở hữu bài. Không có dòng này thì bài thuộc kho chung. Máy chủ tự ghi dòng này khi giảng viên tạo bài trên web và không nhận giá trị từ trình duyệt.
 - `difficulty`: 1 Dễ, 2 Vừa, 3 Khó. `order`: thứ tự trong chủ đề; bài không có `order` xếp sau theo mã bài.
 - Lộ trình khai báo trong `data/topics.txt`, mỗi dòng có dạng `ma-chu-de | Tên | Mô tả | Tên lớp`; thứ tự dòng là thứ tự học. Các chủ đề cùng tên lớp thuộc cùng một lớp, lớp nào xuất hiện trước thì đứng trước.
 
@@ -493,7 +500,7 @@ Các module mở rộng mới được thử ở chế độ `--no-db`, bằng c
 
 | Nguyên lý / mẫu | Áp dụng |
 |---|---|
-| Kế thừa & đa hình | `User` → `Student` / `Teacher` / `Admin`; quyền lấy từ `canCreateProblem()` thay vì `if` theo vai trò. `ApiModule` → 13 lớp `…Api`; `ApiServer` gọi `handle()` mà không cần biết đang cầm lớp nào |
+| Kế thừa & đa hình | `User` → `Student` / `Teacher` / `Admin`; quyền lấy từ `canCreateProblem()` và `canEditProblem(Problem)` thay vì `if` theo vai trò. `canEditProblem` ở `User` trả về false, `Teacher` ghi đè để chỉ nhận bài của mình, `Admin` ghi đè để nhận mọi bài. `ApiModule` → 13 lớp `…Api`; `ApiServer` gọi `handle()` mà không cần biết đang cầm lớp nào |
 | Trừu tượng | `Language`, `User`, `Entity`, `ApiModule` là abstract class; `OutputComparator`, `Repository<T>` là interface |
 | Strategy | `OutputComparator`: đổi cách so sánh mà không sửa `Judge` |
 | Factory | `ComparatorFactory`, `LanguageRegistry`, `JudgeService.mysql()` / `inMemory()` |
@@ -509,6 +516,8 @@ Các module mở rộng mới được thử ở chế độ `--no-db`, bằng c
 - Giới hạn bộ nhớ chỉ áp chính xác cho Java (`-Xmx`) và JavaScript; các ngôn ngữ còn lại chỉ phát hiện MLE khi runtime báo hết bộ nhớ.
 - Bài được chấm tuần tự để số đo thời gian ổn định, và người nộp phải chờ chấm xong mới thấy kết quả; có thể chuyển sang hàng đợi, nhiều worker và đẩy kết quả từng test theo thời gian thực. Một lần stress test cũng giữ bộ chấm tối đa 25 giây.
 - Chưa sửa được nội dung đề và chưa xoá được bài qua giao diện; lộ trình (`topics.txt`) và thứ tự bài trong chủ đề (`order`) vẫn sửa tay.
+- Giảng viên tự đăng ký là dùng được ngay, chưa có bước quản trị viên duyệt. Muốn chặn thì tắt tự đăng ký ở Quản trị → Hệ thống rồi tạo tài khoản giảng viên bằng tay.
+- Kho bài riêng gắn với tên đăng nhập. Ở chế độ `--no-db` tài khoản mất khi tắt máy chủ còn bài vẫn nằm trên đĩa, nên người đăng ký lại đúng tên đó sẽ nhận kho bài cũ. Máy chủ cũng chưa chặn việc nộp bài vào một bài kho riêng khi người nộp biết mã bài.
 - Phiên đăng nhập lưu trong RAM; chưa có connection pool và phân trang cho lịch sử nộp bài.
 - Dữ liệu của các module mở rộng nằm trong RAM, khởi động lại là mất. Hướng phát triển: thêm bảng MySQL và lớp DAO cho từng thực thể.
 - Các module mở rộng chưa được chạy thử ở chế độ MySQL. Các trang phân tích, tổng quan, chi tiết lớp và xem lại kỳ thi đọc lại toàn bộ lịch sử nộp bài ở mỗi request, nên sẽ chậm dần khi CSDL lớn.

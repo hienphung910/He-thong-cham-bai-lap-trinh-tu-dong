@@ -7,7 +7,7 @@ export type PageKey =
   | "Analytics" | "Achievements" | "Billing" | "Account"
   | "Forum" | "Chat" | "Notifications"
   | "Submissions" | "MySubmissions" | "Leaderboard"
-  | "Dashboard" | "TeachingAssistant" | "Parents"
+  | "Dashboard" | "TeachingAssistant" | "Parents" | "MyProblems"
   | "Admin" | "Accounts" | "Organizations" | "System" | "Audit";
 
 interface Nav {

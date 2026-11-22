@@ -30,6 +30,10 @@ export interface LoginResponse {
 }
 
 export interface RegisterRequest {
+  /** Vai tro tu chon khi dang ky; may chu khong nhan ADMIN. */
+  role: "STUDENT" | "TEACHER";
+  /** Bo mon - chi dung khi dang ky giang vien. */
+  department: string;
   username: string;
   password: string;
   fullName: string;
@@ -62,6 +66,8 @@ export interface Problem {
   difficulty: number;
   /** Thu tu hoc trong chu de (tu 1); 0 = khong khai bao, dung sau cac bai co thu tu va xep theo ma bai. */
   order: number;
+  /** Ten dang nhap cua giang vien so huu bai; "" = bai thuoc kho chung. */
+  owner: string;
   /** Chi gom test vi du - test an khong bao gio duoc gui xuong trinh duyet. */
   samples: Sample[];
 }

@@ -101,13 +101,19 @@ public abstract class ApiModule {
         return Json.array(items);
     }
 
-    /** Doc mang ma bai tu body, kiem tra tung ma co ton tai, tra ve ma da chuan hoa. */
-    protected List<String> problemIds(Json.Value body, String key) {
+    /**
+     * Doc mang ma bai tu body, kiem tra tung ma co ton tai, tra ve ma da chuan hoa.
+     * user chi duoc dung bai kho chung hoac bai trong kho cua minh (User.canUseProblem).
+     */
+    protected List<String> problemIds(Json.Value body, String key, User user) {
         List<String> ids = new ArrayList<>();
         for (Json.Value v : body.getArray(key)) {
             String raw = v.asString();
             Problem p = judge.findProblem(raw)
                     .orElseThrow(() -> ApiException.badRequest("Không có bài " + raw));
+            if (!user.canUseProblem(p)) {
+                throw ApiException.forbidden("Bài " + p.getId() + " nằm trong kho riêng của giảng viên khác");
+            }
             if (!ids.contains(p.getId())) ids.add(p.getId());
         }
         return ids;

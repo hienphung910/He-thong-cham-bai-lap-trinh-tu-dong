@@ -4,6 +4,7 @@ import com.ptit.oj.dao.IdGenerator;
 import com.ptit.oj.dao.InMemoryRepository;
 import com.ptit.oj.dao.Repository;
 import com.ptit.oj.model.Contest;
+import com.ptit.oj.model.Problem;
 import com.ptit.oj.model.Submission;
 import com.ptit.oj.model.User;
 import com.ptit.oj.model.Verdict;
@@ -68,17 +69,55 @@ public class ContestService {
         public Map<String, Integer> getWrong() { return wrong; }
     }
 
-    public Contest create(String title, String description, LocalDateTime startAt,
-                          int durationMin, List<String> problemIds) {
+    public synchronized Contest create(User owner, String title, String description, LocalDateTime startAt,
+                                       int durationMin, List<String> problemIds) {
         if (startAt == null) throw ApiException.badRequest("Thiếu thời gian bắt đầu");
         if (durationMin < 5 || durationMin > 7 * 24 * 60) {
             throw ApiException.badRequest("Thời lượng phải từ 5 phút đến 7 ngày");
         }
         if (problemIds.isEmpty()) throw ApiException.badRequest("Cuộc thi phải có ít nhất một bài");
         Contest contest = new Contest(IdGenerator.next("CON"), Check.text(title, "Tên cuộc thi", 150),
-                Check.optional(description, "Mô tả", 2000), startAt, durationMin, problemIds);
+                Check.optional(description, "Mô tả", 2000), startAt, durationMin, problemIds,
+                owner.getUsername(), owner.getFullName());
         contests.save(contest);
         return contest;
+    }
+
+    // ------------------------------------------- sua cuoc thi cua chinh minh
+
+    /** Nguoi tao cuoc thi va quan tri vien moi duoc them / bot bai, xoa cuoc thi. */
+    public boolean canManage(User user, Contest contest) {
+        return User.ROLE_ADMIN.equals(user.getRoleCode())
+                || contest.getOwnerUsername().equals(user.getUsername());
+    }
+
+    private void requireManage(User user, Contest contest) {
+        if (!canManage(user, contest)) {
+            throw ApiException.forbidden("Chỉ người tạo kỳ thi hoặc quản trị viên mới sửa được kỳ thi này");
+        }
+    }
+
+    /** Them mot bai vao cuoc thi. Bai phai la bai kho chung hoac bai trong kho cua nguoi them. */
+    public synchronized void addProblem(User actor, Contest contest, Problem problem) {
+        requireManage(actor, contest);
+        if (!actor.canUseProblem(problem)) {
+            throw ApiException.forbidden("Bài " + problem.getId() + " nằm trong kho riêng của giảng viên khác");
+        }
+        if (contest.getProblemIds().contains(problem.getId())) {
+            throw ApiException.badRequest("Kỳ thi đã có bài " + problem.getId());
+        }
+        contest.getProblemIds().add(problem.getId());
+    }
+
+    public synchronized void removeProblem(User actor, Contest contest, String problemId) {
+        requireManage(actor, contest);
+        if (!contest.getProblemIds().contains(problemId)) {
+            throw ApiException.notFound("Kỳ thi không có bài " + problemId);
+        }
+        if (contest.getProblemIds().size() == 1) {
+            throw ApiException.badRequest("Kỳ thi phải còn ít nhất một bài");
+        }
+        contest.getProblemIds().remove(problemId);
     }
 
     /** Cuoc thi moi nhat dung truoc. */
@@ -92,7 +131,8 @@ public class ContestService {
         return contests.findById(id).orElseThrow(() -> ApiException.notFound("Không có cuộc thi " + id));
     }
 
-    public void delete(String id) {
+    public synchronized void delete(User actor, String id) {
+        requireManage(actor, find(id));
         contests.deleteById(id);
     }
 

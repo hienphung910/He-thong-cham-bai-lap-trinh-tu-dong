@@ -1,5 +1,13 @@
 package com.ptit.oj.controller;
 
+import com.ptit.oj.model.Assignment;
+import com.ptit.oj.model.Contest;
+import com.ptit.oj.model.Course;
+import com.ptit.oj.model.Lesson;
+
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * Noi tao va giu tat ca service cua cac module mo rong (lop hoc, khoa hoc, phong hoc,
  * cuoc thi, phan tich, cong dong...). ApiServer chi can giu mot doi tuong Platform.
@@ -28,6 +36,20 @@ public class Platform {
         this.analytics = new AnalyticsService(judge);
         this.assistant = new AssistantService(judge, analytics);
         this.playground = new PlaygroundService(judge);
+    }
+
+    /**
+     * Ma cac bai da duoc dua vao mot ky thi, bai tap giao hoac bai hoc.
+     * Bai kho rieng binh thuong chi chu bai thay; da nam trong danh sach nay thi moi nguoi mo duoc de lam.
+     */
+    public Set<String> publishedProblemIds() {
+        Set<String> ids = new HashSet<>();
+        for (Contest c : contests.getContests()) ids.addAll(c.getProblemIds());
+        for (Assignment a : assignments.getAll()) ids.addAll(a.getProblemIds());
+        for (Course c : courses.getCourses()) {
+            for (Lesson l : c.getLessons()) ids.addAll(l.getProblemIds());
+        }
+        return ids;
     }
 
     public JudgeService getJudge() { return judge; }

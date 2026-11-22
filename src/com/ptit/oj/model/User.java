@@ -29,5 +29,17 @@ public abstract class User extends Entity {
      */
     public abstract String getRoleCode();
 
+    /** Co duoc tao bai tap khong. Hoc sinh: khong. Giang vien va quan tri vien ghi de thanh true. */
     public boolean canCreateProblem() { return false; }
+
+    /**
+     * Co duoc sua bai nay khong (doi chu de, do kho, them / xoa test, xem test an).
+     * Mac dinh la khong; Admin sua duoc moi bai, Teacher chi sua bai trong kho cua minh.
+     */
+    public boolean canEditProblem(Problem problem) { return false; }
+
+    /** Co duoc dua bai nay vao ky thi, bai tap giao, bai hoc khong: bai kho chung hoac bai minh sua duoc. */
+    public boolean canUseProblem(Problem problem) {
+        return problem.isShared() || canEditProblem(problem);
+    }
 }

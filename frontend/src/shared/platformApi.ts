@@ -90,6 +90,11 @@ export const papi = {
   createContest: (body: { title: string; description: string; startAt: string; durationMin: number; problemIds: string[] }) =>
     postJson<Contest>("/api/contests", body),
   deleteContest: (id: string) => del(`/api/contests/${enc(id)}`),
+  /** Them / bot mot bai trong ky thi do chinh minh tao. */
+  addContestProblem: (id: string, problemId: string) =>
+    postJson<Contest>(`/api/contests/${enc(id)}/problems`, { problemId }),
+  removeContestProblem: (id: string, problemId: string) =>
+    del<Contest>(`/api/contests/${enc(id)}/problems/${enc(problemId)}`),
 
   // --- phan tich, thanh tich, bao cao (Module 23-26, 33, 38) ---
   myProfile: () => request<Profile>("/api/analytics/me"),

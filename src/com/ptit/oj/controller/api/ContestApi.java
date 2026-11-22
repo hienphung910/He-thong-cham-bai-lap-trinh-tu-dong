@@ -1,10 +1,13 @@
 package com.ptit.oj.controller.api;
 
+import com.ptit.oj.controller.ApiException;
 import com.ptit.oj.controller.ContestService;
 import com.ptit.oj.controller.Json;
 import com.ptit.oj.controller.Platform;
 import com.ptit.oj.model.Contest;
+import com.ptit.oj.model.Problem;
 import com.ptit.oj.model.Submission;
+import com.ptit.oj.model.User;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -16,6 +19,10 @@ import java.util.List;
  *   POST /api/contests                    - giang vien / quan tri tao cuoc thi
  *   GET  /api/contests/{id}?minute=N      - chi tiet + bang xep hang tai phut N (bo trong = hien tai)
  *   GET  /api/contests/{id}/events        - dien bien nop bai, dung cho man hinh xem lai
+ * Chi nguoi tao cuoc thi (hoac quan tri vien) duoc sua cuoc thi cua minh:
+ *   POST   /api/contests/{id}/problems          - them mot bai (kho chung hoac kho cua minh)
+ *   DELETE /api/contests/{id}/problems/{maBai}  - bo mot bai
+ *   DELETE /api/contests/{id}                   - xoa cuoc thi
  */
 public class ContestApi extends ApiModule {
 
@@ -29,32 +36,48 @@ public class ContestApi extends ApiModule {
     @Override
     public boolean handle(Request req) throws IOException {
         if (req.is("GET", "contests")) {
-            req.user();
+            User user = req.user();
             List<String> items = new ArrayList<>();
-            for (Contest c : contests.getContests()) items.add(contestJson(c).build());
+            for (Contest c : contests.getContests()) items.add(contestJson(c, user).build());
             req.send(Json.array(items));
             return true;
         }
         if (req.is("POST", "contests")) {
-            req.staff();
+            User user = req.staff();
             Json.Value body = req.body();
-            Contest created = contests.create(body.getString("title"), body.getString("description"),
+            Contest created = contests.create(user, body.getString("title"), body.getString("description"),
                     parseTime(body.getString("startAt")), (int) body.getLong("durationMin", 120),
-                    problemIds(body, "problemIds"));
-            req.send(contestJson(created).build());
+                    problemIds(body, "problemIds", user));
+            req.send(contestJson(created, user).build());
             return true;
         }
         if (req.is("DELETE", "contests", "*")) {
-            req.staff();
-            contests.delete(req.arg(0));
+            contests.delete(req.staff(), req.arg(0));
             req.sendOk();
             return true;
         }
+        if (req.is("POST", "contests", "*", "problems")) {
+            User user = req.staff();
+            Contest c = contests.find(req.arg(0));
+            String problemId = req.body().getString("problemId", "");
+            Problem problem = judge.findProblem(problemId)
+                    .orElseThrow(() -> ApiException.badRequest("Không có bài " + problemId));
+            contests.addProblem(user, c, problem);
+            req.send(contestJson(c, user).build());
+            return true;
+        }
+        if (req.is("DELETE", "contests", "*", "problems", "*")) {
+            User user = req.staff();
+            Contest c = contests.find(req.arg(0));
+            contests.removeProblem(user, c, req.arg(1).toUpperCase());
+            req.send(contestJson(c, user).build());
+            return true;
+        }
         if (req.is("GET", "contests", "*")) {
-            req.user();
+            User user = req.user();
             Contest c = contests.find(req.arg(0));
             int minute = req.queryInt("minute", c.getDurationMin());
-            req.send(contestJson(c)
+            req.send(contestJson(c, user)
                     .put("minute", minute)
                     .putRaw("standings", standingsJson(c, minute))
                     .build());
@@ -79,9 +102,11 @@ public class ContestApi extends ApiModule {
         return false;
     }
 
-    private Json.Obj contestJson(Contest c) {
+    private Json.Obj contestJson(Contest c, User viewer) {
         return Json.obj()
                 .put("id", c.getId())
+                .put("ownerName", c.getOwnerName())
+                .put("canManage", contests.canManage(viewer, c))
                 .put("title", c.getTitle())
                 .put("description", c.getDescription())
                 .put("startAt", time(c.getStartAt()))

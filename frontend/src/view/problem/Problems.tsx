@@ -10,13 +10,17 @@ interface Progress { total: number; solved: number }
 
 export default function Problems({
   problems,
+  allProblems,
   topics,
   languages,
   onSubmitted,
   reloadKey,
   openId,
 }: {
+  /** Bai cua kho chung - chi nhung bai nay hien trong lo trinh. */
   problems: Problem[];
+  /** Moi bai nguoi dung mo duoc, gom ca bai kho rieng nam trong ky thi / bai tap giao. */
+  allProblems: Problem[];
   topics: Topic[];
   languages: LanguageInfo[];
   onSubmitted: () => void;
@@ -99,11 +103,14 @@ export default function Problems({
   const currentTopic = groupTopics.find((t) => t.id === topicFilter);
   const nameOf = (p: Problem) => topicName.get(p.topic) ?? "Bài khác";
 
-  const selected = selectedId ? problems.find((p) => p.id === selectedId) ?? null : null;
+  // Tim trong allProblems de mo duoc ca bai kho rieng (bam tu ky thi, bai tap giao).
+  const selected = selectedId ? allProblems.find((p) => p.id === selectedId) ?? null : null;
   if (selected) {
     // "Bai tiep theo": trong danh sach dang loc neu bai nam trong do, khong thi theo lo trinh chung.
     const list = filtered.some((p) => p.id === selected.id) ? filtered : ordered;
-    const next = list[list.findIndex((p) => p.id === selected.id) + 1] ?? null;
+    // Bai kho rieng (mo tu ky thi) khong nam trong lo trinh nen khong co "bai tiep theo".
+    const index = list.findIndex((p) => p.id === selected.id);
+    const next = index >= 0 ? list[index + 1] ?? null : null;
     return (
       <ProblemDetail
         key={selected.id}

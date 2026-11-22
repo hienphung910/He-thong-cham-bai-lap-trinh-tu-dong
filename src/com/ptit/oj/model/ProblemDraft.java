@@ -21,6 +21,8 @@ public class ProblemDraft {
     private double totalPoints = 100;
     private String topic = "";
     private int difficulty = 0;
+    /** Ten dang nhap cua giang vien so huu bai; "" = kho chung. May chu tu dien, khong nhan tu client. */
+    private String owner = "";
     private final List<TestDraft> tests = new ArrayList<>();
 
     /** Mot bo test trong ban thao. */
@@ -69,6 +71,9 @@ public class ProblemDraft {
 
     public int getDifficulty() { return difficulty; }
     public void setDifficulty(int difficulty) { this.difficulty = difficulty; }
+
+    public String getOwner() { return owner; }
+    public void setOwner(String owner) { this.owner = owner; }
 
     public void addTest(TestDraft test) { tests.add(test); }
 

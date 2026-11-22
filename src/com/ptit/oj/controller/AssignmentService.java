@@ -35,6 +35,8 @@ public class AssignmentService {
         return assignments.findById(id).orElseThrow(() -> ApiException.notFound("Không có bài tập giao " + id));
     }
 
+    public List<Assignment> getAll() { return assignments.findAll(); }
+
     /** Bai tap giao cua cac lop cho truoc, han nop gan nhat dung truoc. */
     public List<Assignment> ofClassrooms(List<Classroom> classrooms) {
         List<Assignment> result = new ArrayList<>();

@@ -89,6 +89,8 @@ export interface ContestRow {
 export interface Contest {
   id: string; title: string; description: string; startAt: string; endAt: string;
   durationMin: number; status: "UPCOMING" | "RUNNING" | "ENDED"; problems: ProblemRef[];
+  /** Ho ten nguoi tao; canManage = nguoi dang xem duoc them / bot bai va xoa ky thi nay. */
+  ownerName: string; canManage: boolean;
   minute?: number; standings?: ContestRow[];
 }
 export interface ContestEvent { minute: number; username: string; fullName: string; problemId: string; verdict: string }

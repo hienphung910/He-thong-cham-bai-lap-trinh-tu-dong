@@ -147,7 +147,7 @@ public class ProblemWriter {
     /** Noi dung problem.properties cua bai moi. */
     private String buildProperties(ProblemDraft d) {
         StringBuilder sb = new StringBuilder();
-        sb.append("# Sinh tu giao dien quan tri (POST /api/admin/problems)\n");
+        sb.append("# Sinh tu giao dien web (POST /api/admin/problems)\n");
         sb.append("id=").append(escapeProperty(d.getId())).append('\n');
         sb.append("title=").append(escapeProperty(d.getTitle())).append('\n');
         sb.append("timeLimitMs=").append(d.getTimeLimitMs()).append('\n');
@@ -159,6 +159,10 @@ public class ProblemWriter {
         }
         if (d.getDifficulty() > 0) {
             sb.append("difficulty=").append(d.getDifficulty()).append('\n');
+        }
+        // Bai trong kho rieng cua giang vien: ghi ten chu bai de lan chay sau van biet.
+        if (d.getOwner() != null && !d.getOwner().isEmpty()) {
+            sb.append("owner=").append(escapeProperty(d.getOwner())).append('\n');
         }
         return sb.toString();
     }

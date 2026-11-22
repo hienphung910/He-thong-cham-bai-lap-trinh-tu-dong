@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "./shared/api";
 import { papi } from "./shared/platformApi";
 import { NavContext, type PageKey } from "./shared/nav";
@@ -40,10 +40,10 @@ import AuditLogs from "./view/admin/AuditLogs";
 /**
  * Menu tren thanh do tren cung, chia theo nhom: thanh chi hien ten nhom, re chuot vao
  * nhom nao thi xo xuong cac trang cua nhom do. Truong "role" gioi han ai thay muc do:
- * "staff" = giang vien va quan tri, "admin" = chi quan tri. Day chi la an / hien tren
- * giao dien - may chu van kiem tra lai quyen o tung request.
+ * "staff" = giang vien va quan tri, "teacher" = chi giang vien, "admin" = chi quan tri.
+ * Day chi la an / hien tren giao dien - may chu van kiem tra lai quyen o tung request.
  */
-interface NavItem { key: PageKey; label: string; role?: "staff" | "admin" }
+interface NavItem { key: PageKey; label: string; role?: "staff" | "teacher" | "admin" }
 const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
   {
     title: "Học tập",
@@ -96,12 +96,13 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
       { key: "Dashboard", label: "Tổng quan", role: "staff" },
       { key: "TeachingAssistant", label: "Trợ lý giảng dạy", role: "staff" },
       { key: "Parents", label: "Phụ huynh", role: "staff" },
+      { key: "MyProblems", label: "Kho bài của tôi", role: "teacher" },
     ],
   },
   {
     title: "Quản trị",
     items: [
-      { key: "Admin", label: "Bài tập và bộ test", role: "admin" },
+      { key: "Admin", label: "Kho bài chung và bộ test", role: "admin" },
       { key: "Accounts", label: "Tài khoản, giảng viên", role: "admin" },
       { key: "Organizations", label: "Tổ chức", role: "admin" },
       { key: "System", label: "Hệ thống", role: "admin" },
@@ -132,6 +133,7 @@ function AppShell() {
 
   const isAdmin = user?.role === "ADMIN";
   const isStaff = user?.role === "ADMIN" || user?.role === "TEACHER";
+  const isTeacher = user?.role === "TEACHER";
 
   /** Nguoi dang dang nhap co duoc vao trang nay khong (theo truong role cua NAV_GROUPS). */
   const allowed = useCallback((key: PageKey) => {
@@ -140,10 +142,15 @@ function AppShell() {
         if (item.key !== key) continue;
         if (item.role === "admin") return isAdmin;
         if (item.role === "staff") return isStaff;
+        if (item.role === "teacher") return isTeacher;
       }
     }
     return true;
-  }, [isAdmin, isStaff]);
+  }, [isAdmin, isStaff, isTeacher]);
+
+  // Hai kho bai: kho chung (owner rong) hien o lo trinh hoc; kho rieng la bai giang vien tu tao.
+  const sharedProblems = useMemo(() => problems.filter((p) => !p.owner), [problems]);
+  const myProblems = useMemo(() => problems.filter((p) => !!p.owner && p.owner === user?.username), [problems, user]);
 
   const loadProblems = useCallback(async () => {
     // Lo trinh la tuy chon: loi khi tai chu de khong duoc lam hong ca trang bai tap.
@@ -175,7 +182,12 @@ function AppShell() {
   const onProblemsChanged = useCallback(async () => { await loadProblems().catch(() => undefined); setReloadKey((k) => k + 1); }, [loadProblems]);
 
   const go = useCallback((next: PageKey) => { setOpenProblemId(null); setOpenGroup(null); setPage(next); }, []);
-  const openProblem = useCallback((id: string) => { setOpenProblemId(id); setPage("Problems"); }, []);
+  const openProblem = useCallback((id: string) => {
+    // Bai kho rieng vua duoc dua vao ky thi / bai tap co the chua nam trong danh sach da tai: tai lai.
+    if (!problems.some((p) => p.id === id)) void loadProblems().catch(() => undefined);
+    setOpenProblemId(id);
+    setPage("Problems");
+  }, [problems, loadProblems]);
 
   function handleLogout() { logout(); setPage("Problems"); setAvatarOpen(false); }
 
@@ -324,7 +336,7 @@ function AppShell() {
               </div>
             ) : !allowed(page) ? null : (
               <>
-                {page === "Problems" && <Problems problems={problems} topics={topics} languages={languages} onSubmitted={onSubmitted} reloadKey={reloadKey} openId={openProblemId} />}
+                {page === "Problems" && <Problems problems={sharedProblems} allProblems={problems} topics={topics} languages={languages} onSubmitted={onSubmitted} reloadKey={reloadKey} openId={openProblemId} />}
                 {page === "Classrooms" && <Classrooms />}
                 {page === "Courses" && <Courses />}
                 {page === "Assignments" && <Assignments />}
@@ -343,11 +355,12 @@ function AppShell() {
                 {page === "Notifications" && <Notifications onRead={loadHeader} />}
                 {page === "Submissions" && <Submissions reloadKey={reloadKey} />}
                 {page === "MySubmissions" && <MySubmissions />}
-                {page === "Leaderboard" && <Leaderboard reloadKey={reloadKey} problems={problems} />}
+                {page === "Leaderboard" && <Leaderboard reloadKey={reloadKey} problems={sharedProblems} />}
                 {page === "Dashboard" && <Dashboard />}
                 {page === "TeachingAssistant" && <TeachingAssistant />}
                 {page === "Parents" && <Parents />}
-                {page === "Admin" && <AdminPanel onProblemsChanged={onProblemsChanged} problems={problems} topics={topics} />}
+                {page === "MyProblems" && <AdminPanel mine onProblemsChanged={onProblemsChanged} problems={myProblems} topics={topics} />}
+                {page === "Admin" && <AdminPanel onProblemsChanged={onProblemsChanged} problems={sharedProblems} topics={topics} />}
                 {page === "Accounts" && <Accounts />}
                 {page === "Organizations" && <Organizations />}
                 {page === "System" && <SystemAdmin onSettingsChanged={loadHeader} />}

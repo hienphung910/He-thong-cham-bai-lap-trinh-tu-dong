@@ -52,7 +52,7 @@ public class AssignmentApi extends ApiModule {
             Classroom classroom = school.findClassroom(body.getString("classroomId"));
             school.requireManager(user, classroom);
             Assignment created = assignments.create(classroom, body.getString("title"),
-                    body.getString("description"), problemIds(body, "problemIds"),
+                    body.getString("description"), problemIds(body, "problemIds", user),
                     parseTime(body.getString("dueAt")), user);
             platform.getCommunity().notifyMany(classroom.getStudentIds(),
                     "Bài tập mới: " + created.getTitle(),

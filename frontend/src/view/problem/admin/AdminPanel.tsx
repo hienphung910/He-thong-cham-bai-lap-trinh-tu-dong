@@ -5,8 +5,16 @@ import ProblemEditor from "./ProblemEditor";
 import ProblemMetaEditor from "./ProblemMetaEditor";
 import TestcaseManager from "./TestcaseManager";
 
-/** Trang Quan tri (AdminPanelView): tao bai tap moi, doi chu de va do kho cua bai da co. */
-export default function AdminPanel({ problems, topics, onProblemsChanged }: { problems: Problem[]; topics: Topic[]; onProblemsChanged: () => Promise<void> }) {
+/**
+ * Trang quan ly bai tap: tao bai moi, sua bo test, doi chu de va do kho cua bai da co.
+ * Dung cho hai noi: quan tri vien voi KHO CHUNG, va giang vien voi KHO RIENG (mine = true).
+ * Trang chi nhan dung danh sach bai cua kho do; may chu tu gan chu bai khi tao.
+ */
+export default function AdminPanel({ problems, topics, onProblemsChanged, mine = false }: {
+  problems: Problem[]; topics: Topic[]; onProblemsChanged: () => Promise<void>;
+  /** true = kho rieng cua giang vien dang dang nhap. */
+  mine?: boolean;
+}) {
   const [showProblemEditor, setShowProblemEditor] = useState(false);
   const [editProblem, setEditProblem] = useState<Problem | null>(null);
   const [testProblem, setTestProblem] = useState<Problem | null>(null);
@@ -29,9 +37,11 @@ export default function AdminPanel({ problems, topics, onProblemsChanged }: { pr
             <div style={{ width: 30, height: 30, borderRadius: 7, background: "var(--color-maroon)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="#FAF7F2" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="12" height="10" rx="1.5" /><path d="M5 7h6M5 10h4" /></svg>
             </div>
-            <h1 style={{ fontFamily: "var(--font-serif)", fontSize: 26, fontWeight: 700, color: "var(--color-maroon)", margin: 0, letterSpacing: "-0.02em" }}>Admin Panel</h1>
+            <h1 style={{ fontFamily: "var(--font-serif)", fontSize: 26, fontWeight: 700, color: "var(--color-maroon)", margin: 0, letterSpacing: "-0.02em" }}>{mine ? "Kho bài của tôi" : "Kho bài chung"}</h1>
           </div>
-          <p style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--color-text-muted)", margin: 0 }}>Quản lý bài tập và sắp xếp lộ trình học.</p>
+          <p style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--color-text-muted)", margin: 0 }}>{mine
+            ? "Bài bạn tự tạo, chỉ bạn sửa được. Học sinh chỉ thấy bài khi bạn đưa nó vào kỳ thi, bài tập giao hoặc bài học."
+            : "Quản lý kho bài chung và sắp xếp lộ trình học. Giảng viên không sửa được các bài ở đây."}</p>
         </div>
 
         <button
@@ -66,7 +76,7 @@ export default function AdminPanel({ problems, topics, onProblemsChanged }: { pr
           <label style={{ fontFamily: "var(--font-mono)", fontSize: 10, fontWeight: 600, color: "var(--color-text-muted)", textTransform: "uppercase", letterSpacing: "0.09em" }}>Chủ đề</label>
           <select value={topicFilter} onChange={(e) => setTopicFilter(e.target.value)} style={FILTER}>
             <option value="">Tất cả ({problems.length})</option>
-            {topics.map((t) => <option key={t.id} value={t.id}>{t.order}. {t.name} ({t.problemCount})</option>)}
+            {topics.map((t) => <option key={t.id} value={t.id}>{t.order}. {t.name} ({problems.filter((p) => p.topic === t.id).length})</option>)}
             {ordered.some((p) => topicKey(p, known) === OTHER_TOPIC) && <option value={OTHER_TOPIC}>Bài khác</option>}
           </select>
         </div>
@@ -110,7 +120,7 @@ export default function AdminPanel({ problems, topics, onProblemsChanged }: { pr
           </table>
         </div>
         <div style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, color: "var(--color-text-muted)" }}>
-          Bảng xếp theo đúng thứ tự lộ trình học sinh thấy. "Test" để xem, thêm, xoá test; "Sửa" để đổi chủ đề hoặc độ khó.
+          {mine ? "Bài trong kho riêng không hiện ở lộ trình chung." : "Bảng xếp theo đúng thứ tự lộ trình học sinh thấy."} "Test" để xem, thêm, xoá test; "Sửa" để đổi chủ đề hoặc độ khó.
         </div>
       </div>
 

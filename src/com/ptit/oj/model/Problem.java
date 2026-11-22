@@ -21,6 +21,11 @@ public class Problem extends Entity {
      * 0 = khong khai bao: bai dung sau cac bai co thu tu va xep theo ma bai.
      */
     private final int order;
+    /**
+     * Ten dang nhap cua giang vien tao bai (khoa "owner" trong problem.properties).
+     * "" = bai thuoc KHO CHUNG, chi quan tri vien sua duoc.
+     */
+    private final String owner;
     private final List<TestCase> testCases = new ArrayList<>();
 
     /** Bai chua phan loai: khong thuoc chu de nao, chua danh gia do kho. */
@@ -29,9 +34,16 @@ public class Problem extends Entity {
         this(id, title, statement, timeLimitMs, memoryLimitMb, comparatorSpec, "", 0, 0);
     }
 
+    /** Bai thuoc kho chung (khong co chu). */
     public Problem(String id, String title, String statement,
                    long timeLimitMs, int memoryLimitMb, String comparatorSpec,
                    String topic, int difficulty, int order) {
+        this(id, title, statement, timeLimitMs, memoryLimitMb, comparatorSpec, topic, difficulty, order, "");
+    }
+
+    public Problem(String id, String title, String statement,
+                   long timeLimitMs, int memoryLimitMb, String comparatorSpec,
+                   String topic, int difficulty, int order, String owner) {
         super(id);
         this.title = title;
         this.statement = statement == null ? "" : statement;
@@ -41,6 +53,7 @@ public class Problem extends Entity {
         this.topic = topic == null ? "" : topic;
         this.difficulty = difficulty;
         this.order = order;
+        this.owner = owner == null ? "" : owner;
     }
 
     public void addTestCase(TestCase tc) {
@@ -60,6 +73,10 @@ public class Problem extends Entity {
     public String getTopic() { return topic; }
     public int getDifficulty() { return difficulty; }
     public int getOrder() { return order; }
+    public String getOwner() { return owner; }
+
+    /** true = bai cua kho chung; false = bai trong kho rieng cua mot giang vien. */
+    public boolean isShared() { return owner.isEmpty(); }
 
     /** Tong diem toi da cua bai = tong diem cac test. */
     public double getMaxPoints() {

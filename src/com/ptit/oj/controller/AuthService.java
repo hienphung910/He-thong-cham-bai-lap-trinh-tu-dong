@@ -15,7 +15,8 @@ import java.util.UUID;
  * Dang ky / dang nhap / phan quyen.
  *
  * Nguyen tac:
- *  - Client KHONG bao gio duoc tu chon vai tro: register() luon tao STUDENT.
+ *  - Khi tu dang ky, client chi duoc chon STUDENT hoac TEACHER. Tai khoan ADMIN
+ *    khong bao gio tao duoc qua register(), chi quan tri vien tao (createByAdmin).
  *  - Sai username va sai mat khau tra ve cung mot thong bao, de khong lo
  *    tai khoan nao dang ton tai (user enumeration).
  *  - Khong ham nao trong lop nay tra ve hash hoac salt ra ngoai.
@@ -67,23 +68,35 @@ public class AuthService {
 
     // ---------------------------------------------------------------- dang ky
 
-    /** Dang ky tai khoan hoc sinh. Vai tro luon la STUDENT, khong nhan tu client. */
-    public synchronized User register(String username, String rawPassword, String fullName,
-                                      String studentCode, String className) {
+    /**
+     * Tu dang ky tai khoan. role chi nhan STUDENT hoac TEACHER (de trong thi coi la STUDENT);
+     * gui ADMIN hay gia tri la deu bi tu choi.
+     * Hoc sinh dung studentCode + className, giang vien dung department.
+     */
+    public synchronized User register(String role, String username, String rawPassword, String fullName,
+                                      String studentCode, String className, String department) {
         String cleanUsername = normalizeOrFail(username);
         passwords.validate(rawPassword);
-
         String cleanFullName = requireText(fullName, "Họ tên", MAX_FULL_NAME);
-        String cleanCode = optionalText(studentCode, "Mã sinh viên", MAX_CODE);
-        String cleanClass = optionalText(className, "Lớp", MAX_CODE);
+
+        // Tao dung lop con theo vai tro duoc chon.
+        User user;
+        if (role == null || role.isEmpty() || User.ROLE_STUDENT.equals(role)) {
+            String cleanCode = optionalText(studentCode, "Mã sinh viên", MAX_CODE);
+            String cleanClass = optionalText(className, "Lớp", MAX_CODE);
+            user = new Student(newUserId(), cleanUsername, cleanFullName, cleanCode, cleanClass);
+        } else if (User.ROLE_TEACHER.equals(role)) {
+            String cleanDepartment = optionalText(department, "Bộ môn", MAX_CODE);
+            user = new Teacher(newUserId(), cleanUsername, cleanFullName, cleanDepartment);
+        } else {
+            throw new AuthException(400, "Chỉ được tự đăng ký vai trò Học sinh hoặc Giảng viên");
+        }
 
         if (users.existsByUsername(cleanUsername)) {
             throw new AuthException(409, "Tên đăng nhập \"" + cleanUsername + "\" đã tồn tại");
         }
-
-        Student student = new Student(newUserId(), cleanUsername, cleanFullName, cleanCode, cleanClass);
-        users.saveWithCredentials(student, passwords.hash(rawPassword));
-        return student;
+        users.saveWithCredentials(user, passwords.hash(rawPassword));
+        return user;
     }
 
     /** Tao tai khoan cho vai tro bat ky - chi dung tu phia may chu (seed, bootstrap). */

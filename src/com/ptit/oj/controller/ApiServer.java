@@ -44,6 +44,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -195,8 +196,7 @@ public class ApiServer {
             return;
         }
         if ("GET".equals(method) && path.equals("/api/problems")) {
-            requireUser(ex);
-            sendJson(ex, 200, problemsJson());
+            sendJson(ex, 200, problemsJson(requireUser(ex)));
             return;
         }
         if ("GET".equals(method) && path.equals("/api/topics")) {
@@ -222,13 +222,14 @@ public class ApiServer {
             return;
         }
 
-        // ---- chi ADMIN ----
+        // ---- quan ly bai tap: quan tri vien (kho chung) va giang vien (kho rieng cua minh) ----
+        // Hoc sinh bi chan o day; con "bai nay co phai cua minh khong" do ProblemAdminService kiem tra.
         if ("POST".equals(method) && path.equals("/api/admin/problems")) {
-            handleCreateProblem(ex, requireAdmin(ex));
+            handleCreateProblem(ex, requireStaff(ex));
             return;
         }
         if ("PUT".equals(method) && path.startsWith("/api/admin/problems/")) {
-            handleUpdateProblem(ex, requireAdmin(ex), path.substring("/api/admin/problems/".length()));
+            handleUpdateProblem(ex, requireStaff(ex), path.substring("/api/admin/problems/".length()));
             return;
         }
 
@@ -252,11 +253,11 @@ public class ApiServer {
         return user.get();
     }
 
-    /** Nem 401 neu chua dang nhap, 403 neu dang nhap nhung khong phai quan tri. */
-    private User requireAdmin(HttpExchange ex) {
+    /** Nem 401 neu chua dang nhap, 403 neu la hoc sinh. */
+    private User requireStaff(HttpExchange ex) {
         User user = requireUser(ex);
-        if (!User.ROLE_ADMIN.equals(user.getRoleCode())) {
-            throw ApiException.forbidden("Chỉ tài khoản quản trị mới được dùng chức năng này");
+        if (!canSeeEveryone(user)) {
+            throw ApiException.forbidden("Chỉ giảng viên hoặc quản trị viên mới được dùng chức năng này");
         }
         return user;
     }
@@ -272,13 +273,15 @@ public class ApiServer {
             throw ApiException.forbidden("Quản trị viên đang tạm khoá chức năng tự đăng ký");
         }
         Json.Value body = Json.parseObject(readBody(ex, MAX_BODY_BYTES));
-        // Cho du client co gui "role": "ADMIN" thi cung bi bo qua: register() luon tao STUDENT.
+        // role chi duoc la STUDENT hoac TEACHER; gui "ADMIN" thi register() tu choi (400).
         User created = service.getAuth().register(
+                body.getString("role", User.ROLE_STUDENT),
                 body.getString("username"),
                 body.getString("password"),
                 body.getString("fullName"),
-                body.getString("studentCode"),
-                body.getString("className"));
+                body.getString("studentCode", ""),
+                body.getString("className", ""),
+                body.getString("department", ""));
         sendJson(ex, 201, Json.obj()
                 .put("message", "Đăng ký thành công, mời bạn đăng nhập")
                 .putRaw("user", userJson(created))
@@ -336,12 +339,18 @@ public class ApiServer {
     }
 
     /**
-     * Danh sach bai tap. KHONG tra ve so luong test, va chi tra ve input/output
-     * cua test VI DU - test an khong bao gio roi xuong trinh duyet.
+     * Danh sach bai tap nguoi xem duoc thay. KHONG tra ve so luong test, va chi tra ve
+     * input/output cua test VI DU - test an khong bao gio roi xuong trinh duyet.
+     *
+     * Bai kho chung: ai cung thay. Bai kho rieng cua giang vien: chi chu bai va quan tri vien
+     * thay, tru khi bai da duoc dua vao mot ky thi / bai tap giao / bai hoc (luc do ai cung mo duoc).
      */
-    private String problemsJson() {
+    private String problemsJson(User viewer) {
+        Set<String> published = platform.publishedProblemIds();
         List<String> items = new ArrayList<>();
         for (Problem p : service.getProblems()) {
+            boolean visible = p.isShared() || viewer.canEditProblem(p) || published.contains(p.getId());
+            if (!visible) continue;
             List<String> samples = new ArrayList<>();
             for (TestCase tc : p.getTestCases()) {
                 if (!tc.isSample()) continue;
@@ -361,6 +370,7 @@ public class ApiServer {
                     .put("topic", p.getTopic())
                     .put("difficulty", p.getDifficulty())
                     .put("order", p.getOrder())
+                    .put("owner", p.getOwner())            // "" = kho chung
                     .putRaw("samples", Json.array(samples))
                     .build());
         }
@@ -370,7 +380,7 @@ public class ApiServer {
     /** Lo trinh hoc theo dung thu tu; dem so bai de giao dien khoi phai tu dem lai. */
     private String topicsJson() {
         Map<String, Integer> counts = new LinkedHashMap<>();
-        for (Problem p : service.getProblems()) {
+        for (Problem p : service.getSharedProblems()) {      // lo trinh chi dem bai kho chung
             counts.merge(p.getTopic(), 1, Integer::sum);
         }
         List<String> items = new ArrayList<>();
@@ -467,6 +477,7 @@ public class ApiServer {
 
     private String scoreboardJson() {
         Map<String, Integer> solvedByUser = service.getSolvedCountByUser();
+        Map<String, Integer> privateSolved = privateSolvedCount();
         List<String> rows = new ArrayList<>();
         int rank = 1;
         for (ScoreboardService.Row row : service.buildScoreboard()) {
@@ -482,12 +493,28 @@ public class ApiServer {
                     .put("roleName", row.getUser().getRole())
                     .put("total", row.getTotal())
                     .put("solved", row.getSolved())
-                    .put("solvedCount", solvedByUser.getOrDefault(row.getUser().getId(), 0))
+                    .put("solvedCount", solvedByUser.getOrDefault(row.getUser().getId(), 0)
+                            - privateSolved.getOrDefault(row.getUser().getId(), 0))
                     .put("attempts", row.getAttempts())
                     .putRaw("perProblem", Json.array(perProblem))
                     .build());
         }
         return Json.array(rows);
+    }
+
+    /**
+     * userId -> so bai KHO RIENG nguoi do da AC. So bai da giai lay tu CSDL (view user_stats)
+     * dem moi bai, nen bang xep hang tru di phan nay de chi con bai kho chung.
+     */
+    private Map<String, Integer> privateSolvedCount() {
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        for (Map.Entry<String, Set<String>> e : platform.getAnalytics().solvedByUser().entrySet()) {
+            for (String problemId : e.getValue()) {
+                Problem p = service.findProblem(problemId).orElse(null);
+                if (p != null && !p.isShared()) counts.merge(e.getKey(), 1, Integer::sum);
+            }
+        }
+        return counts;
     }
 
     /**
@@ -524,7 +551,10 @@ public class ApiServer {
         sendJson(ex, 200, submissionJson(result.getSubmission(), true));
     }
 
-    /** POST /api/admin/problems - tao bai tap moi, chi ADMIN. */
+    /**
+     * POST /api/admin/problems - tao bai tap moi. Quan tri vien tao vao kho chung,
+     * giang vien tao vao kho rieng; chu bai do may chu tu gan, khong doc tu body.
+     */
     private void handleCreateProblem(HttpExchange ex, User admin) throws IOException {
         Json.Value body = Json.parseObject(readBody(ex, MAX_ADMIN_BODY_BYTES));
 
@@ -559,7 +589,8 @@ public class ApiServer {
     }
 
     /**
-     * PUT /api/admin/problems/{id} - doi chu de va do kho cua bai da co. Chi ADMIN.
+     * PUT /api/admin/problems/{id} - doi chu de va do kho cua bai da co.
+     * Quan tri vien sua duoc moi bai, giang vien chi sua bai trong kho cua minh.
      * Body: {"topic": "vong-lap", "difficulty": 2}. Truong nao vang mat thi giu nhu cu.
      */
     private void handleUpdateProblem(HttpExchange ex, User admin, String id) throws IOException {
@@ -597,6 +628,7 @@ public class ApiServer {
                 .put("topic", p.getTopic())
                 .put("difficulty", p.getDifficulty())
                 .put("order", p.getOrder())
+                .put("owner", p.getOwner())
                 .build();
     }
 

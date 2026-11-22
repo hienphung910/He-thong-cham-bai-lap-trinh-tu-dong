@@ -19,6 +19,9 @@ export default function LoginModal() {
   const [fullName, setFullName] = useState("");
   const [studentCode, setStudentCode] = useState("");
   const [className, setClassName] = useState("");
+  // Vai tro chon khi dang ky: hoc sinh hoac giang vien (quan tri vien khong tu dang ky duoc).
+  const [role, setRole] = useState<"STUDENT" | "TEACHER">("STUDENT");
+  const [department, setDepartment] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
@@ -40,8 +43,12 @@ export default function LoginModal() {
     if (password !== confirm) { setError("Hai lần nhập mật khẩu không khớp."); return; }
     setBusy(true);
     try {
-      await register({ username: username.trim(), password, fullName: fullName.trim(), studentCode: studentCode.trim(), className: className.trim() });
-      switchMode("login"); setNotice(`Đã tạo tài khoản @${username.trim()}. Mời bạn đăng nhập.`);
+      await register({
+        role, username: username.trim(), password, fullName: fullName.trim(),
+        studentCode: studentCode.trim(), className: className.trim(), department: department.trim(),
+      });
+      switchMode("login");
+      setNotice(`Đã tạo tài khoản ${role === "TEACHER" ? "giảng viên" : "học sinh"} @${username.trim()}. Mời bạn đăng nhập.`);
     } catch (e2) { setError(e2 instanceof Error ? e2.message : String(e2)); }
     finally { setBusy(false); }
   }
@@ -72,7 +79,7 @@ export default function LoginModal() {
             {mode === "login" ? "Đăng nhập" : "Đăng ký tài khoản"}
           </h2>
           <p style={{ fontSize: 14, color: "#9E9E9E", margin: 0 }}>
-            {mode === "login" ? "Truy cập hệ thống chấm bài" : "Tạo tài khoản học sinh mới"}
+            {mode === "login" ? "Truy cập hệ thống chấm bài" : "Chọn vai trò rồi điền thông tin"}
           </p>
 
           {notice && (
@@ -88,9 +95,26 @@ export default function LoginModal() {
 
           {mode === "register" && (
             <>
+              {/* Chon vai tro: hai nut, nut dang chon to mau do */}
+              <div style={{ display: "flex", gap: 8 }}>
+                {([["STUDENT", "Học sinh"], ["TEACHER", "Giảng viên"]] as const).map(([value, label]) => (
+                  <button key={value} type="button" onClick={() => setRole(value)} style={{
+                    flex: 1, height: 40, borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer",
+                    border: role === value ? "1px solid var(--color-red)" : "1px solid #E0E0E0",
+                    background: role === value ? "var(--color-red)" : "#fff",
+                    color: role === value ? "#fff" : "#616161",
+                  }}>{label}</button>
+                ))}
+              </div>
               <input type="text" placeholder="Họ và tên" value={fullName} onChange={(e) => setFullName(e.target.value)} style={inputBox} />
-              <input type="text" placeholder="Mã sinh viên" value={studentCode} onChange={(e) => setStudentCode(e.target.value)} style={inputBox} />
-              <input type="text" placeholder="Lớp" value={className} onChange={(e) => setClassName(e.target.value)} style={inputBox} />
+              {role === "STUDENT" ? (
+                <>
+                  <input type="text" placeholder="Mã sinh viên" value={studentCode} onChange={(e) => setStudentCode(e.target.value)} style={inputBox} />
+                  <input type="text" placeholder="Lớp" value={className} onChange={(e) => setClassName(e.target.value)} style={inputBox} />
+                </>
+              ) : (
+                <input type="text" placeholder="Bộ môn" value={department} onChange={(e) => setDepartment(e.target.value)} style={inputBox} />
+              )}
             </>
           )}
 

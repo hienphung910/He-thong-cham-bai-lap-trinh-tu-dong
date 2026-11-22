@@ -43,7 +43,7 @@ export default function SystemAdmin({ onSettingsChanged }: { onSettingsChanged: 
           </Field>
           <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13.5 }}>
             <input type="checkbox" checked={allowRegister} onChange={(e) => setAllowRegister(e.target.checked)} />
-            Cho phép học sinh tự đăng ký tài khoản
+            Cho phép tự đăng ký tài khoản (học sinh và giảng viên)
           </label>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <Btn onClick={() => void save()}>Lưu cấu hình</Btn>

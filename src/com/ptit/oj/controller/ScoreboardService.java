@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Tinh bang xep hang: moi nguoi lay diem CAO NHAT tren tung bai, roi cong lai.
+ * Tinh bang xep hang: moi nguoi lay diem CAO NHAT tren tung bai KHO CHUNG, roi cong lai.
  * Tang lop service chi lam nghiep vu, khong lam I/O va khong lam cham bai.
  */
 public class ScoreboardService {
@@ -66,6 +66,10 @@ public class ScoreboardService {
 
         for (Submission s : submissions.findAll()) {
             if (!s.isJudged()) continue;
+            // Bang xep hang chung chi tinh bai kho chung. Neu tinh ca kho rieng thi ai cung
+            // co the dang ky giang vien, tu tao bai de roi tu nop de leo hang.
+            Problem own = problems.findById(s.getProblem().getId()).orElse(null);
+            if (own != null && !own.isShared()) continue;
             User u = s.getAuthor();
             best.putIfAbsent(u, new LinkedHashMap<>());
             attempts.merge(u, 1, Integer::sum);

@@ -25,7 +25,7 @@ export default function Accounts() {
   }
 
   return (
-    <Page title="Tài khoản và giảng viên" subtitle="Học sinh tự đăng ký; tài khoản giảng viên và quản trị do quản trị viên tạo ở đây.">
+    <Page title="Tài khoản và giảng viên" subtitle="Học sinh và giảng viên tự đăng ký được; tài khoản quản trị chỉ tạo được ở đây.">
       <ErrorBox text={error || users.error} />
       <Card title="Tạo tài khoản">
         <Row>

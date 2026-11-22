@@ -1,6 +1,5 @@
 package com.ptit.oj.controller.api;
 
-import com.ptit.oj.controller.ApiException;
 import com.ptit.oj.controller.Json;
 import com.ptit.oj.controller.Platform;
 import com.ptit.oj.model.Problem;
@@ -13,7 +12,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Module 7 (quan ly bo test) - chi quan tri vien, vi day la noi duy nhat tra ve test an:
+ * Module 7 (quan ly bo test). Day la noi duy nhat tra ve test an, nen ca ba endpoint deu
+ * kiem tra quyen SUA BAI: quan tri vien voi moi bai, giang vien chi voi bai trong kho cua minh.
  *   GET    /api/admin/problems/{id}/tests          - toan bo test cua bai (ca test an)
  *   POST   /api/admin/problems/{id}/tests          - them mot test
  *   DELETE /api/admin/problems/{id}/tests/{ten}    - xoa mot test
@@ -30,24 +30,23 @@ public class TestcaseApi extends ApiModule {
     @Override
     public boolean handle(Request req) throws IOException {
         if (req.is("GET", "admin", "problems", "*", "tests")) {
-            req.admin();
-            String id = req.arg(0);
-            Problem problem = judge.findProblem(id).orElseThrow(() -> ApiException.notFound("Không có bài " + id));
-            req.send(testsJson(problem));
+            User user = req.staff();
+            // findProblemForEdit nem 403 neu day khong phai bai nguoi nay duoc sua.
+            req.send(testsJson(judge.findProblemForEdit(user, req.arg(0))));
             return true;
         }
         if (req.is("POST", "admin", "problems", "*", "tests")) {
-            User admin = req.admin();
+            User user = req.staff();
             Json.Value body = req.body();
-            Problem updated = judge.addTest(admin, req.arg(0), new ProblemDraft.TestDraft(
+            Problem updated = judge.addTest(user, req.arg(0), new ProblemDraft.TestDraft(
                     body.getString("name"), body.getString("input"), body.getString("output"),
                     body.getBoolean("sample", false)));
             req.send(testsJson(updated));
             return true;
         }
         if (req.is("DELETE", "admin", "problems", "*", "tests", "*")) {
-            User admin = req.admin();
-            req.send(testsJson(judge.deleteTest(admin, req.arg(0), req.arg(1))));
+            User user = req.staff();
+            req.send(testsJson(judge.deleteTest(user, req.arg(0), req.arg(1))));
             return true;
         }
         return false;

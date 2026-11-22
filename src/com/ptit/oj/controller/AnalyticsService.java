@@ -162,13 +162,14 @@ public class AnalyticsService {
         for (Topic t : judge.getTopics()) byTopic.put(t.getId(), new TopicStat(t));
 
         Set<String> solved = solvedIds(submissions);
-        for (Problem p : judge.getProblems()) {
+        for (Problem p : judge.getSharedProblems()) {      // chi tinh kho chung
             TopicStat stat = byTopic.get(p.getTopic());
             if (stat == null) continue;                 // bai chua gan chu de
             stat.total++;
             if (solved.contains(p.getId())) stat.solved++;
         }
         for (Submission s : submissions) {
+            if (!s.getProblem().isShared()) continue;       // bai kho rieng khong tinh vao ky nang theo chu de
             TopicStat stat = byTopic.get(s.getProblem().getTopic());
             if (stat == null) continue;
             stat.attempts++;
@@ -216,7 +217,7 @@ public class AnalyticsService {
         List<Topic> topics = judge.getTopics();
         for (int i = 0; i < topics.size(); i++) topicIndex.put(topics.get(i).getId(), i);
 
-        List<Problem> ordered = judge.getProblems();
+        List<Problem> ordered = judge.getSharedProblems();     // lo trinh chi gom bai kho chung
         ordered.sort((a, b) -> {
             int ta = topicIndex.getOrDefault(a.getTopic(), 9999);
             int tb = topicIndex.getOrDefault(b.getTopic(), 9999);
@@ -263,7 +264,7 @@ public class AnalyticsService {
     /** Diem thuong: moi bai da giai duoc 10 / 20 / 40 diem theo do kho De / Vua / Kho. */
     public int points(Set<String> solvedIds) {
         int points = 0;
-        for (Problem p : judge.getProblems()) {
+        for (Problem p : judge.getSharedProblems()) {      // bai kho rieng khong cong diem thuong
             if (!solvedIds.contains(p.getId())) continue;
             if (p.getDifficulty() == 3) points += 40;
             else if (p.getDifficulty() == 2) points += 20;

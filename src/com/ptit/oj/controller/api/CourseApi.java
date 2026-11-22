@@ -50,11 +50,11 @@ public class CourseApi extends ApiModule {
             return true;
         }
         if (req.is("POST", "courses", "*", "lessons")) {
-            req.staff();
+            User user = req.staff();
             Json.Value body = req.body();
             Course course = courses.findCourse(req.arg(0));
             courses.addLesson(course, body.getString("title"), body.getString("content"),
-                    problemIds(body, "problemIds"));
+                    problemIds(body, "problemIds", user));
             req.send(courseJson(course));
             return true;
         }

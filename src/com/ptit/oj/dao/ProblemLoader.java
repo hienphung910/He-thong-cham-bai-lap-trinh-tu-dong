@@ -82,9 +82,11 @@ public class ProblemLoader {
         long order = parseLong(config.getProperty("order"), 0);
         if (order < 0 || order > 9999) order = 0;        // ngoai khoang 1..9999 coi nhu khong khai bao
         String statement = readTextIfExists(dir.resolve("statement.txt"));
+        // Khong co dong "owner" = bai kho chung (toan bo bai co san deu nhu vay).
+        String owner = config.getProperty("owner", "").trim();
 
         Problem problem = new Problem(id, title, statement, timeLimit, memoryLimit, comparator,
-                topic, difficulty, (int) order);
+                topic, difficulty, (int) order, owner);
 
         List<Path> inputs = listInputs(dir.resolve("tests"));
         if (inputs.isEmpty()) {
