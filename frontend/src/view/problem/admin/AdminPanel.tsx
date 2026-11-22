@@ -3,11 +3,13 @@ import { DIFFICULTY_META, OTHER_TOPIC, orderByPath, topicKey } from "../learning
 import type { Problem, Topic } from "../../../shared/types";
 import ProblemEditor from "./ProblemEditor";
 import ProblemMetaEditor from "./ProblemMetaEditor";
+import TestcaseManager from "./TestcaseManager";
 
 /** Trang Quan tri (AdminPanelView): tao bai tap moi, doi chu de va do kho cua bai da co. */
 export default function AdminPanel({ problems, topics, onProblemsChanged }: { problems: Problem[]; topics: Topic[]; onProblemsChanged: () => Promise<void> }) {
   const [showProblemEditor, setShowProblemEditor] = useState(false);
   const [editProblem, setEditProblem] = useState<Problem | null>(null);
+  const [testProblem, setTestProblem] = useState<Problem | null>(null);
   /** "" = moi chu de, ma chu de, hoac OTHER_TOPIC. */
   const [topicFilter, setTopicFilter] = useState("");
 
@@ -97,6 +99,7 @@ export default function AdminPanel({ problems, topics, onProblemsChanged }: { pr
                       <td style={{ padding: "8px 14px" }}><span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--color-text-secondary)" }}>{p.maxPoints.toFixed(0)}</span></td>
                       <td style={{ padding: "8px 14px" }}>
                         <div style={{ display: "flex", justifyContent: "flex-end", gap: 6 }}>
+                          <button onClick={() => setTestProblem(p)} style={ROW_BTN}>Test</button>
                           <button onClick={() => setEditProblem(p)} style={ROW_BTN}>Sửa</button>
                         </div>
                       </td>
@@ -107,12 +110,15 @@ export default function AdminPanel({ problems, topics, onProblemsChanged }: { pr
           </table>
         </div>
         <div style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, color: "var(--color-text-muted)" }}>
-          Bảng xếp theo đúng thứ tự lộ trình học sinh thấy. "Sửa" để đổi chủ đề hoặc độ khó. Chưa có API sửa đề, test hay xoá bài.
+          Bảng xếp theo đúng thứ tự lộ trình học sinh thấy. "Test" để xem, thêm, xoá test; "Sửa" để đổi chủ đề hoặc độ khó.
         </div>
       </div>
 
       {showProblemEditor && (
         <ProblemEditor topics={topics} onClose={() => setShowProblemEditor(false)} onCreated={() => void onProblemsChanged()} />
+      )}
+      {testProblem && (
+        <TestcaseManager problem={testProblem} onClose={() => { setTestProblem(null); void onProblemsChanged(); }} />
       )}
       {editProblem && (
         <ProblemMetaEditor problem={editProblem} topics={topics} onClose={() => setEditProblem(null)} onSaved={onProblemsChanged} />

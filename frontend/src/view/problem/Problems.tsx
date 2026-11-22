@@ -14,12 +14,15 @@ export default function Problems({
   languages,
   onSubmitted,
   reloadKey,
+  openId,
 }: {
   problems: Problem[];
   topics: Topic[];
   languages: LanguageInfo[];
   onSubmitted: () => void;
   reloadKey: number;
+  /** Ma bai can mo ngay (bam tu trang bai tap giao, ky thi, goi y...); null = hien danh sach. */
+  openId?: string | null;
 }) {
   const { user } = useAuth();
   const [search, setSearch] = useState("");
@@ -31,6 +34,7 @@ export default function Problems({
   const [diffFilter, setDiffFilter] = useState(0);
   const [hov, setHov] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  useEffect(() => { if (openId) setSelectedId(openId); }, [openId]);
   const [mySubs, setMySubs] = useState<Submission[]>([]);
 
   useEffect(() => {

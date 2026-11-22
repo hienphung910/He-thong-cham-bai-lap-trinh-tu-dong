@@ -150,6 +150,12 @@ public final class Json {
             return (List<Value>) raw;
         }
 
+        /** Gia tri chuoi cua chinh phan tu nay - dung khi duyet mot mang chuoi. */
+        public String asString() {
+            if (!isString()) throw new IllegalArgumentException("Cần một chuỗi");
+            return (String) raw;
+        }
+
         /** Co thuoc tinh nay khong (ke ca khi gia tri la null). */
         public boolean has(String key) {
             return isObject() && asMap().containsKey(key);

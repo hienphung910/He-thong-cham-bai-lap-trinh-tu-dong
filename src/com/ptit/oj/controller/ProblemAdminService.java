@@ -6,6 +6,7 @@ import com.ptit.oj.dao.ProblemWriter;
 import com.ptit.oj.dao.Repository;
 import com.ptit.oj.model.Problem;
 import com.ptit.oj.model.ProblemDraft;
+import com.ptit.oj.model.TestCase;
 import com.ptit.oj.model.User;
 
 import java.io.IOException;
@@ -116,6 +117,65 @@ public class ProblemAdminService {
         } catch (IOException e) {
             throw new ProblemAdminException(500, "Không ghi được bài tập ra ổ đĩa: " + e.getMessage());
         }
+    }
+
+    // ------------------------------------------------- quan ly bo test (Module 7)
+
+    /** Them mot test vao bai DA CO. Diem moi test duoc chia deu lai khi nap lai bai. */
+    public synchronized Problem addTest(User actor, String rawId, ProblemDraft.TestDraft test) {
+        if (actor == null || !actor.canCreateProblem()) {
+            throw new ProblemAdminException(403, "Chỉ tài khoản quản trị mới được sửa bộ test");
+        }
+        Problem current = findExisting(rawId);
+        if (current.getTestCases().size() >= MAX_TESTS) {
+            throw new ProblemAdminException(400, "Tối đa " + MAX_TESTS + " test cho một bài");
+        }
+        // Dua ten cac test dang co vao "seen" de validateTest bat duoc ten trung.
+        Set<String> seen = new LinkedHashSet<>();
+        for (TestCase tc : current.getTestCases()) seen.add(tc.getId().toLowerCase(Locale.ROOT));
+        validateTest(test, seen);
+
+        try {
+            writer.writeTest(current.getId(), test.getName().trim(), test.getInput(), test.getOutput());
+        } catch (IOException e) {
+            throw new ProblemAdminException(500, "Không ghi được test ra ổ đĩa: " + e.getMessage());
+        }
+        return reload(current.getId());
+    }
+
+    /** Xoa mot test cua bai da co; bai phai con lai it nhat mot test. */
+    public synchronized Problem deleteTest(User actor, String rawId, String testName) {
+        if (actor == null || !actor.canCreateProblem()) {
+            throw new ProblemAdminException(403, "Chỉ tài khoản quản trị mới được sửa bộ test");
+        }
+        Problem current = findExisting(rawId);
+        boolean exists = false;
+        for (TestCase tc : current.getTestCases()) {
+            if (tc.getId().equals(testName)) exists = true;
+        }
+        // Chi xoa ten test co trong danh sach da nap -> khong the truyen duong dan la vao day.
+        if (!exists) throw new ProblemAdminException(404, "Bài " + current.getId() + " không có test " + testName);
+        if (current.getTestCases().size() == 1) {
+            throw new ProblemAdminException(400, "Bài phải còn ít nhất một test");
+        }
+        try {
+            writer.deleteTest(current.getId(), testName);
+        } catch (IOException e) {
+            throw new ProblemAdminException(500, "Không xoá được test: " + e.getMessage());
+        }
+        return reload(current.getId());
+    }
+
+    private Problem findExisting(String rawId) {
+        String id = normalizeId(rawId);
+        return problems.findById(id).orElseThrow(() -> new ProblemAdminException(404, "Không có bài " + id));
+    }
+
+    /** Nap lai bai tu o dia de bo nho luon khop voi thu muc tests/. */
+    private Problem reload(String id) {
+        Problem problem = loader.load(writer.problemDir(id));
+        problems.save(problem);
+        return problem;
     }
 
     // ------------------------------------------------------------ kiem tra

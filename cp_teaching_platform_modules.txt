@@ -1,0 +1,44 @@
+DANH SÁCH MODULE CHỨC NĂNG – CP TEACHING PLATFORM
+
+1. User & Account Management – Quản lý tài khoản và phân quyền.
+2. Organization Management – Quản lý trung tâm, tổ chức.
+3. Classroom Management – Quản lý lớp học, giáo viên, học sinh.
+4. Course Management – Quản lý khóa học và giáo trình.
+5. Curriculum & Learning Path – Quản lý lộ trình học tập.
+6. Problem Management – Quản lý ngân hàng bài tập.
+7. Testcase Management – Quản lý bộ test và dữ liệu kiểm thử.
+8. Judge Engine – Hệ thống chấm bài tự động.
+9. Submission Management – Quản lý bài nộp và lịch sử submit.
+10. Online IDE – Môi trường lập trình trực tuyến.
+11. Advanced CP Tools – Công cụ hỗ trợ Competitive Programming.
+12. Stress Testing – Sinh test, brute force và tìm counterexample.
+13. Assignment Management – Quản lý bài tập được giao.
+14. Virtual Classroom – Phòng học trực tuyến.
+15. Meeting Management – Tạo và quản lý buổi học trực tuyến.
+16. Video & Audio Conference – Hội nghị video và âm thanh.
+17. Live Coding – Giảng dạy và lập trình trực tiếp.
+18. Collaborative Coding – Nhiều người cùng lập trình realtime.
+19. Whiteboard & Interactive Tools – Bảng tương tác và công cụ giảng dạy.
+20. Attendance Management – Quản lý điểm danh.
+21. Contest Management – Quản lý cuộc thi lập trình.
+22. Contest Replay – Xem lại và phân tích quá trình thi.
+23. Student Analytics – Phân tích kết quả học tập.
+24. Skill Assessment – Đánh giá năng lực lập trình.
+25. Weakness Detection – Phát hiện lỗ hổng kiến thức.
+26. Learning Recommendation – Đề xuất bài tập và lộ trình học.
+27. AI Teaching Assistant – Trợ lý AI cho giáo viên.
+28. AI Coding Assistant – Trợ lý AI cho học sinh.
+29. Notification Management – Quản lý thông báo.
+30. Communication & Chat – Chat và trao đổi trực tuyến.
+31. Discussion Forum – Diễn đàn thảo luận.
+32. Parent Management – Quản lý phụ huynh.
+33. Reporting & Dashboard – Báo cáo và thống kê.
+34. Payment & Subscription – Quản lý thanh toán và gói dịch vụ.
+35. Teacher Management – Quản lý giáo viên và trợ giảng.
+36. Document Management – Quản lý tài liệu học tập.
+37. Recording Management – Quản lý bản ghi buổi học.
+38. Gamification – Huy hiệu, điểm thưởng và thành tích.
+39. System Administration – Quản trị hệ thống.
+40. Security & Audit Management – Bảo mật và nhật ký hoạt động.
+
+TỔNG CỘNG: 40 MODULE CHỨC NĂNG.

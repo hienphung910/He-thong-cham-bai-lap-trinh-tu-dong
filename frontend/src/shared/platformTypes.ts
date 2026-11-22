@@ -1,0 +1,147 @@
+import type { RoleCode } from "./types";
+
+/** Kieu du lieu cua cac module mo rong - khop 1-1 voi JSON do cac lop ...Api.java tra ve. */
+
+export interface BasicUser {
+  id: string;
+  username: string;
+  fullName: string;
+  role: RoleCode;
+  roleName: string;
+  /** Lop cua hoc sinh hoac bo mon cua giang vien (chi co o /api/users). */
+  detail?: string;
+}
+
+export interface ProblemRef { id: string; title: string }
+export interface Count { key: string; count: number }
+
+// ---- to chuc, lop hoc, phu huynh ----
+export interface Organization { id: string; name: string; address: string; description: string; classCount: number }
+
+export interface Classroom {
+  id: string;
+  name: string;
+  organizationId: string;
+  organizationName: string;
+  courseId: string;
+  courseTitle: string;
+  teacherName: string;
+  studentCount: number;
+  canManage: boolean;
+  /** Chi co khi lay chi tiet mot lop. */
+  students?: (BasicUser & { solved: number })[];
+  assistants?: BasicUser[];
+}
+
+export interface ParentContact {
+  id: string; fullName: string; phone: string; email: string; studentName: string; studentUsername: string;
+}
+export interface ParentReport { parentName: string; studentName: string; lines: string[] }
+
+// ---- khoa hoc, tai lieu, bai tap giao ----
+export interface Lesson { title: string; content: string; problems: ProblemRef[] }
+export interface Course { id: string; title: string; description: string; level: string; lessons: Lesson[] }
+export interface DocumentItem {
+  id: string; courseId: string; courseTitle: string; title: string;
+  kind: "TEXT" | "LINK"; content: string; authorName: string; createdAt: string;
+}
+
+export interface Assignment {
+  id: string; classroomId: string; classroomName: string; title: string; description: string;
+  dueAt: string; overdue: boolean; createdBy: string; solvedCount: number; total: number;
+  canManage: boolean; problems: (ProblemRef & { solved: boolean })[];
+}
+export interface AssignmentProgress {
+  title: string; problemIds: string[];
+  rows: { username: string; fullName: string; solvedCount: number; solved: boolean[] }[];
+}
+
+// ---- buoi hoc, phong hoc, diem danh, ban ghi ----
+export interface Meeting {
+  id: string; classroomId: string; classroomName: string; title: string; startAt: string;
+  durationMin: number; hostName: string; status: "SCHEDULED" | "LIVE" | "ENDED";
+  recorded: boolean; canManage: boolean;
+}
+export interface Stroke { color: string; points: string }
+export interface RoomState {
+  meeting: Meeting;
+  participants: (BasicUser & { host: boolean; handRaised: boolean })[];
+  code: string; language: string; codeVersion: number;
+  collaborative: boolean; canEditCode: boolean; isHost: boolean; handRaised: boolean;
+  strokesFrom: number; strokeCount: number; strokes: Stroke[];
+}
+export interface AttendanceSheet {
+  title: string; status: string;
+  rows: (BasicUser & { status: string; joinedAt: string | null })[];
+}
+export interface Recording {
+  id: string; meetingId: string; title: string; durationMin: number; createdAt: string;
+  strokeCount: number; chatCount: number;
+  code?: string; language?: string; strokes?: Stroke[];
+  chat?: { senderName: string; text: string; sentAt: string }[];
+}
+
+// ---- cuoc thi ----
+export interface ContestRow {
+  rank: number; username: string; fullName: string; solved: number; penalty: number;
+  cells: { problemId: string; wrong: number; solvedAt: number | null }[];
+}
+export interface Contest {
+  id: string; title: string; description: string; startAt: string; endAt: string;
+  durationMin: number; status: "UPCOMING" | "RUNNING" | "ENDED"; problems: ProblemRef[];
+  minute?: number; standings?: ContestRow[];
+}
+export interface ContestEvent { minute: number; username: string; fullName: string; problemId: string; verdict: string }
+
+// ---- phan tich, thanh tich, bao cao ----
+export interface TopicStat {
+  id: string; name: string; group: string; total: number; solved: number;
+  attempts: number; failed: number; score: number; level: string; weak: boolean;
+}
+export interface Profile {
+  user: BasicUser; totalSubmissions: number; solvedCount: number; acRate: number;
+  verdicts: Count[]; activity: Count[]; topics: TopicStat[]; weaknessNotes: string[];
+  recommendations: { problemId: string; title: string; difficulty: number; reason: string }[];
+  points: number; rankName: string; streak: number;
+  badges: { name: string; description: string; earned: boolean }[];
+}
+export interface Dashboard {
+  users: number; students: number; teachers: number; problems: number; submissions: number;
+  classrooms: number; courses: number; contests: number; revenue: number;
+  verdicts: Count[]; activity: Count[];
+  topProblems: { id: string; title: string; attempts: number; acRate: number }[];
+}
+export interface PointRow { rank: number; username: string; fullName: string; points: number; rankName: string; solved: number }
+
+// ---- cong dong ----
+export interface NotificationList {
+  unread: number;
+  items: { id: string; title: string; body: string; createdAt: string; read: boolean }[];
+}
+export interface ChatMessage { id: string; senderName: string; senderRole: string; text: string; sentAt: string }
+export interface ForumPost {
+  id: string; title: string; authorId: string; authorName: string; problemId: string;
+  createdAt: string; replyCount: number;
+  body?: string; replies?: { authorName: string; body: string; createdAt: string }[];
+}
+
+// ---- thanh toan, he thong ----
+export interface Payment {
+  id: string; planName: string; amount: number; createdAt: string; expiresAt: string;
+  active: boolean; buyerName?: string;
+}
+export interface Billing {
+  simulated: boolean; currentPlan: string;
+  plans: { code: string; name: string; price: number; features: string }[];
+  payments: Payment[];
+}
+export interface Settings { announcement: string; allowRegister: boolean }
+export interface AuditRow { id: string; time: string; username: string; action: string; detail: string; success: boolean }
+
+// ---- cong cu ----
+export interface RunResult {
+  compileError: string; stdout?: string; stderr?: string; exitCode?: number; timeMs?: number; timedOut?: boolean;
+}
+export interface StressResult { found: boolean; rounds: number; message: string; input: string; expected: string; actual: string }
+export interface TestcaseItem { name: string; sample: boolean; points: number; input: string; output: string }
+export interface AssistantReply { simulated: boolean; lines: string[] }

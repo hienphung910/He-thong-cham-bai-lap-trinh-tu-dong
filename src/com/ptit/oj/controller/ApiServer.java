@@ -1,5 +1,20 @@
 package com.ptit.oj.controller;
 
+import com.ptit.oj.controller.api.AccountApi;
+import com.ptit.oj.controller.api.AnalyticsApi;
+import com.ptit.oj.controller.api.ApiModule;
+import com.ptit.oj.controller.api.AssignmentApi;
+import com.ptit.oj.controller.api.AssistantApi;
+import com.ptit.oj.controller.api.BillingApi;
+import com.ptit.oj.controller.api.CommunityApi;
+import com.ptit.oj.controller.api.ContestApi;
+import com.ptit.oj.controller.api.CourseApi;
+import com.ptit.oj.controller.api.MeetingApi;
+import com.ptit.oj.controller.api.PlaygroundApi;
+import com.ptit.oj.controller.api.Request;
+import com.ptit.oj.controller.api.SchoolApi;
+import com.ptit.oj.controller.api.SystemApi;
+import com.ptit.oj.controller.api.TestcaseApi;
 import com.ptit.oj.controller.judge.Language;
 import com.ptit.oj.dao.DataAccessException;
 import com.ptit.oj.model.JudgeResult;
@@ -24,6 +39,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -55,16 +71,26 @@ public class ApiServer {
     private static final int MAX_ADMIN_BODY_BYTES = 8 * 1024 * 1024;  // de bai + test co the lon hon
 
     private final JudgeService service;
+    private final Platform platform;
+    /** Cac nhom endpoint cua module mo rong; route() hoi lan luot tung nhom. */
+    private final List<ApiModule> modules;
     private final int port;
     private final Path webRoot;
 
     private HttpServer server;
     private ExecutorService pool;
 
-    public ApiServer(JudgeService service, int port, Path webRoot) {
-        this.service = service;
+    public ApiServer(Platform platform, int port, Path webRoot) {
+        this.platform = platform;
+        this.service = platform.getJudge();
         this.port = port;
         this.webRoot = webRoot;
+        this.modules = Arrays.<ApiModule>asList(
+                new AccountApi(platform), new SchoolApi(platform), new CourseApi(platform),
+                new AssignmentApi(platform), new MeetingApi(platform), new ContestApi(platform),
+                new AnalyticsApi(platform), new AssistantApi(platform), new CommunityApi(platform),
+                new BillingApi(platform), new SystemApi(platform), new PlaygroundApi(platform),
+                new TestcaseApi(platform));
     }
 
     public void start() throws IOException {
@@ -96,25 +122,47 @@ public class ApiServer {
     private void handleApi(HttpExchange ex) throws IOException {
         String path = ex.getRequestURI().getPath();
         String method = ex.getRequestMethod();
+        int status = 200;          // ma HTTP cua request nay, de ghi vao nhat ky
+        String error = null;
         try {
             route(ex, method, path);
         } catch (ApiException e) {
-            sendError(ex, e.getStatus(), e.getMessage());
+            status = e.getStatus();
+            error = e.getMessage();
         } catch (AuthService.AuthException e) {
-            sendError(ex, e.getHttpStatus(), e.getMessage());
+            status = e.getHttpStatus();
+            error = e.getMessage();
         } catch (ProblemAdminService.ProblemAdminException e) {
-            sendError(ex, e.getHttpStatus(), e.getMessage());
+            status = e.getHttpStatus();
+            error = e.getMessage();
         } catch (IllegalArgumentException e) {
-            sendError(ex, 400, e.getMessage());
+            status = 400;
+            error = e.getMessage();
         } catch (DataAccessException e) {
             // Khong lo chi tiet SQL / duong dan CSDL ra ngoai, nhung van ghi log de sua.
             System.err.println("Lỗi CSDL khi xử lý " + method + " " + path + ": " + e);
-            sendError(ex, 500, "Lỗi truy cập cơ sở dữ liệu");
+            status = 500;
+            error = "Lỗi truy cập cơ sở dữ liệu";
         } catch (RuntimeException e) {
             // Khong de mot request loi lam sap ca may chu, cung khong tra stack trace ve client.
             System.err.println("Lỗi khi xử lý " + method + " " + path + ": " + e);
-            sendError(ex, 500, "Lỗi máy chủ nội bộ");
+            status = 500;
+            error = "Lỗi máy chủ nội bộ";
         }
+        if (status != 200) sendError(ex, status, error);
+        audit(ex, method, path, status);
+    }
+
+    /**
+     * Ghi nhat ky hoat dong (Module 40) cho moi request LAM THAY DOI du lieu.
+     * Bo qua GET (chi doc), dang nhap (handleLogin tu ghi kem ten dang nhap) va cac
+     * request cua phong hoc (trinh duyet gui lien tuc khi go ma / ve bang).
+     */
+    private void audit(HttpExchange ex, String method, String path, int status) {
+        if ("GET".equals(method) || path.equals("/api/auth/login") || path.contains("/room/")) return;
+        String token = SessionService.extractBearerToken(ex.getRequestHeaders().getFirst("Authorization"));
+        String username = service.getAuth().authenticate(token).map(User::getUsername).orElse("(khách)");
+        platform.getSystem().log(username, method + " " + path, "HTTP " + status, status == 200);
     }
 
     private void route(HttpExchange ex, String method, String path) throws IOException {
@@ -184,10 +232,12 @@ public class ApiServer {
             return;
         }
 
-        if ("GET".equals(method) || "POST".equals(method)) {
-            throw ApiException.notFound("Không có endpoint " + path);
+        // ---- cac module mo rong (lop hoc, khoa hoc, phong hoc, cuoc thi...) ----
+        Request request = new Request(ex, service);
+        for (ApiModule module : modules) {
+            if (module.handle(request)) return;
         }
-        throw new ApiException(405, "Phương thức không hỗ trợ: " + method);
+        throw ApiException.notFound("Không có endpoint " + method + " " + path);
     }
 
     // ------------------------------------------------------------ xac thuc
@@ -218,6 +268,9 @@ public class ApiServer {
     }
 
     private void handleRegister(HttpExchange ex) throws IOException {
+        if (!platform.getSystem().isRegisterAllowed()) {
+            throw ApiException.forbidden("Quản trị viên đang tạm khoá chức năng tự đăng ký");
+        }
         Json.Value body = Json.parseObject(readBody(ex, MAX_BODY_BYTES));
         // Cho du client co gui "role": "ADMIN" thi cung bi bo qua: register() luon tao STUDENT.
         User created = service.getAuth().register(
@@ -234,8 +287,15 @@ public class ApiServer {
 
     private void handleLogin(HttpExchange ex) throws IOException {
         Json.Value body = Json.parseObject(readBody(ex, MAX_BODY_BYTES));
-        AuthService.LoginResult result = service.getAuth()
-                .login(body.getString("username"), body.getString("password"));
+        String username = body.getString("username", "");
+        AuthService.LoginResult result;
+        try {
+            result = service.getAuth().login(username, body.getString("password"));
+        } catch (AuthService.AuthException e) {
+            platform.getSystem().log(username, "Đăng nhập thất bại", e.getMessage(), false);
+            throw e;
+        }
+        platform.getSystem().log(result.getUser().getUsername(), "Đăng nhập", "", true);
         sendJson(ex, 200, Json.obj()
                 .put("token", result.getToken())
                 .putRaw("user", userJson(result.getUser()))
@@ -540,7 +600,7 @@ public class ApiServer {
                 .build();
     }
 
-    private String readBody(HttpExchange ex, int maxBytes) throws IOException {
+    public static String readBody(HttpExchange ex, int maxBytes) throws IOException {
         try (InputStream in = ex.getRequestBody()) {
             byte[] buf = new byte[8192];
             java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
@@ -607,7 +667,7 @@ public class ApiServer {
 
     // ------------------------------------------------------------- tien ich
 
-    private void sendJson(HttpExchange ex, int status, String json) throws IOException {
+    public static void sendJson(HttpExchange ex, int status, String json) throws IOException {
         byte[] data = json.getBytes(StandardCharsets.UTF_8);
         ex.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
         ex.getResponseHeaders().set("Cache-Control", "no-store");

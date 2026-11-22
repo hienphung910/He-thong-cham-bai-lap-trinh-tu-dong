@@ -2,7 +2,9 @@ package com.ptit.oj;
 
 import com.ptit.oj.controller.ApiServer;
 import com.ptit.oj.controller.AuthService;
+import com.ptit.oj.controller.DemoData;
 import com.ptit.oj.controller.JudgeService;
+import com.ptit.oj.controller.Platform;
 import com.ptit.oj.dao.DataAccessException;
 import com.ptit.oj.dao.DatabaseConfig;
 import com.ptit.oj.dao.MySqlDatabaseManager;
@@ -69,7 +71,7 @@ public class Main {
                 if (database == null) return;
                 service = JudgeService.mysql(dataDir, database);
             }
-            runServer(service, Paths.get("frontend", "dist"), port);
+            runServer(service, Paths.get("frontend", "dist"), port, noDatabase);
         } catch (ProblemLoadException e) {
             System.out.println("Lỗi nạp đề bài: " + e.getMessage());
         } catch (DataAccessException e) {
@@ -105,13 +107,18 @@ public class Main {
     }
 
     /** Nap du lieu roi mo may chu HTTP, chay den khi bi dung (Ctrl+C). */
-    private static void runServer(JudgeService service, Path webRoot, int port) {
+    private static void runServer(JudgeService service, Path webRoot, int port, boolean noDatabase) {
         service.loadData();
         prepareAccounts(service);
         System.out.printf("Đã nạp %d bài tập, %d tài khoản.%n",
                 service.getProblems().size(), service.getUsers().size());
 
-        ApiServer server = new ApiServer(service, port, webRoot);
+        // Cac module mo rong (lop hoc, khoa hoc, phong hoc, cuoc thi...) luu trong RAM,
+        // nen moi lan khoi dong deu tao lai mot bo du lieu mau de co cai ma xem.
+        Platform platform = new Platform(service);
+        new DemoData(platform).seed(noDatabase);
+
+        ApiServer server = new ApiServer(platform, port, webRoot);
         try {
             server.start();
         } catch (IOException e) {

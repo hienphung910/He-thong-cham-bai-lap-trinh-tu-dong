@@ -20,10 +20,14 @@ import com.ptit.oj.model.JudgeResult;
 import com.ptit.oj.model.Problem;
 import com.ptit.oj.model.ProblemDraft;
 import com.ptit.oj.model.Submission;
+import com.ptit.oj.model.TestCase;
+import com.ptit.oj.model.TestCaseResult;
 import com.ptit.oj.model.Topic;
 import com.ptit.oj.model.User;
+import com.ptit.oj.model.Verdict;
 
 import java.nio.file.Path;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -110,6 +114,10 @@ public class JudgeService {
 
     public List<User> getUsers() { return users.findAll(); }
 
+    public Optional<User> findUserByUsername(String username) {
+        return username == null ? Optional.empty() : users.findByUsername(username.trim());
+    }
+
     // ------------------------------------------- bai tap va lo trinh hoc (Module 2)
 
     public List<Problem> getProblems() { return problems.findAll(); }
@@ -138,6 +146,16 @@ public class JudgeService {
         return problemAdmin.updateProblemMeta(actor, problemId, topic, difficulty);
     }
 
+    /** Them mot test vao bai da co - chi ADMIN (Module 7). */
+    public Problem addTest(User actor, String problemId, ProblemDraft.TestDraft test) {
+        return problemAdmin.addTest(actor, problemId, test);
+    }
+
+    /** Xoa mot test cua bai da co - chi ADMIN (Module 7). */
+    public Problem deleteTest(User actor, String problemId, String testName) {
+        return problemAdmin.deleteTest(actor, problemId, testName);
+    }
+
     // --------------------------------------------- nop bai va cham tu dong (Module 3)
 
     public List<Language> getLanguages() { return languages.all(); }
@@ -159,6 +177,26 @@ public class JudgeService {
         // cung mot transaction, khong bao gio con ban ghi do dang.
         submissions.saveWithResults(submission);
         return result;
+    }
+
+    /**
+     * Tao mot bai nop MAU ma khong chay bo cham (chi DemoData goi, o che do --no-db),
+     * de cac trang thong ke, cuoc thi, thanh tich co du lieu ngay khi khoi dong.
+     * accepted = true: moi test AC; false: moi test WA.
+     */
+    public void addSampleSubmission(Problem problem, User author, Language language,
+                                    boolean accepted, LocalDateTime submittedAt) {
+        Submission submission = new Submission(Submission.newId(), problem, author, language,
+                language.defaultFileName(""), submittedAt);
+        submission.setSourceCode("// Bài nộp mẫu sinh lúc khởi động (chế độ --no-db), không phải bài nộp thật.");
+        JudgeResult result = new JudgeResult(submission);
+        for (TestCase test : problem.getTestCases()) {
+            result.addTestResult(new TestCaseResult(test, accepted ? Verdict.AC : Verdict.WA, 15,
+                    accepted ? test.getPoints() : 0, ""));
+        }
+        result.setGlobalMessage("BÀI NỘP MẪU: sinh lúc khởi động ở chế độ --no-db, không qua bộ chấm.");
+        submission.setResult(result);
+        submissions.saveWithResults(submission);
     }
 
     // ------------------------------- lich su nop bai va bang xep hang (Module 4)

@@ -115,6 +115,24 @@ public class ProblemWriter {
         return dir;
     }
 
+    public Path problemDir(String problemId) {
+        return problemsDir.resolve(problemId);
+    }
+
+    /** Them mot test (hai file ten.in / ten.out) vao bai da co. Ten test da duoc kiem tra truoc. */
+    public void writeTest(String problemId, String name, String input, String output) throws IOException {
+        Path testsDir = problemDir(problemId).resolve("tests");
+        Files.createDirectories(testsDir);
+        writeText(testsDir.resolve(name + ".in"), input);
+        writeText(testsDir.resolve(name + ".out"), output);
+    }
+
+    public void deleteTest(String problemId, String name) throws IOException {
+        Path testsDir = problemDir(problemId).resolve("tests");
+        Files.deleteIfExists(testsDir.resolve(name + ".in"));
+        Files.deleteIfExists(testsDir.resolve(name + ".out"));
+    }
+
     /** Ten khoa cua mot dong "khoa=gia tri", hoac null neu la dong trong / ghi chu. */
     private static String keyOf(String line) {
         String trimmed = line.trim();
