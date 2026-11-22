@@ -1,6 +1,6 @@
 # CodeHub
 
-Hệ thống chấm bài lập trình tự động: backend Java thuần, giao diện web React, chấm được 4 ngôn ngữ và trả kết quả của từng test.
+Nền tảng dạy và luyện lập trình thi đấu: chấm bài tự động, lớp học, kỳ thi và phòng học trực tuyến. Backend viết bằng Java thuần, giao diện web bằng React.
 
 ![Java](https://img.shields.io/badge/Java-11+-ED8B00?logo=openjdk&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
@@ -9,7 +9,9 @@ Hệ thống chấm bài lập trình tự động: backend Java thuần, giao d
 
 ## Giới thiệu
 
-CodeHub là nền tảng luyện lập trình theo kiểu Codeforces. Người dùng nộp mã nguồn; hệ thống biên dịch, chạy trên bộ test với giới hạn thời gian và bộ nhớ, so sánh output với đáp án rồi trả verdict AC / WA / TLE / MLE / RE / CE cho từng test. Hệ thống có sẵn hai lớp học: lớp Nhập môn (10 chủ đề, 300 bài cho người mới bắt đầu) và lớp Lộ trình VNOI (26 chặng lập trình thi đấu theo [lộ trình tổng quát của VNOI Wiki](https://wiki.vnoi.info/roadmap/general-roadmap), tổng cộng 300 bài).
+Phần lõi của CodeHub là một trình chấm bài theo kiểu Codeforces. Người dùng nộp mã nguồn; hệ thống biên dịch, chạy trên bộ test với giới hạn thời gian và bộ nhớ, so sánh output với đáp án rồi trả verdict AC / WA / TLE / MLE / RE / CE cho từng test. Hệ thống có sẵn hai lớp học: lớp Nhập môn (10 chủ đề, 300 bài cho người mới bắt đầu) và lớp Lộ trình VNOI (26 chặng lập trình thi đấu theo [lộ trình tổng quát của VNOI Wiki](https://wiki.vnoi.info/roadmap/general-roadmap), tổng cộng 300 bài).
+
+Quanh phần lõi đó là 40 module chức năng liệt kê trong `cp_teaching_platform_modules.txt`: lớp học, khóa học, bài tập giao, kỳ thi, phòng học, phân tích kết quả, diễn đàn, quản trị. 31 module chạy thật. 9 module còn lại cần hạ tầng mà project không có (truyền video, cổng thanh toán, mô hình AI) nên được làm ở dạng mô phỏng và ghi nhãn "MÔ PHỎNG" ngay trên giao diện. Bảng đầy đủ nằm ở mục [Bốn mươi module](#bốn-mươi-module).
 
 Backend chỉ dùng API chuẩn của JDK. Máy chủ HTTP, bộ đọc/ghi JSON, băm mật khẩu và quản lý phiên đều do nhóm tự viết. Thư viện ngoài duy nhất là MySQL Connector/J; dữ liệu được truy cập bằng JDBC, không qua framework hay ORM.
 
@@ -26,17 +28,117 @@ Backend chỉ dùng API chuẩn của JDK. Máy chủ HTTP, bộ đọc/ghi JSON
 - Hai lớp học, mỗi lớp có lộ trình riêng: lớp Nhập môn gồm 10 chủ đề từ nhập/xuất đến mảng, xâu và sắp xếp; lớp Lộ trình VNOI gồm 26 chặng từ đệ quy, đồ thị đến luồng và quy hoạch động nâng cao. Có theo dõi tiến độ từng chặng, nút *Học tiếp* và *Bài tiếp theo*.
 - Lớp Nhập môn có 300 bài mã `K001` đến `K300`; lớp VNOI có 300 bài mã `V001` đến `V300`, mỗi chặng từ 6 đến 16 bài, xếp từ dễ đến khó. Mỗi bài có test ví dụ, test ẩn và lời giải mẫu C++ trong `data/submissions/`.
 - Lọc bài theo độ khó, tìm bài theo mã hoặc tên, bảng xếp hạng.
+- Sau mỗi lần nộp, ngay dưới kết quả chấm có thẻ "Phân tích sau khi nộp": các lần đã nộp bài đó, nhận xét cho lần nộp vừa rồi, tiến độ chủ đề của bài, các chủ đề đang yếu và ba bài nên làm tiếp.
+- Trang làm bài có trợ lý dạng pop-up ở góc dưới bên phải. Trợ lý biết đang ở bài nào, đọc mã nguồn trong ô soạn và tự nhận xét sau mỗi lần nộp.
+- Chuỗi ngày luyện tập (streak) hiện bằng biểu tượng ngọn lửa trên thanh tiêu đề. Bấm vào để xem 7 ngày gần nhất, mốc tiếp theo và lịch 16 tuần.
+
+### Lớp học và giảng dạy
+- Giảng viên tạo lớp, gắn lớp vào một tổ chức và một khóa học. Học sinh tham gia bằng mã lớp; giảng viên cũng thêm, xoá được học sinh và trợ giảng.
+- Khóa học có giáo trình là danh sách bài giảng, mỗi bài giảng kèm các bài tập luyện. Tài liệu học tập là văn bản hoặc đường link.
+- Giao bài cho lớp kèm hạn nộp. Tiến độ của từng học sinh tính từ lịch sử nộp bài, giảng viên xem được bảng tiến độ cả lớp.
+- Kỳ thi tính điểm kiểu ICPC: xếp theo số bài giải được, bằng nhau thì ai ít phút phạt hơn đứng trước, mỗi lần nộp sai cộng 20 phút. Trang kỳ thi có thanh thời gian để xem lại bảng xếp hạng tại một phút bất kỳ.
+- Danh bạ phụ huynh và báo cáo học tập soạn sẵn để gửi về gia đình.
+- Trang tổng quan cho giảng viên: số tài khoản, lượt nộp theo ngày, phân bố verdict, năm bài được nộp nhiều nhất.
+
+### Phòng học trực tuyến
+- Lên lịch, bắt đầu và kết thúc buổi học cho từng lớp. Học sinh vào phòng khi buổi học đang diễn ra.
+- Trong phòng có ô mã nguồn dùng chung (chủ phòng gõ, cả lớp thấy; bật "cùng lập trình" thì cả lớp cùng sửa), nút chạy thử, bảng trắng, giơ tay, chat và danh sách người đang có mặt.
+- Điểm danh tự động khi học sinh vào phòng, vào muộn quá 10 phút tính là đi muộn. Giảng viên sửa tay được.
+- Buổi học có bật ghi lại sẽ lưu mã nguồn cuối buổi, bảng trắng và nội dung chat thành một bản ghi.
+- Phòng học là bản mô phỏng: trình duyệt hỏi lại trạng thái phòng mỗi 1,5 giây thay cho kết nối thời gian thực. Xem mục [Các module mô phỏng](#các-module-mô-phỏng).
+
+### Công cụ
+- IDE trực tuyến: chạy thử mã nguồn với input tự nhập, giới hạn 5 giây, không tính là nộp bài.
+- Stress test: nhập lời giải cần kiểm tra, lời giải vét cạn và chương trình sinh test. Máy chủ chạy tối đa 30 vòng trong 25 giây và dừng ở input đầu tiên làm hai lời giải cho kết quả khác nhau.
+- Công cụ CP chạy trong trình duyệt: sinh test ngẫu nhiên (mảng, hoán vị, cây, đồ thị, xâu), so sánh hai output, ước lượng độ phức tạp theo giới hạn của đề.
+
+### Phân tích và thành tích
+- Hồ sơ học tập của từng học sinh: số lượt nộp, tỉ lệ AC, hoạt động 14 ngày, điểm kỹ năng theo chủ đề, chủ đề yếu, kiểu lỗi hay gặp và danh sách bài gợi ý. Giảng viên xem được hồ sơ của học sinh.
+- Điểm thưởng 10 / 20 / 40 cho mỗi bài Dễ / Vừa / Khó đã giải, năm hạng từ Tập sự đến Kim cương, tám huy hiệu.
+- Mọi con số ở đây đều tính lại từ lịch sử nộp bài mỗi lần mở trang, không có bảng thống kê lưu riêng.
+
+### Cộng đồng
+- Thông báo tự sinh khi có bài tập mới, buổi học mới hoặc khi giảng viên gửi thông báo cho lớp. Số thông báo chưa đọc hiện trên chuông ở thanh tiêu đề.
+- Chat theo kênh: kênh chung, kênh của từng lớp, kênh của từng phòng học.
+- Diễn đàn: đăng chủ đề, trả lời, gắn chủ đề với một bài tập.
 
 ### Quản trị
 - Tạo bài tập trên web: đề, giới hạn, kiểu so sánh, test ví dụ và test ẩn. Bài được ghi vào thư mục tạm rồi mới đổi tên thành thư mục thật, nên không có bài nào bị ghi dở. Bài mới dùng được ngay, không cần khởi động lại máy chủ.
 - Sắp xếp lộ trình: đổi chủ đề và độ khó của từng bài.
+- Quản lý bộ test: xem toàn bộ test của một bài (kể cả test ẩn), thêm và xoá từng test.
+- Tạo tài khoản giảng viên, học sinh, quản trị. Quản lý tổ chức.
+- Cấu hình hệ thống: thông báo chung hiện ở đầu mọi trang, bật hoặc tắt việc học sinh tự đăng ký.
 - Ba vai trò Học sinh / Giảng viên / Quản trị. Backend kiểm tra quyền ở từng request, kể cả khi giao diện đã ẩn nút.
 
 ### Bảo mật
 - Mật khẩu băm bằng PBKDF2-HMAC-SHA256 (120 000 vòng, salt riêng cho từng tài khoản) và so sánh trong thời gian hằng số.
 - Token phiên 32 byte sinh bằng `SecureRandom`, hết hạn sau 8 giờ.
 - Mọi truy vấn dùng `PreparedStatement`; mã bài và tên test được kiểm tra để chặn path traversal.
+- Nhật ký hoạt động ghi mọi request làm thay đổi dữ liệu (POST, PUT, DELETE) và mọi lần đăng nhập, kể cả đăng nhập sai. Chỉ quản trị viên xem được.
 - Máy chủ chỉ lắng nghe trên `127.0.0.1`.
+
+## Các module mô phỏng
+
+Chín module dưới đây không làm thật được với một máy chủ HTTP viết bằng JDK chuẩn. Giao diện ghi nhãn "MÔ PHỎNG" ở từng trang tương ứng.
+
+| Module | Bản mô phỏng làm gì | Thiếu gì so với bản thật |
+|---|---|---|
+| 14 Virtual Classroom, 17 Live Coding, 18 Collaborative Coding, 19 Whiteboard | Trình duyệt hỏi máy chủ trạng thái phòng mỗi 1,5 giây (polling) | Kết nối thời gian thực. Khi nhiều người cùng sửa mã, bản gửi sau ghi đè bản trước |
+| 16 Video & Audio Conference | Bật camera và micro của chính máy mình để xem trước | Truyền hình và tiếng tới người khác |
+| 27 AI Teaching Assistant, 28 AI Coding Assistant | Câu trả lời ghép từ các luật viết sẵn, dựa trên verdict gần nhất, vài dấu hiệu trong mã nguồn và từ khóa trong câu hỏi | Mô hình AI. Mã nguồn của học sinh không được gửi ra ngoài máy chủ |
+| 34 Payment & Subscription | Bấm nút là ghi nhận một giao dịch thành công, gói có hiệu lực 30 ngày | Cổng thanh toán. Không nhập thông tin thẻ, không có tiền thật |
+| 37 Recording Management | Lưu mã nguồn cuối buổi, bảng trắng và chat | Ghi hình, ghi âm |
+
+Module 15 (Meeting Management) và 20 (Attendance Management) chạy thật, dù chúng nằm cùng trang với phòng học.
+
+## Bốn mươi module
+
+Cột "Ở đâu" ghi đường đi trên menu của giao diện.
+
+| # | Module | Ở đâu | Mức độ |
+|---|---|---|---|
+| 1 | User & Account Management | Trang đăng nhập; Cá nhân → Tài khoản của tôi; Quản trị → Tài khoản, giảng viên | Chạy thật |
+| 2 | Organization Management | Quản trị → Tổ chức | Chạy thật |
+| 3 | Classroom Management | Học tập → Lớp của tôi | Chạy thật |
+| 4 | Course Management | Học tập → Khóa học, tài liệu | Chạy thật |
+| 5 | Curriculum & Learning Path | Học tập → Lớp học (lộ trình) | Chạy thật |
+| 6 | Problem Management | Quản trị → Bài tập và bộ test | Chạy thật |
+| 7 | Testcase Management | Quản trị → Bài tập và bộ test, nút Test | Chạy thật |
+| 8 | Judge Engine | Trang làm bài | Chạy thật |
+| 9 | Submission Management | Lịch sử → Trạng thái, Bài nộp | Chạy thật |
+| 10 | Online IDE | Công cụ → IDE trực tuyến | Chạy thật |
+| 11 | Advanced CP Tools | Công cụ → Công cụ CP | Chạy thật |
+| 12 | Stress Testing | Công cụ → Stress test | Chạy thật |
+| 13 | Assignment Management | Học tập → Bài tập được giao | Chạy thật |
+| 14 | Virtual Classroom | Học tập → Phòng học trực tuyến | Mô phỏng |
+| 15 | Meeting Management | Học tập → Phòng học trực tuyến | Chạy thật |
+| 16 | Video & Audio Conference | Trong phòng học | Mô phỏng |
+| 17 | Live Coding | Trong phòng học | Mô phỏng |
+| 18 | Collaborative Coding | Trong phòng học | Mô phỏng |
+| 19 | Whiteboard & Interactive Tools | Trong phòng học | Mô phỏng |
+| 20 | Attendance Management | Học tập → Phòng học trực tuyến, nút Điểm danh | Chạy thật |
+| 21 | Contest Management | Học tập → Kỳ thi | Chạy thật |
+| 22 | Contest Replay | Trang chi tiết kỳ thi | Chạy thật |
+| 23 | Student Analytics | Cá nhân → Phân tích học tập; trang làm bài sau khi nộp | Chạy thật |
+| 24 | Skill Assessment | Cá nhân → Phân tích học tập | Chạy thật |
+| 25 | Weakness Detection | Cá nhân → Phân tích học tập; trang làm bài sau khi nộp | Chạy thật |
+| 26 | Learning Recommendation | Cá nhân → Phân tích học tập; trang làm bài sau khi nộp | Chạy thật |
+| 27 | AI Teaching Assistant | Giảng dạy → Trợ lý giảng dạy | Mô phỏng |
+| 28 | AI Coding Assistant | Pop-up trong trang làm bài; Công cụ → Trợ lý AI | Mô phỏng |
+| 29 | Notification Management | Chuông trên thanh tiêu đề; Cộng đồng → Thông báo | Chạy thật |
+| 30 | Communication & Chat | Cộng đồng → Chat; trong lớp và trong phòng học | Chạy thật |
+| 31 | Discussion Forum | Cộng đồng → Diễn đàn | Chạy thật |
+| 32 | Parent Management | Giảng dạy → Phụ huynh | Chạy thật |
+| 33 | Reporting & Dashboard | Giảng dạy → Tổng quan | Chạy thật |
+| 34 | Payment & Subscription | Cá nhân → Gói dịch vụ | Mô phỏng |
+| 35 | Teacher Management | Quản trị → Tài khoản, giảng viên; trợ giảng trong Lớp của tôi | Chạy thật |
+| 36 | Document Management | Học tập → Khóa học, tài liệu | Chạy thật |
+| 37 | Recording Management | Học tập → Phòng học trực tuyến, mục Bản ghi | Mô phỏng |
+| 38 | Gamification | Cá nhân → Thành tích; ngọn lửa streak trên thanh tiêu đề | Chạy thật |
+| 39 | System Administration | Quản trị → Hệ thống | Chạy thật |
+| 40 | Security & Audit Management | Quản trị → Nhật ký hoạt động | Chạy thật |
+
+Nhóm Giảng dạy chỉ hiện với giảng viên và quản trị viên, nhóm Quản trị chỉ hiện với quản trị viên.
 
 ## Công nghệ
 
@@ -53,6 +155,10 @@ Backend chỉ dùng API chuẩn của JDK. Máy chủ HTTP, bộ đọc/ghi JSON
 flowchart LR
     Web["Giao diện web<br/>React + TypeScript"] -- "REST" --> Api[ApiServer]
     Api --> Svc[JudgeService]
+    Api --> Mod["ApiModule<br/>13 lớp …Api"]
+    Mod --> Plat["Platform<br/>các lớp …Service"]
+    Plat --> Svc
+    Plat --> RAM
     Svc --> Judge
     Judge --> Lang["Language<br/>Java · C++ · Python · JavaScript"]
     Judge --> Cmp["OutputComparator<br/>exact · token · lines · float"]
@@ -62,9 +168,23 @@ flowchart LR
     Svc --> Disk[("data/problems<br/>đề bài + test")]
 ```
 
-`ApiServer` chỉ gọi tầng nghiệp vụ qua một lớp duy nhất là `JudgeService`. Kho dữ liệu được truyền vào qua constructor (`JudgeService.mysql()` hoặc `JudgeService.inMemory()`), nên đổi giữa MySQL và bộ nhớ không phải sửa tầng nghiệp vụ hay giao diện. Câu SQL chỉ nằm trong package `dao`.
+`ApiServer` tự xử lí các endpoint của phần lõi (đăng nhập, bài tập, nộp bài, bảng xếp hạng) qua `JudgeService`. Kho dữ liệu của `JudgeService` được truyền vào qua constructor (`JudgeService.mysql()` hoặc `JudgeService.inMemory()`), nên đổi giữa MySQL và bộ nhớ không phải sửa tầng nghiệp vụ hay giao diện. Câu SQL chỉ nằm trong package `dao`.
 
-`ProcessRunner` chạy code thí sinh trong tiến trình con. Một luồng ghi stdin, hai luồng đọc stdout và stderr để tiến trình không bị treo khi bộ đệm đầy. Chương trình chạy quá giờ bị dừng cưỡng bức, và output bị cắt ở 1 MB.
+Mọi endpoint còn lại đi theo cùng một đường. `ApiServer.route()` bọc request vào một đối tượng `Request` rồi hỏi lần lượt 13 lớp con của `ApiModule` trong `controller/api/`; lớp nào nhận ra đường dẫn của mình thì xử lí. Mỗi lớp `…Api` làm ba việc: kiểm tra quyền, gọi lớp `…Service` tương ứng, đổi kết quả thành JSON. Các service được tạo và giữ trong `Platform`.
+
+Ví dụ với yêu cầu tạo lớp học: trình duyệt gửi `POST /api/classrooms`, `SchoolApi.handle()` gọi `req.staff()` để chặn học sinh, `SchoolService.createClassroom()` kiểm tra dữ liệu và lưu một đối tượng `Classroom` vào `InMemoryRepository`, rồi `SchoolApi` trả JSON của lớp vừa tạo.
+
+`ProcessRunner` chạy code thí sinh trong tiến trình con. Một luồng ghi stdin, hai luồng đọc stdout và stderr để tiến trình không bị treo khi bộ đệm đầy. Chương trình chạy quá giờ bị dừng cưỡng bức, và output bị cắt ở 1 MB. IDE trực tuyến và stress test dùng lại `Language` và `ProcessRunner`, và khóa chung với bộ chấm để không chạy song song với việc chấm bài.
+
+### Dữ liệu lưu ở đâu
+
+| Dữ liệu | Chạy với MySQL | Chạy với `--no-db` |
+|---|---|---|
+| Tài khoản, bài nộp, kết quả từng test | MySQL | Bộ nhớ |
+| Đề bài và test | `data/problems/` | `data/problems/` |
+| Lớp học, khóa học, bài tập giao, buổi học, kỳ thi, thông báo, chat, diễn đàn, giao dịch, cấu hình, nhật ký | Bộ nhớ | Bộ nhớ |
+
+Dữ liệu ở dòng cuối mất khi tắt máy chủ. Mỗi lần khởi động, `DemoData` tạo lại một bộ dữ liệu mẫu: một tổ chức, hai khóa học, một lớp với các tài khoản mẫu, một bài tập giao, một buổi học và hai kỳ thi. Ở chế độ `--no-db`, `DemoData` tạo thêm 24 bài nộp mẫu để các trang phân tích và xem lại kỳ thi có số liệu ngay. Các bài này không qua bộ chấm và có dòng "BÀI NỘP MẪU" trong phần thông báo. Muốn tắt, đổi `seed(noDatabase)` thành `seed(false)` trong `Main.java`.
 
 ### Cấu trúc theo MVC
 
@@ -72,41 +192,62 @@ Mã nguồn chia theo mô hình MVC, mỗi tầng một thư mục, khớp với
 
 | Tầng | Thư mục | Chứa gì |
 |---|---|---|
-| Model (lớp thực thể) | `src/com/ptit/oj/model/` | Dữ liệu của hệ thống: người dùng, bài tập, bài nộp, kết quả chấm |
-| Controller (tầng điều khiển) | `src/com/ptit/oj/controller/` | `ApiServer` nhận yêu cầu từ giao diện, các lớp `…Service` xử lí nghiệp vụ, `judge/` là bộ chấm |
+| Model (lớp thực thể) | `src/com/ptit/oj/model/` | Dữ liệu của hệ thống: người dùng, bài tập, bài nộp, lớp học, kỳ thi, buổi học |
+| Controller (tầng điều khiển) | `src/com/ptit/oj/controller/` | `ApiServer` và các lớp `api/…Api` nhận yêu cầu từ giao diện, các lớp `…Service` xử lí nghiệp vụ, `judge/` là bộ chấm |
 | DAO (tầng truy cập dữ liệu) | `src/com/ptit/oj/dao/` | Đọc ghi MySQL, bộ nhớ và thư mục `data/` |
 | View (tầng giao diện) | `frontend/src/view/` | Các trang React, mỗi chức năng một thư mục |
 
-Chiều phụ thuộc là `view` → `controller` → `dao` → `model`. Giao diện chỉ nói chuyện với backend qua REST API của `ApiServer`. Có một ngoại lệ: `Submission` giữ ngôn ngữ của bài nộp dưới dạng đối tượng `Language`, mà `Language` biết biên dịch và chạy mã nguồn nên nằm trong `controller/judge/`.
+Chiều phụ thuộc là `view` → `controller` → `dao` → `model`. Giao diện chỉ nói chuyện với backend qua REST API. Có một ngoại lệ: `Submission` giữ ngôn ngữ của bài nộp dưới dạng đối tượng `Language`, mà `Language` biết biên dịch và chạy mã nguồn nên nằm trong `controller/judge/`.
 
 ```
 src/com/ptit/oj
-├── Main.java            Điểm vào: chọn kho MySQL hay bộ nhớ rồi mở máy chủ web
+├── Main.java            Điểm vào: chọn kho MySQL hay bộ nhớ, tạo Platform và dữ liệu mẫu, mở máy chủ web
 ├── model/               Entity, User → Student / Teacher / Admin, Credentials,
 │                        Problem, TestCase, Topic, ProblemDraft,
-│                        Submission, JudgeResult, TestCaseResult, Verdict
-├── dao/                 Repository<T>, InMemoryRepository<T>,
+│                        Submission, JudgeResult, TestCaseResult, Verdict,
+│                        Organization, Classroom, ParentContact, Course, Lesson, Document, Assignment,
+│                        Meeting, MeetingRoom, Stroke, Attendance, Recording, Contest,
+│                        Notification, ChatMessage, ForumPost, Plan, Payment, AuditLog
+├── dao/                 Repository<T>, InMemoryRepository<T>, IdGenerator,
 │                        UserRepository, SubmissionRepository (mỗi cái có bản MySQL và In-memory),
 │                        ProblemLoader, ProblemWriter, TopicLoader (đề bài và lộ trình trên ổ đĩa),
 │                        DatabaseConfig, MySqlDatabaseManager, MySqlSchemaInitializer,
 │                        DataAccessException, ProblemLoadException, TextUtils
-└── controller/          ApiServer (REST API + phục vụ file tĩnh), Json, ApiException,
-    │                    JudgeService (điểm vào nghiệp vụ dùng chung),
+└── controller/          ApiServer (REST API + phục vụ file tĩnh), Json, ApiException, Check,
+    │                    JudgeService (điểm vào nghiệp vụ của phần lõi),
     │                    AuthService, PasswordService, SessionService,
-    │                    ProblemAdminService, ScoreboardService
+    │                    ProblemAdminService, ScoreboardService,
+    │                    Platform (tạo và giữ các service dưới đây), DemoData (dữ liệu mẫu),
+    │                    SchoolService, CourseService, AssignmentService, MeetingService,
+    │                    ContestService, AnalyticsService, AssistantService, CommunityService,
+    │                    BillingService, SystemService, PlaygroundService
+    ├── api/             Request, ApiModule (abstract) → AccountApi, SchoolApi, CourseApi,
+    │                    AssignmentApi, MeetingApi, ContestApi, AnalyticsApi, AssistantApi,
+    │                    CommunityApi, BillingApi, SystemApi, PlaygroundApi, TestcaseApi
     └── judge/           Judge, ProcessRunner,
                          Language (abstract) → 4 ngôn ngữ, LanguageRegistry,
                          OutputComparator → Exact / Token / Line / Float, ComparatorFactory
 
 frontend/src
-├── main.tsx, App.tsx    Khung ứng dụng: thanh tiêu đề, điều hướng, menu tài khoản
-├── shared/              api.ts, types.ts, ui.tsx, Logo.tsx
+├── main.tsx, App.tsx    Khung ứng dụng: thanh tiêu đề, menu theo nhóm, streak, chuông thông báo
+├── shared/              api.ts, types.ts (phần lõi); platformApi.ts, platformTypes.ts (module mở rộng);
+│                        kit.tsx (khung trang, thẻ, nút, bảng, biểu đồ cột), nav.ts, ProblemChip.tsx,
+│                        ui.tsx, Logo.tsx
 └── view/
-    ├── account/         auth.tsx, LoginModal.tsx (đăng nhập / đăng ký)
+    ├── account/         auth.tsx, LoginModal.tsx, MyAccount.tsx, StreakBadge.tsx, streak.ts
     ├── problem/         Problems.tsx (lộ trình + danh sách bài), learningPath.ts,
-    │                    admin/ AdminPanel.tsx, ProblemEditor.tsx, ProblemMetaEditor.tsx
-    ├── judge/           ProblemDetail.tsx (làm bài + kết quả chấm), CodeEditor.tsx, TestTable.tsx
-    └── history/         Submissions.tsx (trạng thái), MySubmissions.tsx (bài nộp của tôi), Leaderboard.tsx
+    │                    admin/ AdminPanel.tsx, ProblemEditor.tsx, ProblemMetaEditor.tsx, TestcaseManager.tsx
+    ├── judge/           ProblemDetail.tsx (làm bài + kết quả chấm), CodeEditor.tsx, TestTable.tsx,
+    │                    SubmitInsight.tsx (phân tích sau khi nộp), AssistantPopup.tsx (trợ lý pop-up)
+    ├── history/         Submissions.tsx (trạng thái), MySubmissions.tsx (bài nộp của tôi), Leaderboard.tsx
+    ├── school/          Classrooms.tsx, Courses.tsx, Assignments.tsx
+    ├── contest/         Contests.tsx (danh sách, chi tiết, xem lại)
+    ├── meeting/         Meetings.tsx (buổi học, điểm danh, bản ghi), Room.tsx (phòng học), Whiteboard.tsx
+    ├── tools/           Playground.tsx (IDE), CpTools.tsx, StressTest.tsx, Assistant.tsx
+    ├── profile/         Analytics.tsx, Achievements.tsx, Billing.tsx
+    ├── community/       Forum.tsx, ChatPage.tsx, ChatBox.tsx, Notifications.tsx
+    ├── manage/          Dashboard.tsx, TeachingAssistant.tsx, Parents.tsx
+    └── admin/           Accounts.tsx, Organizations.tsx, SystemAdmin.tsx, AuditLogs.tsx
 ```
 
 Bốn module của báo cáo nằm ở các tệp sau:
@@ -118,11 +259,29 @@ Bốn module của báo cáo nằm ở các tệp sau:
 | 3. Nộp bài và chấm tự động | `Submission`, `JudgeResult`, `TestCaseResult`, `Verdict` | | `judge/` | `judge/` |
 | 4. Xem lịch sử nộp bài và bảng xếp hạng | | `SubmissionRepository` và hai bản cài đặt | `ScoreboardService` | `history/` |
 
-`ApiServer` và `JudgeService` phục vụ cả bốn module.
+`ApiServer` và `JudgeService` phục vụ cả bốn module. Các module mở rộng nằm ở các tệp sau:
+
+| Nhóm module | `model/` | `controller/` | `controller/api/` | `view/` |
+|---|---|---|---|---|
+| Tài khoản, giảng viên (1, 35) | `User` và các lớp con | `AuthService` | `AccountApi` | `account/`, `admin/Accounts.tsx` |
+| Tổ chức, lớp học, phụ huynh (2, 3, 32) | `Organization`, `Classroom`, `ParentContact` | `SchoolService` | `SchoolApi` | `school/`, `admin/`, `manage/` |
+| Khóa học, tài liệu (4, 36) | `Course`, `Lesson`, `Document` | `CourseService` | `CourseApi` | `school/Courses.tsx` |
+| Bộ test (7) | `TestCase` | `ProblemAdminService` | `TestcaseApi` | `problem/admin/TestcaseManager.tsx` |
+| IDE, stress test (10, 12) | | `PlaygroundService` | `PlaygroundApi` | `tools/` |
+| Bài tập giao (13) | `Assignment` | `AssignmentService` | `AssignmentApi` | `school/Assignments.tsx` |
+| Buổi học, phòng học, điểm danh, bản ghi (14 đến 20, 37) | `Meeting`, `MeetingRoom`, `Stroke`, `Attendance`, `Recording` | `MeetingService` | `MeetingApi` | `meeting/` |
+| Kỳ thi, xem lại (21, 22) | `Contest` | `ContestService` | `ContestApi` | `contest/` |
+| Phân tích, báo cáo, thành tích (23 đến 26, 33, 38) | | `AnalyticsService` | `AnalyticsApi` | `profile/`, `manage/Dashboard.tsx`, `judge/SubmitInsight.tsx` |
+| Trợ lý AI (27, 28) | | `AssistantService` | `AssistantApi` | `judge/AssistantPopup.tsx`, `tools/Assistant.tsx`, `manage/TeachingAssistant.tsx` |
+| Thông báo, chat, diễn đàn (29, 30, 31) | `Notification`, `ChatMessage`, `ForumPost` | `CommunityService` | `CommunityApi` | `community/` |
+| Thanh toán (34) | `Plan`, `Payment` | `BillingService` | `BillingApi` | `profile/Billing.tsx` |
+| Hệ thống, nhật ký (39, 40) | `AuditLog` | `SystemService` | `SystemApi` | `admin/` |
+
+Module 11 (Công cụ CP) chỉ có phần giao diện trong `tools/CpTools.tsx`.
 
 ## Bắt đầu nhanh
 
-Cần có JDK 11+ và Node.js 20.19+. MySQL 8 chỉ cần khi muốn lưu dữ liệu lâu dài. Muốn chấm các ngôn ngữ khác Java thì cài thêm toolchain tương ứng (g++, Python 3, Node.js); ngôn ngữ nào thiếu toolchain sẽ tự được đánh dấu là không khả dụng.
+Cần có JDK 11+ và Node.js 20.19+. MySQL 8 chỉ cần khi muốn lưu tài khoản và bài nộp lâu dài. Muốn chấm các ngôn ngữ khác Java thì cài thêm toolchain tương ứng (g++, Python 3, Node.js); ngôn ngữ nào thiếu toolchain sẽ tự được đánh dấu là không khả dụng.
 
 ### Chạy thử không cần MySQL
 
@@ -158,7 +317,9 @@ cd Online-Judge
    java "-Dfile.encoding=UTF-8" -cp out com.ptit.oj.Main --serve --no-db
    ```
 
-Mở http://localhost:8080. Mật khẩu tài khoản `admin` được in ra terminal; muốn tự đặt thì gán biến môi trường `OJ_ADMIN_PASSWORD` trước khi chạy. Ở chế độ này tài khoản và lịch sử nộp bài nằm trong RAM nên sẽ mất khi tắt máy chủ.
+Mở http://localhost:8080. Mật khẩu tài khoản `admin` và mật khẩu chung của bốn tài khoản mẫu (`hiennm`, `lananh`, `tuanpv` là học sinh, `gvthanh` là giảng viên) được in ra terminal; muốn tự đặt mật khẩu admin thì gán biến môi trường `OJ_ADMIN_PASSWORD` trước khi chạy. Ở chế độ này mọi dữ liệu trừ đề bài nằm trong RAM nên sẽ mất khi tắt máy chủ.
+
+Muốn thử phòng học, mở hai tab: một tab đăng nhập `gvthanh`, một tab đăng nhập một tài khoản học sinh. Phiên đăng nhập lưu riêng theo tab nên không cần hai trình duyệt.
 
 Nếu máy chủ báo `Unable to establish loopback connection` dù cổng không bận (gặp trên Windows với JDK 17), thêm `"-Djdk.net.unixdomain.tmpdir=C:\Users\Public"` vào ngay sau `java`.
 
@@ -215,14 +376,17 @@ Các biến được đọc từ biến môi trường hoặc file `.env` (biế
 
 Trừ 4 endpoint công khai, mọi request phải gửi header `Authorization: Bearer <token>`.
 
+### Phần lõi
+
 | Method | Endpoint | Quyền | Mô tả |
 |---|---|---|---|
 | GET | `/api/health` | công khai | Trạng thái máy chủ |
 | GET | `/api/languages` | công khai | Danh sách ngôn ngữ và trạng thái toolchain |
-| POST | `/api/auth/register` | công khai | Đăng ký tài khoản học sinh |
+| POST | `/api/auth/register` | công khai | Đăng ký tài khoản học sinh (bị từ chối khi quản trị viên tắt tự đăng ký) |
 | POST | `/api/auth/login` | công khai | Đăng nhập, trả về token |
 | POST | `/api/auth/logout` | đăng nhập | Huỷ token |
 | GET | `/api/auth/me` | đăng nhập | Thông tin tài khoản đang đăng nhập |
+| POST | `/api/auth/password` | đăng nhập | Đổi mật khẩu của chính mình |
 | GET | `/api/problems` | đăng nhập | Danh sách bài kèm đề, chủ đề, độ khó và test ví dụ |
 | GET | `/api/topics` | đăng nhập | Lộ trình học theo thứ tự |
 | GET | `/api/submissions` | đăng nhập | Lịch sử nộp: học sinh chỉ thấy của mình |
@@ -231,6 +395,67 @@ Trừ 4 endpoint công khai, mọi request phải gửi header `Authorization: B
 | POST | `/api/submit` | đăng nhập | Nộp bài; chấm xong trả về bài nộp kèm kết quả từng test |
 | POST | `/api/admin/problems` | admin | Tạo bài tập |
 | PUT | `/api/admin/problems/{id}` | admin | Đổi chủ đề và độ khó của bài |
+| GET, POST | `/api/admin/problems/{id}/tests` | admin | Xem toàn bộ test của bài, thêm một test |
+| DELETE | `/api/admin/problems/{id}/tests/{tên}` | admin | Xoá một test |
+
+### Module mở rộng
+
+"Quản lý lớp" là quản trị viên, giảng viên phụ trách hoặc trợ giảng của lớp đó. "Thành viên lớp" gồm người quản lý lớp và học sinh của lớp.
+
+| Method | Endpoint | Quyền | Mô tả |
+|---|---|---|---|
+| GET | `/api/users` | GV / admin | Danh sách tài khoản |
+| POST | `/api/admin/users` | admin | Tạo tài khoản với vai trò bất kỳ |
+| GET | `/api/organizations` | đăng nhập | Danh sách tổ chức |
+| POST, DELETE | `/api/organizations`, `/api/organizations/{id}` | admin | Thêm, xoá tổ chức |
+| GET | `/api/classrooms` | đăng nhập | Các lớp mình thuộc về (admin thấy tất cả) |
+| POST | `/api/classrooms` | GV / admin | Tạo lớp |
+| GET | `/api/classrooms/{id}` | thành viên lớp | Chi tiết lớp: học sinh, trợ giảng |
+| DELETE | `/api/classrooms/{id}` | quản lý lớp | Xoá lớp |
+| POST | `/api/classrooms/{id}/join` | đăng nhập | Tham gia lớp bằng mã lớp |
+| POST, DELETE | `/api/classrooms/{id}/students`, `.../students/{userId}` | quản lý lớp | Thêm, xoá học sinh |
+| POST, DELETE | `/api/classrooms/{id}/assistants`, `.../assistants/{userId}` | quản lý lớp | Thêm, xoá trợ giảng |
+| GET, POST, DELETE | `/api/parents`, `/api/parents/{id}` | GV / admin | Danh bạ phụ huynh |
+| GET | `/api/parents/{id}/report` | GV / admin | Báo cáo học tập của con |
+| GET | `/api/courses`, `/api/documents` | đăng nhập | Khóa học kèm giáo trình; tài liệu |
+| POST | `/api/courses`, `/api/courses/{id}/lessons`, `/api/documents` | GV / admin | Thêm khóa học, bài giảng, tài liệu |
+| DELETE | `/api/courses/{id}`, `/api/documents/{id}` | GV / admin | Xoá khóa học, tài liệu |
+| GET | `/api/assignments` | đăng nhập | Bài tập giao của các lớp mình thuộc về, kèm tiến độ của mình |
+| POST, DELETE | `/api/assignments`, `/api/assignments/{id}` | quản lý lớp | Giao bài, xoá bài tập giao |
+| GET | `/api/assignments/{id}/progress` | quản lý lớp | Bảng tiến độ cả lớp |
+| GET | `/api/meetings` | đăng nhập | Buổi học của các lớp mình thuộc về |
+| POST, DELETE | `/api/meetings`, `/api/meetings/{id}` | quản lý lớp | Lên lịch, xoá buổi học |
+| POST | `/api/meetings/{id}/start`, `.../end` | quản lý lớp | Bắt đầu, kết thúc buổi học |
+| GET | `/api/meetings/{id}/room?strokes=N` | thành viên lớp | Trạng thái phòng; cũng là lệnh báo "tôi còn ở đây" và điểm danh |
+| PUT | `/api/meetings/{id}/room/code` | chủ phòng, hoặc thành viên khi bật cùng lập trình | Cập nhật mã nguồn dùng chung |
+| POST | `/api/meetings/{id}/room/collab` | chủ phòng | Bật, tắt cùng lập trình |
+| POST | `/api/meetings/{id}/room/strokes`, `.../room/hand` | thành viên lớp | Vẽ một nét lên bảng; giơ hoặc hạ tay |
+| DELETE | `/api/meetings/{id}/room/strokes` | quản lý lớp | Xoá bảng |
+| GET, PUT | `/api/meetings/{id}/attendance` | quản lý lớp | Xem, sửa điểm danh |
+| GET | `/api/recordings`, `/api/recordings/{id}` | thành viên lớp | Bản ghi buổi học |
+| GET | `/api/contests`, `/api/contests/{id}?minute=N`, `/api/contests/{id}/events` | đăng nhập | Danh sách kỳ thi; bảng xếp hạng tại phút N; diễn biến nộp bài |
+| POST, DELETE | `/api/contests`, `/api/contests/{id}` | GV / admin | Tạo, xoá kỳ thi |
+| GET | `/api/analytics/me` | đăng nhập | Hồ sơ học tập của mình |
+| GET | `/api/analytics/users/{username}` | GV / admin | Hồ sơ học tập của một học sinh |
+| GET | `/api/dashboard` | GV / admin | Số liệu toàn hệ thống |
+| GET | `/api/gamification/leaderboard` | đăng nhập | Bảng điểm thưởng |
+| POST | `/api/assistant/hint` | đăng nhập | Gợi ý cho một bài |
+| GET | `/api/assistant/classrooms/{id}` | quản lý lớp | Tóm tắt tình hình lớp |
+| GET | `/api/assistant/students/{username}` | GV / admin | Nhận xét về một học sinh |
+| GET, POST | `/api/notifications`, `/api/notifications/read` | đăng nhập | Thông báo của mình; đánh dấu đã đọc |
+| POST | `/api/announcements` | quản lý lớp; admin khi gửi toàn hệ thống | Gửi thông báo |
+| GET, POST | `/api/chat/{kênh}?after=N` | đăng nhập; kênh lớp và kênh phòng học cần là thành viên lớp | Đọc tin nhắn mới, gửi tin nhắn |
+| GET | `/api/forum`, `/api/forum/{id}` | đăng nhập | Danh sách chủ đề; một chủ đề kèm các câu trả lời |
+| POST | `/api/forum`, `/api/forum/{id}/replies` | đăng nhập | Đăng chủ đề; trả lời |
+| DELETE | `/api/forum/{id}` | tác giả / GV / admin | Xoá chủ đề |
+| GET, POST | `/api/billing`, `/api/billing/pay` | đăng nhập | Các gói và giao dịch của mình; thanh toán mô phỏng |
+| GET | `/api/admin/payments` | admin | Toàn bộ giao dịch |
+| GET | `/api/settings` | đăng nhập | Cấu hình công khai |
+| PUT | `/api/admin/settings` | admin | Đổi cấu hình |
+| GET | `/api/admin/system`, `/api/admin/audit?q=...` | admin | Thông tin máy chủ; nhật ký hoạt động |
+| POST | `/api/run`, `/api/stress` | đăng nhập | Chạy thử mã nguồn; stress test |
+
+Tên kênh chat: `general`, `class-<mã lớp>`, `meeting-<mã buổi học>`.
 
 Mã lỗi: `400` dữ liệu sai, `401` chưa đăng nhập, `403` không đủ quyền, `404` không tìm thấy, `409` trùng tên đăng nhập hoặc mã bài, `500` lỗi nội bộ (chi tiết chỉ ghi vào log máy chủ).
 
@@ -252,7 +477,7 @@ P001/
 - `difficulty`: 1 Dễ, 2 Vừa, 3 Khó. `order`: thứ tự trong chủ đề; bài không có `order` xếp sau theo mã bài.
 - Lộ trình khai báo trong `data/topics.txt`, mỗi dòng có dạng `ma-chu-de | Tên | Mô tả | Tên lớp`; thứ tự dòng là thứ tự học. Các chủ đề cùng tên lớp thuộc cùng một lớp, lớp nào xuất hiện trước thì đứng trước.
 
-Lược đồ CSDL gồm ba bảng `users`, `submissions`, `test_case_results` (khoá ngoại `ON DELETE CASCADE`) và view `user_stats`. Mỗi bài nộp cùng kết quả các test được ghi trong một transaction. Xem [database/mysql/02_schema.sql](database/mysql/02_schema.sql).
+Lược đồ CSDL gồm ba bảng `users`, `submissions`, `test_case_results` (khoá ngoại `ON DELETE CASCADE`) và view `user_stats`. Mỗi bài nộp cùng kết quả các test được ghi trong một transaction. Xem [database/mysql/02_schema.sql](database/mysql/02_schema.sql). Các module mở rộng không thêm bảng nào.
 
 ## Kiểm thử
 
@@ -262,30 +487,36 @@ Project không kèm bộ kiểm thử tự động. Sau khi sửa code, kiểm t
 - Trong `frontend/`: `npx tsc --noEmit` kiểm tra kiểu, `npm run build` build giao diện.
 - Chạy máy chủ với `--no-db` rồi thử bộ chấm bằng tay: `data/submissions/demo-plan.txt` liệt kê 41 bài nộp mẫu (đủ 6 verdict, nhiều ngôn ngữ) kèm verdict đúng của từng bài.
 
+Các module mở rộng mới được thử ở chế độ `--no-db`, bằng cách gọi API và bấm trên giao diện với cả ba vai trò.
+
 ## Thiết kế hướng đối tượng
 
 | Nguyên lý / mẫu | Áp dụng |
 |---|---|
-| Kế thừa & đa hình | `User` → `Student` / `Teacher` / `Admin`; quyền lấy từ `canCreateProblem()` thay vì `if` theo vai trò |
-| Trừu tượng | `Language`, `User`, `Entity` là abstract class; `OutputComparator`, `Repository<T>` là interface |
+| Kế thừa & đa hình | `User` → `Student` / `Teacher` / `Admin`; quyền lấy từ `canCreateProblem()` thay vì `if` theo vai trò. `ApiModule` → 13 lớp `…Api`; `ApiServer` gọi `handle()` mà không cần biết đang cầm lớp nào |
+| Trừu tượng | `Language`, `User`, `Entity`, `ApiModule` là abstract class; `OutputComparator`, `Repository<T>` là interface |
 | Strategy | `OutputComparator`: đổi cách so sánh mà không sửa `Judge` |
 | Factory | `ComparatorFactory`, `LanguageRegistry`, `JudgeService.mysql()` / `inMemory()` |
-| Repository + Generic | `Repository<T extends Entity>`, hai bản cài đặt In-memory và MySQL thay thế được cho nhau |
-| Dependency Injection | `JudgeService` nhận kho dữ liệu qua constructor |
+| Repository + Generic | `Repository<T extends Entity>`, hai bản cài đặt In-memory và MySQL thay thế được cho nhau. Mọi thực thể của module mở rộng dùng chung `InMemoryRepository<T>` |
+| Dependency Injection | `JudgeService` nhận kho dữ liệu qua constructor; các service của `Platform` nhận `JudgeService` và service khác qua constructor |
+| Enum | `Verdict`, `Plan` |
 | Đóng gói | Field `private`, danh sách trả về dạng chỉ đọc, `Credentials` bất biến |
-| Đa luồng | Luồng đọc/ghi riêng cho tiến trình con, `ConcurrentHashMap` cho phiên, chấm tuần tự để đo thời gian ổn định |
+| Đa luồng | Luồng đọc/ghi riêng cho tiến trình con, `ConcurrentHashMap` cho phiên, chấm tuần tự để đo thời gian ổn định, `InMemoryRepository` và các hàm sửa danh sách trong service là `synchronized` |
 
 ## Hạn chế và hướng phát triển
 
 - Chưa có sandbox: code thí sinh chạy bằng quyền người dùng hiện tại, nên máy chủ chỉ mở trên localhost. Hướng phát triển: chạy trong container hoặc dùng cgroups / Job Object.
 - Giới hạn bộ nhớ chỉ áp chính xác cho Java (`-Xmx`) và JavaScript; các ngôn ngữ còn lại chỉ phát hiện MLE khi runtime báo hết bộ nhớ.
-- Bài được chấm tuần tự để số đo thời gian ổn định, và người nộp phải chờ chấm xong mới thấy kết quả; có thể chuyển sang hàng đợi, nhiều worker và đẩy kết quả từng test theo thời gian thực.
-- Chưa sửa được nội dung đề, bộ test, chưa xoá bài và chưa đổi mật khẩu qua giao diện; lộ trình (`topics.txt`) và thứ tự bài trong chủ đề (`order`) vẫn sửa tay.
+- Bài được chấm tuần tự để số đo thời gian ổn định, và người nộp phải chờ chấm xong mới thấy kết quả; có thể chuyển sang hàng đợi, nhiều worker và đẩy kết quả từng test theo thời gian thực. Một lần stress test cũng giữ bộ chấm tối đa 25 giây.
+- Chưa sửa được nội dung đề và chưa xoá được bài qua giao diện; lộ trình (`topics.txt`) và thứ tự bài trong chủ đề (`order`) vẫn sửa tay.
 - Phiên đăng nhập lưu trong RAM; chưa có connection pool và phân trang cho lịch sử nộp bài.
-- Bộ test lớp VNOI được giữ nhỏ cho repo gọn (khoảng 1 MB mỗi bài với V001–V026, dưới 100 KB mỗi bài với V027–V300), nên ở nhiều bài cách làm trâu viết bằng C++ vẫn kịp giới hạn thời gian; Java và Python thì thường không.
+- Dữ liệu của các module mở rộng nằm trong RAM, khởi động lại là mất. Hướng phát triển: thêm bảng MySQL và lớp DAO cho từng thực thể.
+- Các module mở rộng chưa được chạy thử ở chế độ MySQL. Các trang phân tích, tổng quan, chi tiết lớp và xem lại kỳ thi đọc lại toàn bộ lịch sử nộp bài ở mỗi request, nên sẽ chậm dần khi CSDL lớn.
+- Phòng học đồng bộ bằng polling, và máy chủ chỉ mở trên localhost nên mới thử được trên một máy với nhiều tab. Bản thật cần WebSocket cho dữ liệu và WebRTC cho video.
+- Bộ test lớp VNOI được giữ nhỏ cho repo gọn (khoảng 1 MB mỗi bài với V001 đến V026, dưới 100 KB mỗi bài với V027 đến V300), nên ở nhiều bài cách làm trâu viết bằng C++ vẫn kịp giới hạn thời gian; Java và Python thì thường không.
 
 ## Nhóm phát triển
 
 Bài tập lớn môn Công Nghệ Phần Mềm, Học viện Công nghệ Bưu chính Viễn thông (PTIT).
 
-Thành viên: **hienphung910**, **longnd**, **tm079**, **tienkhoi235**
+Thành viên: hienphung910, longnd, tm079, tienkhoi235
