@@ -2,18 +2,19 @@ package com.ptit.oj.dao;
 
 import com.ptit.oj.model.ProblemDraft;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 /**
  * Ghi bai tap ra o dia theo dung cau truc ma ProblemLoader doc duoc:
@@ -30,7 +31,7 @@ public class ProblemWriter {
     /** ProblemLoader bo qua cac thu muc bat dau bang tien to nay. */
     public static final String TEMP_PREFIX = "_tmp_";
 
-    private Path problemsDir;
+    private final Path problemsDir;
 
     public ProblemWriter(Path problemsDir) {
         this.problemsDir = problemsDir;
@@ -128,7 +129,7 @@ public class ProblemWriter {
     /** Noi dung problem.properties cua bai moi. */
     private String buildProperties(ProblemDraft d) {
         StringBuilder sb = new StringBuilder();
-        sb.append("# Sinh tu giao dien quan tri\n");
+        sb.append("# Sinh tu giao dien quan tri (POST /api/admin/problems)\n");
         sb.append("id=").append(escapeProperty(d.getId())).append('\n');
         sb.append("title=").append(escapeProperty(d.getTitle())).append('\n');
         sb.append("timeLimitMs=").append(d.getTimeLimitMs()).append('\n');
@@ -157,12 +158,15 @@ public class ProblemWriter {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < value.length(); i++) {
             char c = value.charAt(i);
-            if (c == '=' || c == ':' || c == '#' || c == '!' || c == '\\') {
-                sb.append('\\').append(c);          // them dau \ dung truoc ky tu dac biet
-            } else if (c == '\n') {
-                sb.append("\\n");
-            } else if (c != '\r') {
-                sb.append(c);
+            switch (c) {
+                case '=':  sb.append("\\="); break;
+                case ':':  sb.append("\\:"); break;
+                case '#':  sb.append("\\#"); break;
+                case '!':  sb.append("\\!"); break;
+                case '\\': sb.append("\\\\"); break;
+                case '\n': sb.append("\\n"); break;
+                case '\r': break;
+                default:   sb.append(c);
             }
         }
         return sb.toString();
@@ -173,20 +177,18 @@ public class ProblemWriter {
         Files.write(file, (content == null ? "" : content).getBytes(StandardCharsets.UTF_8));
     }
 
-    /** Xoa mot thu muc cung moi thu ben trong: xoa cac muc con truoc, roi moi xoa chinh no. */
     private void deleteRecursively(Path dir) {
-        if (dir == null) return;
-        deleteRecursively(dir.toFile());
-    }
-
-    private void deleteRecursively(File file) {
-        File[] children = file.listFiles();         // null neu day la file thuong
-        if (children != null) {
-            for (File child : children) {
-                deleteRecursively(child);
-            }
+        if (dir == null || !Files.exists(dir)) return;
+        try (Stream<Path> walk = Files.walk(dir)) {
+            walk.sorted(Comparator.reverseOrder()).forEach(p -> {
+                try {
+                    Files.deleteIfExists(p);
+                } catch (IOException ignored) {
+                    // don dep het suc; file con lai se mang tien to _tmp_ nen bi bo qua khi nap
+                }
+            });
+        } catch (IOException ignored) {
+            // bo qua
         }
-        // Don dep het suc; file con lai se mang tien to _tmp_ nen bi bo qua khi nap.
-        file.delete();
     }
 }

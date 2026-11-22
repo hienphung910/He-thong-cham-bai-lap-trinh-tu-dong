@@ -8,11 +8,11 @@ package com.ptit.oj.model;
  */
 public class TestCaseResult {
 
-    private TestCase testCase;
-    private Verdict verdict;
-    private long runtimeMs;
-    private double earnedPoints;
-    private String message;
+    private final TestCase testCase;
+    private final Verdict verdict;
+    private final long runtimeMs;
+    private final double earnedPoints;
+    private final String message;
 
     public TestCaseResult(TestCase testCase, Verdict verdict, long runtimeMs,
                           double earnedPoints, String message) {

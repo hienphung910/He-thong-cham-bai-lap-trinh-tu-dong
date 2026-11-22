@@ -2,8 +2,8 @@ package com.ptit.oj.model;
 
 public class Student extends User {
 
-    private String studentCode;
-    private String className;
+    private final String studentCode;
+    private final String className;
 
     public Student(String id, String username, String fullName, String studentCode, String className) {
         super(id, username, fullName);

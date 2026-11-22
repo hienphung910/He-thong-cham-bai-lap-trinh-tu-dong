@@ -11,9 +11,9 @@ public enum Verdict {
     CE("CE", "Compile Error", 6),
     IE("IE", "Internal Error", 7);
 
-    private String code;
-    private String display;
-    private int severity;
+    private final String code;
+    private final String display;
+    private final int severity;
 
     Verdict(String code, String display, int severity) {
         this.code = code;

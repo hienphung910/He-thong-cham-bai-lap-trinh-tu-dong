@@ -10,11 +10,11 @@ package com.ptit.oj.model;
  */
 public class Topic extends Entity {
 
-    private String name;
-    private String description;
+    private final String name;
+    private final String description;
     /** Lop hoc chua chu de nay, vi du "Nhập môn" hay "Lộ trình VNOI"; "" neu khong chia lop. */
-    private String group;
-    private int order;
+    private final String group;
+    private final int order;
 
     public Topic(String id, String name, String description, String group, int order) {
         super(id);
