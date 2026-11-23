@@ -16,6 +16,7 @@ export default function Problems({
   onSubmitted,
   reloadKey,
   openId,
+  homeKey,
 }: {
   /** Bai cua kho chung - chi nhung bai nay hien trong lo trinh. */
   problems: Problem[];
@@ -27,6 +28,8 @@ export default function Problems({
   reloadKey: number;
   /** Ma bai can mo ngay (bam tu trang bai tap giao, ky thi, goi y...); null = hien danh sach. */
   openId?: string | null;
+  /** Doi gia tri moi lan nguoi dung bam logo hoac muc "Lop hoc" tren menu: dong bai dang mo. */
+  homeKey?: number;
 }) {
   const { user } = useAuth();
   const [search, setSearch] = useState("");
@@ -38,6 +41,8 @@ export default function Problems({
   const [diffFilter, setDiffFilter] = useState(0);
   const [hov, setHov] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Dat truoc effect cua openId: luc moi mo trang, bai can mo ngay van duoc mo.
+  useEffect(() => { setSelectedId(null); }, [homeKey]);
   useEffect(() => { if (openId) setSelectedId(openId); }, [openId]);
   const [mySubs, setMySubs] = useState<Submission[]>([]);
 

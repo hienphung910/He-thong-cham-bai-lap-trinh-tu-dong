@@ -141,6 +141,8 @@ function AppShell() {
   const [page, setPage] = useState<PageKey>("Problems");
   /** Ma bai can mo san khi chuyen sang trang Lop hoc (bam tu mot duong link toi bai). */
   const [openProblemId, setOpenProblemId] = useState<string | null>(null);
+  /** Tang moi lan nguoi dung chon ve trang bai tap, de trang do dong bai dang mo va hien lai danh sach. */
+  const [homeKey, setHomeKey] = useState(0);
   const [avatarOpen, setAvatarOpen] = useState(false);
   /** Ten nhom menu dang xo xuong (dang re chuot vao); null = khong nhom nao mo. */
   const [openGroup, setOpenGroup] = useState<string | null>(null);
@@ -206,7 +208,10 @@ function AppShell() {
   // Tra ve Promise de trang quan tri doi tai lai danh sach xong moi dong hop thoai.
   const onProblemsChanged = useCallback(async () => { await loadProblems().catch(() => undefined); setReloadKey((k) => k + 1); }, [loadProblems]);
 
-  const go = useCallback((next: PageKey) => { setOpenProblemId(null); setOpenGroup(null); setPage(next); }, []);
+  const go = useCallback((next: PageKey) => {
+    setOpenProblemId(null); setOpenGroup(null); setPage(next);
+    if (next === "Problems") setHomeKey((k) => k + 1);
+  }, []);
   const openProblem = useCallback((id: string) => {
     // Bai kho rieng vua duoc dua vao ky thi / bai tap co the chua nam trong danh sach da tai: tai lai.
     if (!problems.some((p) => p.id === id)) void loadProblems().catch(() => undefined);
@@ -359,7 +364,7 @@ function AppShell() {
               </div>
             ) : !allowed(page) ? null : (
               <>
-                {page === "Problems" && <Problems problems={sharedProblems} allProblems={problems} topics={topics} languages={languages} onSubmitted={onSubmitted} reloadKey={reloadKey} openId={openProblemId} />}
+                {page === "Problems" && <Problems problems={sharedProblems} allProblems={problems} topics={topics} languages={languages} onSubmitted={onSubmitted} reloadKey={reloadKey} openId={openProblemId} homeKey={homeKey} />}
                 {page === "Classrooms" && <Classrooms />}
                 {page === "Courses" && <Courses />}
                 {page === "Assignments" && <Assignments />}
