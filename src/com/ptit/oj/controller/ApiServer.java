@@ -56,8 +56,9 @@ import java.util.concurrent.Executors;
  *  - Kiem tra dang nhap va phan quyen cho tung endpoint.
  *  - Phuc vu file tinh cua frontend da build (frontend/dist).
  *
- * An toan: chi lang nghe tren 127.0.0.1. Vi may chu nay bien dich va chay ma
- * nguon tuy y nen KHONG duoc mo ra mang LAN.
+ * An toan: mac dinh chi lang nghe tren 127.0.0.1. Vi may chu nay bien dich va chay ma
+ * nguon tuy y nen KHONG duoc mo ra mang LAN. Khi chay trong container (Docker, Railway)
+ * thi dat bien moi truong OJ_BIND_ADDRESS=0.0.0.0 de nen tang chuyen request vao duoc.
  *
  * Nguyen tac phan quyen: KHONG BAO GIO tin du lieu client gui len.
  *  - nguoi nop bai lay tu token, khong lay tu truong "username" trong body,
@@ -70,6 +71,9 @@ public class ApiServer {
     private static final DateTimeFormatter ISO = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
     private static final int MAX_BODY_BYTES = 512 * 1024;        // 512 KB, du cho mot bai nop
     private static final int MAX_ADMIN_BODY_BYTES = 8 * 1024 * 1024;  // de bai + test co the lon hon
+
+    /** Dia chi lang nghe; bo trong thi chi nghe 127.0.0.1. Trong container dat la 0.0.0.0. */
+    public static final String BIND_ADDRESS_ENV = "OJ_BIND_ADDRESS";
 
     private final JudgeService service;
     private final Platform platform;
@@ -95,14 +99,20 @@ public class ApiServer {
     }
 
     public void start() throws IOException {
-        server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), port), 0);
+        InetAddress address = bindAddress();
+        server = HttpServer.create(new InetSocketAddress(address, port), 0);
         pool = Executors.newFixedThreadPool(4);
         server.setExecutor(pool);
         server.createContext("/api/", this::handleApi);
         server.createContext("/", this::handleStatic);
         server.start();
 
-        System.out.println("Máy chủ web đã chạy: http://localhost:" + port);
+        if (address.isLoopbackAddress()) {
+            System.out.println("Máy chủ web đã chạy: http://localhost:" + port);
+        } else {
+            System.out.println("Máy chủ web đã chạy trên " + address.getHostAddress() + ":" + port
+                    + " (mở ra ngoài máy này theo " + BIND_ADDRESS_ENV + ")");
+        }
         if (Files.isDirectory(webRoot)) {
             System.out.println("Giao diện web: " + webRoot.toAbsolutePath());
         } else {
@@ -111,6 +121,15 @@ public class ApiServer {
             System.out.println("  -> hoặc dùng chế độ dev: cd frontend && npm run dev");
         }
         System.out.println("Nhấn Ctrl+C để dừng.");
+    }
+
+    /** Doc OJ_BIND_ADDRESS; khong dat thi chi nghe loopback nhu truoc. */
+    private static InetAddress bindAddress() throws IOException {
+        String configured = System.getenv(BIND_ADDRESS_ENV);
+        if (configured == null || configured.trim().isEmpty()) {
+            return InetAddress.getLoopbackAddress();
+        }
+        return InetAddress.getByName(configured.trim());
     }
 
     public void stop() {

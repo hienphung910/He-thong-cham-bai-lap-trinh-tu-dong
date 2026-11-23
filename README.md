@@ -77,7 +77,7 @@ Backend chỉ dùng API chuẩn của JDK. Máy chủ HTTP, bộ đọc/ghi JSON
 - Token phiên 32 byte sinh bằng `SecureRandom`, hết hạn sau 8 giờ.
 - Mọi truy vấn dùng `PreparedStatement`; mã bài và tên test được kiểm tra để chặn path traversal.
 - Nhật ký hoạt động ghi mọi request làm thay đổi dữ liệu (POST, PUT, DELETE) và mọi lần đăng nhập, kể cả đăng nhập sai. Chỉ quản trị viên xem được.
-- Máy chủ chỉ lắng nghe trên `127.0.0.1`.
+- Máy chủ mặc định chỉ lắng nghe trên `127.0.0.1`; chỉ mở ra ngoài khi đặt `OJ_BIND_ADDRESS`.
 
 ## Các module mô phỏng
 
@@ -375,6 +375,25 @@ Các biến được đọc từ biến môi trường hoặc file `.env` (biế
 | `OJ_DB_URL`, `OJ_DB_USER`, `OJ_DB_PASSWORD` | Kết nối tới CSDL |
 | `OJ_ADMIN_PASSWORD` | Mật khẩu admin lần đầu; bỏ trống thì hệ thống tự sinh và in ra một lần |
 | `OJ_SEED_PASSWORD` | Mật khẩu của 4 tài khoản mẫu |
+| `OJ_BIND_ADDRESS` | Địa chỉ lắng nghe. Bỏ trống thì chỉ nghe `127.0.0.1`; trong container đặt `0.0.0.0` (Dockerfile đã đặt sẵn) |
+| `OJ_ALLOW_REGISTER` | Đặt `false` để khoá tự đăng ký ngay từ lúc khởi động. Quản trị viên vẫn bật lại được trong Quản trị → Hệ thống cho tới lần khởi động sau |
+
+`OJ_ADMIN_PASSWORD`, `OJ_SEED_PASSWORD`, `OJ_BIND_ADDRESS` và `OJ_ALLOW_REGISTER` chỉ đọc từ biến môi trường, không đọc từ file `.env`.
+
+## Triển khai bằng Docker (Railway + Aiven)
+
+`Dockerfile` ở thư mục gốc đóng gói máy chủ, giao diện đã build và toolchain chấm bài (javac, g++, python3, node) vào một image. MySQL nằm ngoài image.
+
+- Railway: tạo service từ repo GitHub, Railway tự nhận `Dockerfile` và cấp cổng qua biến `PORT`. Gắn một Volume vào `/app/data` để đề bài tạo trên web không mất khi deploy lại; lúc khởi động, đề bài gốc trong repo được chép vào volume mà không ghi đè bài đã có.
+- Aiven MySQL bắt buộc SSL: trong `OJ_DB_URL` dùng `sslMode=REQUIRED` thay cho `useSSL=false`, tên CSDL là `defaultdb`. Không cần chạy `01_create_database.sql`; bảng được tạo khi khởi động.
+- Đặt `OJ_ADMIN_PASSWORD`, `OJ_SEED_PASSWORD` và `OJ_ALLOW_REGISTER=false` trước lần chạy đầu. Bộ chấm chưa có sandbox, nên ai có tài khoản đều chạy được mã tuỳ ý trong container.
+
+Chạy thử image trên máy, không cần MySQL:
+
+```bash
+docker build -t codehub .
+docker run --rm -p 8080:8080 codehub --no-db
+```
 
 ## REST API
 

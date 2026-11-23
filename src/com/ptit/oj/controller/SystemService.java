@@ -27,8 +27,16 @@ public class SystemService {
     private final Map<String, String> settings = new LinkedHashMap<>();
     private final List<AuditLog> auditLogs = new ArrayList<>();
 
+    /**
+     * Gia tri khoi dau cua "cho tu dang ky". Cau hinh nam trong RAM nen moi lan khoi
+     * dong lai deu quay ve gia tri nay; dat OJ_ALLOW_REGISTER=false khi dua len mang
+     * de viec khoi dong lai khong tu mo dang ky.
+     */
+    public static final String ALLOW_REGISTER_ENV = "OJ_ALLOW_REGISTER";
+
     public SystemService() {
-        settings.put(ALLOW_REGISTER, "true");
+        boolean closed = "false".equalsIgnoreCase(String.valueOf(System.getenv(ALLOW_REGISTER_ENV)).trim());
+        settings.put(ALLOW_REGISTER, closed ? "false" : "true");
         settings.put(ANNOUNCEMENT, "");
     }
 

@@ -1,0 +1,10 @@
+# Khong dua vao image: lich su git, ket qua build tren may va file chua mat khau.
+.git
+.env
+out
+lib
+target
+frontend/node_modules
+frontend/dist
+.idea
+.vscode
