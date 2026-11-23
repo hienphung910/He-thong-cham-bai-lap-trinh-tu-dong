@@ -1,5 +1,4 @@
 import { useState } from "react";
-import Logo from "../../shared/Logo";
 import { useAuth } from "./auth";
 
 type Mode = "login" | "register";
@@ -63,9 +62,6 @@ export default function LoginModal() {
     <div style={{ height: "100%", display: "flex", background: "var(--color-page-bg)" }}>
       {/* Left panel */}
       <div style={{ flex: "0 0 42%", background: "linear-gradient(160deg, #E3F2FD 0%, #EEF1F5 100%)", display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 60px" }}>
-        <div style={{ marginBottom: 28 }}>
-          <Logo size={56} />
-        </div>
         <h1 style={{ fontSize: 32, fontWeight: 800, color: "#212121", margin: "0 0 12px", lineHeight: 1.25 }}>CodeHub</h1>
         <p style={{ fontSize: 15, color: "#757575", margin: 0, lineHeight: 1.6 }}>
           Luyện tập và thi lập trình trực tuyến — chấm bài tự động, nhanh và chính xác.

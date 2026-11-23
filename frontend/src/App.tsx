@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api } from "./shared/api";
 import { papi } from "./shared/platformApi";
 import { NavContext, type PageKey } from "./shared/nav";
@@ -44,9 +44,22 @@ import AuditLogs from "./view/admin/AuditLogs";
  * Day chi la an / hien tren giao dien - may chu van kiem tra lai quyen o tung request.
  */
 interface NavItem { key: PageKey; label: string; role?: "staff" | "teacher" | "admin" }
-const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
+
+/** Icon net cho ten nhom tren thanh menu: khung 24x24, net 2px, bo tron dau net. */
+function NavIcon({ children }: { children: ReactNode }) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+         strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ marginRight: 6, flexShrink: 0 }}>
+      {children}
+    </svg>
+  );
+}
+
+const NAV_GROUPS: { title: string; icon: ReactNode; items: NavItem[] }[] = [
   {
+    // Quyen sach co dai danh dau
     title: "Học tập",
+    icon: <NavIcon><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" /><path d="M10 2v8l3-3 3 3V2" /></NavIcon>,
     items: [
       { key: "Problems", label: "Lớp học (lộ trình)" },
       { key: "Classrooms", label: "Lớp của tôi" },
@@ -57,7 +70,9 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     ],
   },
   {
+    // Cap ngoac nhon cua ma nguon
     title: "Công cụ",
+    icon: <NavIcon><path d="m16 18 6-6-6-6" /><path d="m8 6-6 6 6 6" /></NavIcon>,
     items: [
       { key: "Playground", label: "IDE trực tuyến" },
       { key: "CpTools", label: "Công cụ CP" },
@@ -66,7 +81,9 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     ],
   },
   {
+    // Hinh nguoi
     title: "Cá nhân",
+    icon: <NavIcon><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></NavIcon>,
     items: [
       { key: "Analytics", label: "Phân tích học tập" },
       { key: "Achievements", label: "Thành tích" },
@@ -75,7 +92,9 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     ],
   },
   {
+    // Bong thoai
     title: "Cộng đồng",
+    icon: <NavIcon><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></NavIcon>,
     items: [
       { key: "Forum", label: "Diễn đàn" },
       { key: "Chat", label: "Chat" },
@@ -83,7 +102,9 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     ],
   },
   {
+    // Khung danh sach
     title: "Lịch sử",
+    icon: <NavIcon><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M7 8h10M7 12h10M7 16h6" /></NavIcon>,
     items: [
       { key: "Submissions", label: "Trạng thái" },
       { key: "MySubmissions", label: "Bài nộp" },
@@ -91,7 +112,9 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     ],
   },
   {
+    // Mu tot nghiep
     title: "Giảng dạy",
+    icon: <NavIcon><path d="M22 10 12 5 2 10l10 5 10-5Z" /><path d="M6 12v5c0 1.1 2.7 3 6 3s6-1.9 6-3v-5" /></NavIcon>,
     items: [
       { key: "Dashboard", label: "Tổng quan", role: "staff" },
       { key: "TeachingAssistant", label: "Trợ lý giảng dạy", role: "staff" },
@@ -100,7 +123,9 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     ],
   },
   {
+    // Khien bao ve
     title: "Quản trị",
+    icon: <NavIcon><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" /></NavIcon>,
     items: [
       { key: "Admin", label: "Kho bài chung và bộ test", role: "admin" },
       { key: "Accounts", label: "Tài khoản, giảng viên", role: "admin" },
@@ -207,11 +232,7 @@ function AppShell() {
         {/* ═══ THANH TREN CUNG ═══ */}
         <header style={{ display: "flex", alignItems: "center", height: 48, padding: "0 20px", background: "var(--color-header)", flexShrink: 0, zIndex: 50 }}>
           <div onClick={() => go("Problems")} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none" }}>
-            {/* Nen trang de o do giua khong bi chim vao header do */}
-            <div style={{ width: 30, height: 30, borderRadius: 8, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <Logo size={18} />
-            </div>
-            <span style={{ fontSize: 18, fontWeight: 800, color: "#fff", letterSpacing: "-0.01em" }}>CodeHub</span>
+            <Logo size={30} />
           </div>
 
           {/* ═══ MENU: chi hien ten nhom, re chuot vao thi xo xuong cac trang con ═══ */}
@@ -227,10 +248,12 @@ function AppShell() {
                 <div key={group.title} style={{ position: "relative", height: "100%" }}
                   onMouseEnter={() => setOpenGroup(group.title)} onMouseLeave={() => setOpenGroup(null)}>
                   <button onClick={() => setOpenGroup(open ? null : group.title)} style={{
-                    height: "100%", padding: "0 14px", border: "none", cursor: "pointer", whiteSpace: "nowrap",
+                    height: "100%", padding: "0 10px", border: "none", cursor: "pointer", whiteSpace: "nowrap",
+                    display: "flex", alignItems: "center",
                     background: active || open ? "rgba(255,255,255,0.18)" : "transparent",
                     color: "#fff", fontSize: 13.5, fontWeight: active ? 700 : 500,
                   }}>
+                    {group.icon}
                     {group.title}
                     {group.title === "Cộng đồng" && unread > 0 && <span style={{ marginLeft: 5, fontSize: 11, color: "#FFEB3B" }}>({unread})</span>}
                     <span style={{ marginLeft: 5, fontSize: 9, opacity: 0.8 }}>▼</span>
