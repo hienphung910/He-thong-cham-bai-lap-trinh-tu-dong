@@ -14,6 +14,45 @@ const TEMPLATES: Record<string, string> = {
   JavaScript: `const data = require("fs").readFileSync(0, "utf8").trim().split(/\\s+/);\nconsole.log((BigInt(data[0]) + BigInt(data[1])).toString());\n`,
 };
 
+/** Nut sao chep o goc o vi du: khung vien nho, bieu tuong hai o vuong chong nhau; bam xong hien dau tich. */
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {
+      // Trinh duyet chan clipboard (vd. trang khong phai https): bo qua, khong lam vo giao dien.
+    }
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => void copy()}
+      title={copied ? "Đã sao chép" : "Sao chép"}
+      aria-label="Sao chép"
+      style={{
+        position: "absolute", top: 6, right: 6, width: 22, height: 22, padding: 0,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        background: "#fff", border: "1px solid #D0D0D0", borderRadius: 4, cursor: "pointer",
+        color: copied ? "#2E7D32" : "#757575",
+      }}
+    >
+      {copied ? (
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 8.5l3.2 3L13 4.5" />
+        </svg>
+      ) : (
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round">
+          <rect x="5.5" y="5.5" width="8.5" height="8.5" rx="1.5" />
+          <path d="M10.5 2.5V2.2c0-.4-.3-.7-.7-.7H3.2c-.9 0-1.7.8-1.7 1.7v6.6c0 .4.3.7.7.7h.3" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 export default function ProblemDetail({
   problem, languages, onBack, onSubmitted, topicName, nextProblem, onNext, onOpen,
 }: {
@@ -124,21 +163,13 @@ export default function ProblemDetail({
                   </thead>
                   <tbody>
                     <tr>
-                      <td style={{ padding: "8px 16px", fontFamily: "var(--font-mono)", fontSize: 13, color: "#1565C0", borderRight: "1px solid #E0E0E0", verticalAlign: "top", whiteSpace: "pre-wrap", position: "relative" }}>
+                      <td style={{ padding: "8px 40px 8px 16px", fontFamily: "var(--font-mono)", fontSize: 13, color: "#1565C0", borderRight: "1px solid #E0E0E0", verticalAlign: "top", whiteSpace: "pre-wrap", position: "relative" }}>
                         {s.input.trimEnd()}
-                        <button
-                          onClick={() => navigator.clipboard.writeText(s.input)}
-                          style={{ position: "absolute", top: 4, right: 4, background: "none", border: "none", cursor: "pointer", color: "#BDBDBD", fontSize: 12 }}
-                          title="Copy"
-                        >📋</button>
+                        <CopyButton text={s.input} />
                       </td>
-                      <td style={{ padding: "8px 16px", fontFamily: "var(--font-mono)", fontSize: 13, color: "#1565C0", verticalAlign: "top", whiteSpace: "pre-wrap", position: "relative" }}>
+                      <td style={{ padding: "8px 40px 8px 16px", fontFamily: "var(--font-mono)", fontSize: 13, color: "#1565C0", verticalAlign: "top", whiteSpace: "pre-wrap", position: "relative" }}>
                         {s.output.trimEnd()}
-                        <button
-                          onClick={() => navigator.clipboard.writeText(s.output)}
-                          style={{ position: "absolute", top: 4, right: 4, background: "none", border: "none", cursor: "pointer", color: "#BDBDBD", fontSize: 12 }}
-                          title="Copy"
-                        >📋</button>
+                        <CopyButton text={s.output} />
                       </td>
                     </tr>
                   </tbody>
