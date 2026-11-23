@@ -23,6 +23,8 @@ import java.util.List;
 public class Request {
 
     private static final int MAX_BODY_BYTES = 512 * 1024;
+    /** Cho cac request chua noi dung test (input + output moi cai toi da 1 trieu ky tu). */
+    private static final int MAX_LARGE_BODY_BYTES = 8 * 1024 * 1024;
 
     private final HttpExchange exchange;
     private final JudgeService judge;
@@ -88,6 +90,11 @@ public class Request {
                 .orElseThrow(() -> ApiException.unauthorized("Bạn cần đăng nhập để dùng chức năng này"));
     }
 
+    /** Token cua request nay (null neu khong gui). */
+    public String token() {
+        return SessionService.extractBearerToken(exchange.getRequestHeaders().getFirst("Authorization"));
+    }
+
     /** Giang vien hoac quan tri vien. Nem 403 voi hoc sinh. */
     public User staff() {
         User user = user();
@@ -110,6 +117,11 @@ public class Request {
 
     public Json.Value body() throws IOException {
         return Json.parseObject(ApiServer.readBody(exchange, MAX_BODY_BYTES));
+    }
+
+    /** Nhu body() nhung cho phep toi 8 MB - dung cho endpoint them test. */
+    public Json.Value largeBody() throws IOException {
+        return Json.parseObject(ApiServer.readBody(exchange, MAX_LARGE_BODY_BYTES));
     }
 
     public void send(String json) throws IOException {

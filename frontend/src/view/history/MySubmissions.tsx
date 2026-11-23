@@ -9,14 +9,15 @@ export default function MySubmissions() {
   const { user } = useAuth();
   const [subs, setSubs] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState("");
   const [detail, setDetail] = useState<Submission | null>(null);
 
   useEffect(() => {
     if (!user) return;
     setLoading(true);
     api.submissions()
-      .then((all) => setSubs(all.filter((s) => s.author === user.username)))
-      .catch(() => {})
+      .then((all) => { setSubs(all.filter((s) => s.author === user.username)); setLoadError(""); })
+      .catch((e) => setLoadError(e instanceof Error ? e.message : "Không tải được lịch sử nộp bài"))
       .finally(() => setLoading(false));
   }, [user]);
 
@@ -56,7 +57,7 @@ export default function MySubmissions() {
           <tbody>
             {subs.length === 0 ? (
               <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", color: "#9E9E9E", fontSize: 13 }}>
-                {loading ? "Đang tải..." : "Bạn chưa nộp bài nào."}
+                {loading ? "Đang tải..." : loadError ? `Không tải được lịch sử nộp bài: ${loadError}` : "Bạn chưa nộp bài nào."}
               </td></tr>
             ) : subs.map((s, idx) => (
               <tr

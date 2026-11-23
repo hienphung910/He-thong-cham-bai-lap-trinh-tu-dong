@@ -45,7 +45,8 @@ public class AccountApi extends ApiModule {
         if (req.is("POST", "auth", "password")) {
             User user = req.user();
             Json.Value body = req.body();
-            judge.getAuth().changePassword(user, body.getString("oldPassword"), body.getString("newPassword"));
+            judge.getAuth().changePassword(user, body.getString("oldPassword"), body.getString("newPassword"),
+                    req.token());
             req.sendOk();
             return true;
         }

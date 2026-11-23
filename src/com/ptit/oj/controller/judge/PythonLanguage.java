@@ -20,9 +20,17 @@ public class PythonLanguage extends Language {
         return Arrays.asList(interpreter, "--version");
     }
 
+    /** Ket qua do tim interpreter, nho lai de lan goi sau khong doi ten interpreter lan nua. */
+    private Boolean available;
+
     /** Thu ca hai ten interpreter truoc khi ket luan may khong co Python. */
     @Override
-    public boolean isAvailable() {
+    public synchronized boolean isAvailable() {
+        if (available == null) available = detect();
+        return available;
+    }
+
+    private boolean detect() {
         if (super.isAvailable()) return true;
         String other = interpreter.equals("python") ? "python3" : "python";
         ExecutionResult r = probe(Arrays.asList(other, "--version"));

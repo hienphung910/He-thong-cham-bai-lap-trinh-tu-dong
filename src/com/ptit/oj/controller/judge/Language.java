@@ -13,6 +13,7 @@ import java.util.List;
 public abstract class Language {
 
     private static final long COMPILE_TIME_LIMIT_MS = 20_000;
+    private static final int MAX_COMPILE_MESSAGE_CHARS = 12_000;
 
     protected final ProcessRunner runner = new ProcessRunner();
     private Boolean availableCache;
@@ -46,7 +47,8 @@ public abstract class Language {
     public boolean isAvailable() {
         if (availableCache == null) {
             ExecutionResult r = probe(getVersionCommand());
-            availableCache = r != null && !r.isTimedOut();
+            // Phai thoat voi ma 0: "python3" gia cua Windows Store van chay duoc nhung bao loi.
+            availableCache = r != null && r.isSuccess();
         }
         return availableCache;
     }
@@ -69,9 +71,18 @@ public abstract class Language {
         if (r.isTimedOut()) return CompileResult.fail("Biên dịch quá lâu (> 20s)");
         if (r.getExitCode() != 0) {
             String message = r.getStderr().isEmpty() ? r.getStdout() : r.getStderr();
-            return CompileResult.fail(message.trim());
+            return CompileResult.fail(clip(message.trim(), MAX_COMPILE_MESSAGE_CHARS));
         }
         return CompileResult.ok();
+    }
+
+    /**
+     * Cat thong bao qua dai. Trinh bien dich C++ co the in hang tram KB cho mot loi template,
+     * trong khi cot TEXT cua MySQL chi chua duoc 65 535 byte (moi ky tu UTF-8 toi da 4 byte).
+     */
+    public static String clip(String text, int maxChars) {
+        if (text == null || text.length() <= maxChars) return text;
+        return text.substring(0, maxChars) + "\n... (đã cắt bớt, thông báo gốc dài " + text.length() + " ký tự)";
     }
 
     /** File thuc thi sinh ra khi bien dich (C++): cung ten voi file ma nguon. */

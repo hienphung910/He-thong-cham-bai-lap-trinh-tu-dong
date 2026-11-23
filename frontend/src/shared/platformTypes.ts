@@ -28,6 +28,8 @@ export interface Classroom {
   teacherName: string;
   studentCount: number;
   canManage: boolean;
+  /** Ma de hoc sinh tu tham gia lop; "" voi nguoi khong quan ly lop. */
+  joinCode: string;
   /** Chi co khi lay chi tiet mot lop. */
   students?: (BasicUser & { solved: number })[];
   assistants?: BasicUser[];
@@ -69,6 +71,8 @@ export interface RoomState {
   code: string; language: string; codeVersion: number;
   collaborative: boolean; canEditCode: boolean; isHost: boolean; handRaised: boolean;
   strokesFrom: number; strokeCount: number; strokes: Stroke[];
+  /** Tang 1 moi lan bang bi xoa. */
+  boardVersion: number;
 }
 export interface AttendanceSheet {
   title: string; status: string;
@@ -89,6 +93,8 @@ export interface ContestRow {
 export interface Contest {
   id: string; title: string; description: string; startAt: string; endAt: string;
   durationMin: number; status: "UPCOMING" | "RUNNING" | "ENDED"; problems: ProblemRef[];
+  /** So bai cua ky thi. problemsHidden = true: ky thi chua bat dau nen danh sach bai chua duoc gui ve. */
+  problemCount: number; problemsHidden: boolean;
   /** Ho ten nguoi tao; canManage = nguoi dang xem duoc them / bot bai va xoa ky thi nay. */
   ownerName: string; canManage: boolean;
   minute?: number; standings?: ContestRow[];

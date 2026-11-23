@@ -29,7 +29,7 @@ export default function Classrooms() {
   if (openId) return <ClassroomDetail id={openId} onBack={() => { setOpenId(null); list.reload(); }} />;
 
   return (
-    <Page title="Lớp của tôi" subtitle="Lớp học do giảng viên tạo. Học sinh tham gia bằng mã lớp.">
+    <Page title="Lớp của tôi" subtitle="Lớp học do giảng viên tạo. Học sinh tham gia bằng mã tham gia do giảng viên cung cấp.">
       <ErrorBox text={error || list.error} />
       {isStaff ? (
         <Card title="Tạo lớp mới">
@@ -53,7 +53,7 @@ export default function Classrooms() {
       ) : (
         <Card title="Tham gia lớp">
           <Row>
-            <Field label="Mã lớp (giảng viên cung cấp, ví dụ CLS-001)">
+            <Field label="Mã tham gia (giảng viên cung cấp, gồm 8 ký tự)">
               <input style={INPUT} value={joinCode} onChange={(e) => setJoinCode(e.target.value)} />
             </Field>
             <Btn onClick={() => void act(async () => { await papi.joinClassroom(joinCode.trim()); setJoinCode(""); })}>Tham gia</Btn>
@@ -98,7 +98,7 @@ function ClassroomDetail({ id, onBack }: { id: string; onBack: () => void }) {
   }
 
   return (
-    <Page title={c ? c.name : "Lớp học"} subtitle={c ? `Mã lớp ${c.id} · Giảng viên ${c.teacherName}` : ""}
+    <Page title={c ? c.name : "Lớp học"} subtitle={c ? `Mã lớp ${c.id}${c.joinCode ? ` · Mã tham gia ${c.joinCode}` : ""} · Giảng viên ${c.teacherName}` : ""}
       actions={<>
         {c?.canManage && <Btn kind="danger" onClick={() => void removeClass()}>Xoá lớp</Btn>}
         <Btn kind="ghost" onClick={onBack}>← Danh sách lớp</Btn>

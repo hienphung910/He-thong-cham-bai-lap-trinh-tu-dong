@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 
 /**
  * Bo thanh phan giao dien dung chung cho cac trang cua module mo rong:
@@ -16,9 +16,18 @@ export function useLoad<T>(load: () => Promise<T>, deps: unknown[] = []) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState("");
   const [tick, setTick] = useState(0);
+  const prevDeps = useRef<unknown[] | null>(null);
 
   useEffect(() => {
     let alive = true;
+    // deps doi nghia la dang xem mot doi tuong khac (hoc sinh khac, lop khac...): bo du lieu cu de
+    // khong hien tiep thong tin cua doi tuong truoc trong luc cho, hoac khi lan tai moi bi loi.
+    // reload() (chi tick doi) thi giu du lieu cu de trang khong nhay.
+    const before = prevDeps.current;
+    const changed = before !== null
+      && (before.length !== deps.length || deps.some((d, i) => !Object.is(d, before[i])));
+    prevDeps.current = deps;
+    if (changed) setData(null);
     load()
       .then((d) => { if (alive) { setData(d); setError(""); } })
       .catch((e) => { if (alive) setError(errorText(e)); });

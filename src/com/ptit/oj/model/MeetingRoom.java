@@ -27,6 +27,20 @@ public class MeetingRoom {
     public Set<String> getRaisedHands() { return raisedHands; }
     public List<Stroke> getStrokes() { return strokes; }
 
+    /**
+     * So lan bang da bi xoa. Trinh duyet gui lai so nay moi lan hoi: neu khac voi may chu thi
+     * bang da bi xoa tu lan hoi truoc va phai tai lai tu dau - ke ca khi sau khi xoa, giang vien
+     * da ve lai dung bang so net cu (truong hop ma viec chi dem so net khong phat hien duoc).
+     */
+    private int boardVersion = 0;
+
+    public int getBoardVersion() { return boardVersion; }
+
+    public void clearBoard() {
+        strokes.clear();
+        boardVersion++;
+    }
+
     public String getCode() { return code; }
     public String getLanguage() { return language; }
     public int getCodeVersion() { return codeVersion; }

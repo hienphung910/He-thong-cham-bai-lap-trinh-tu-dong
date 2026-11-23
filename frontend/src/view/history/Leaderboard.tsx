@@ -83,7 +83,7 @@ export default function Leaderboard({ reloadKey, problems }: { reloadKey: number
                   display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                 }}>
                   <div style={{ fontSize: i === 1 ? 36 : 30, fontWeight: 800, color: "#212121" }}>{r.solvedCount}</div>
-                  <div style={{ fontSize: 12, color: "#757575" }}>bài</div>
+                  <div style={{ fontSize: 12, color: "#757575" }}>bài · {Math.round(r.total)} điểm</div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: cfg.badge }}>#{r.rank}</div>
                 </div>
               </div>
@@ -127,6 +127,8 @@ export default function Leaderboard({ reloadKey, problems }: { reloadKey: number
                 <td style={{ ...TD, textAlign: "center", fontFamily: "var(--font-mono)", fontSize: 12, color: "#616161", fontWeight: 600 }}>{r.username}</td>
                 <td style={{ ...TD, textAlign: "center" }}>
                   <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, fontWeight: 700, color: "var(--color-red)" }}>{r.solvedCount}</span>
+                  {/* Thu hang xep theo tong diem (tinh ca diem tung phan), nen hien kem diem de thu tu khong kho hieu. */}
+                  <span style={{ marginLeft: 6, fontSize: 12, color: "#757575" }}>· {Math.round(r.total)} điểm</span>
                 </td>
               </tr>
             ))}

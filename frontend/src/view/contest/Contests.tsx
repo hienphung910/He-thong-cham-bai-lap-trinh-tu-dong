@@ -48,7 +48,7 @@ export default function Contests() {
       <Table head={["Kỳ thi", "Người tạo", "Bắt đầu", "Thời lượng", "Số bài", "Trạng thái", ""]} empty="Chưa có kỳ thi nào."
         rows={(list.data ?? []).map((c) => [
           <span><b>{c.title}</b><div style={{ fontSize: 12, color: "#9E9E9E" }}>{c.description}</div></span>,
-          c.ownerName, fmtTime(c.startAt), `${c.durationMin} phút`, c.problems.length,
+          c.ownerName, fmtTime(c.startAt), `${c.durationMin} phút`, c.problemCount,
           <Tag color={STATUS[c.status].color}>{STATUS[c.status].label}</Tag>,
           <div style={{ display: "flex", gap: 6 }}>
             <Btn small onClick={() => setOpenId(c.id)}>Xem</Btn>
@@ -104,6 +104,11 @@ function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
       {c && (
         <>
           <Card title="Đề thi" right={<Tag color={STATUS[c.status].color}>{STATUS[c.status].label}</Tag>}>
+            {c.problemsHidden && (
+              <div style={{ fontSize: 13, color: "#757575" }}>
+                Kỳ thi có {c.problemCount} bài. Đề sẽ hiện khi kỳ thi bắt đầu.
+              </div>
+            )}
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {c.problems.map((p) => (
                 <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>

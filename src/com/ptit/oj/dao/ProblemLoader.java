@@ -128,7 +128,10 @@ public class ProblemLoader {
     private String readText(Path file) {
         try {
             // stripBom: file test tao bang Notepad co BOM se lam sai ket qua so sanh
-            return TextUtils.stripBom(new String(Files.readAllBytes(file), StandardCharsets.UTF_8));
+            // Doi CRLF ve LF: git tren Windows checkout file test thanh CRLF, chuong trinh doc
+            // input theo dong se thay them ky tu '\r' va cho ket qua sai.
+            return TextUtils.stripBom(new String(Files.readAllBytes(file), StandardCharsets.UTF_8))
+                    .replace("\r\n", "\n");
         } catch (IOException e) {
             throw new ProblemLoadException("Không đọc được file " + file, e);
         }

@@ -30,6 +30,12 @@ public class BillingService {
             throw ApiException.badRequest("Không có gói " + planCode);
         }
         if (plan == Plan.FREE) throw ApiException.badRequest("Gói miễn phí không cần thanh toán");
+        // Dang co goi bang hoac cao hon con han thi khong ban them: mua goi thap hon khong duoc
+        // lam ha cap, va mua lai dung goi cu khong gia han them ngay nao.
+        Plan current = currentPlan(user.getId());
+        if (current.ordinal() >= plan.ordinal()) {
+            throw ApiException.badRequest("Bạn đang dùng gói " + current.getDisplayName() + " còn hiệu lực");
+        }
 
         Payment payment = new Payment(IdGenerator.next("PAY"), user.getId(), plan);
         payments.save(payment);
@@ -52,12 +58,13 @@ public class BillingService {
         return all;
     }
 
-    /** Goi dang dung = giao dich gan nhat con han; khong co thi la goi mien phi. */
+    /** Goi dang dung = goi CAO NHAT trong cac giao dich con han; khong co thi la goi mien phi. */
     public Plan currentPlan(String userId) {
+        Plan best = Plan.FREE;
         for (Payment p : paymentsOf(userId)) {
-            if (p.isActive()) return p.getPlan();
+            if (p.isActive() && p.getPlan().ordinal() > best.ordinal()) best = p.getPlan();
         }
-        return Plan.FREE;
+        return best;
     }
 
     public long totalRevenue() {

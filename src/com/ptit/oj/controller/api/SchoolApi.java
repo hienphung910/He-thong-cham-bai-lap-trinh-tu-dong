@@ -99,10 +99,14 @@ public class SchoolApi extends ApiModule {
             Classroom c = school.findClassroom(req.arg(0));
             school.requireManager(user, c);
             school.deleteClassroom(c.getId());
+            // Xoa luon bai tap giao, buoi hoc va ban ghi cua lop: neu de lai thi khong ai xoa duoc
+            // nua (moi thao tac deu can tim thay lop) va bai kho rieng trong do van bi coi la da cong bo.
+            platform.getAssignments().deleteByClassroom(c.getId());
+            platform.getMeetings().deleteByClassroom(c.getId());
             req.sendOk();
             return true;
         }
-        // Hoc sinh tu tham gia lop bang ma lop.
+        // Hoc sinh tu tham gia lop: doan * trong duong dan la MA THAM GIA, khong phai ma lop.
         if (req.is("POST", "classrooms", "*", "join")) {
             User user = req.user();
             Classroom c = school.join(req.arg(0), user);
@@ -159,12 +163,14 @@ public class SchoolApi extends ApiModule {
                 .put("courseTitle", platform.getCourses().courseTitle(c.getCourseId()))
                 .put("teacherName", nameOf(users, c.getTeacherId()))
                 .put("studentCount", c.getStudentIds().size())
-                .put("canManage", school.canManage(viewer, c));
+                .put("canManage", school.canManage(viewer, c))
+                // Ma tham gia chi nguoi quan ly lop thay, de dua cho hoc sinh.
+                .put("joinCode", school.canManage(viewer, c) ? c.getJoinCode() : "");
     }
 
     private String classroomDetailJson(Classroom c, User viewer) {
         Map<String, User> users = usersById();
-        Map<String, Set<String>> solvedByUser = platform.getAnalytics().solvedByUser();
+        Map<String, Set<String>> solvedByUser = platform.getAnalytics().sharedSolvedByUser();
 
         List<String> students = new ArrayList<>();
         for (String id : c.getStudentIds()) {

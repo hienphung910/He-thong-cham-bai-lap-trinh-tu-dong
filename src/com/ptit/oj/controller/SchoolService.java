@@ -96,11 +96,22 @@ public class SchoolService {
         }
     }
 
-    /** Hoc sinh tu tham gia lop bang ma lop. */
-    public synchronized Classroom join(String classroomId, User student) {
-        Classroom classroom = findClassroom(classroomId);
+    /** Hoc sinh tu tham gia lop bang ma tham gia do giang vien cung cap. */
+    public synchronized Classroom join(String joinCode, User student) {
+        String code = joinCode == null ? "" : joinCode.trim().toUpperCase();
+        Classroom classroom = null;
+        for (Classroom c : classrooms.findAll()) {
+            if (c.getJoinCode().equals(code)) classroom = c;
+        }
+        if (classroom == null) throw ApiException.notFound("Mã tham gia không đúng");
         if (classroom.isTaughtBy(student.getId())) {
             throw ApiException.badRequest("Bạn đang dạy lớp này");
+        }
+        if (!User.ROLE_STUDENT.equals(student.getRoleCode())) {
+            throw ApiException.badRequest("Chỉ tài khoản học sinh mới tham gia lớp bằng mã");
+        }
+        if (classroom.getRemovedIds().contains(student.getId())) {
+            throw ApiException.forbidden("Bạn đã bị xoá khỏi lớp này. Hãy liên hệ giảng viên để được thêm lại");
         }
         classroom.getStudentIds().add(student.getId());
         return classroom;
@@ -110,11 +121,12 @@ public class SchoolService {
         if (!User.ROLE_STUDENT.equals(student.getRoleCode())) {
             throw ApiException.badRequest(student.getUsername() + " không phải tài khoản học sinh");
         }
+        classroom.getRemovedIds().remove(student.getId());
         classroom.getStudentIds().add(student.getId());
     }
 
     public synchronized void removeStudent(Classroom classroom, String studentId) {
-        classroom.getStudentIds().remove(studentId);
+        if (classroom.getStudentIds().remove(studentId)) classroom.getRemovedIds().add(studentId);
     }
 
     /** Them tro giang: phai la tai khoan giang vien va khong phai giang vien chinh. */

@@ -132,7 +132,7 @@ public class MeetingApi extends ApiModule {
             // trong luc dang doi no thanh JSON.
             synchronized (meetings) {
                 MeetingRoom room = meetings.enter(m, user);
-                json = roomJson(m, room, user, req.queryInt("strokes", 0));
+                json = roomJson(m, room, user, req.queryInt("strokes", 0), req.queryInt("board", -1));
             }
             req.send(json);
             return true;
@@ -152,7 +152,7 @@ public class MeetingApi extends ApiModule {
             if (!m.getHostId().equals(user.getId())) {
                 throw ApiException.forbidden("Chỉ chủ phòng mới đổi được chế độ lập trình");
             }
-            meetings.room(m).setCollaborative(req.body().getBoolean("on", false));
+            meetings.setCollaborative(m, req.body().getBoolean("on", false));
             req.sendOk();
             return true;
         }
@@ -182,7 +182,7 @@ public class MeetingApi extends ApiModule {
      * Trang thai phong gui ve trinh duyet. knownStrokes la so net ve trinh duyet da co:
      * chi gui cac net moi sau do de moi lan hoi khong phai tai lai ca bang.
      */
-    private String roomJson(Meeting m, MeetingRoom room, User viewer, int knownStrokes) {
+    private String roomJson(Meeting m, MeetingRoom room, User viewer, int knownStrokes, int knownBoard) {
         Map<String, User> users = usersById();
         List<String> participants = new ArrayList<>();
         for (String userId : meetings.onlineUserIds(room)) {
@@ -195,8 +195,10 @@ public class MeetingApi extends ApiModule {
         }
 
         List<Stroke> all = room.getStrokes();
-        // Bang da bi xoa (so net tren may chu it hon phia trinh duyet) -> gui lai tu dau.
-        int from = knownStrokes > all.size() ? 0 : Math.max(0, knownStrokes);
+        // Bang da bi xoa (trinh duyet dang giu phien ban bang cu, hoac so net tren may chu it hon)
+        // -> gui lai tu dau. knownBoard = -1: trinh duyet cu khong gui phien ban, chi dua vao so net.
+        boolean cleared = (knownBoard >= 0 && knownBoard != room.getBoardVersion()) || knownStrokes > all.size();
+        int from = cleared ? 0 : Math.max(0, knownStrokes);
         return Json.obj()
                 .putRaw("meeting", meetingJson(m, viewer, users).build())
                 .putRaw("participants", Json.array(participants))
@@ -209,6 +211,7 @@ public class MeetingApi extends ApiModule {
                 .put("handRaised", room.getRaisedHands().contains(viewer.getId()))
                 .put("strokesFrom", from)
                 .put("strokeCount", all.size())
+                .put("boardVersion", room.getBoardVersion())
                 .putRaw("strokes", strokesJson(all.subList(from, all.size())))
                 .build();
     }
@@ -247,7 +250,11 @@ public class MeetingApi extends ApiModule {
         if (req.is("PUT", "meetings", "*", "attendance")) {
             Meeting m = managedMeeting(req);
             Json.Value body = req.body();
-            meetings.mark(m, body.getString("userId"), body.getString("status"));
+            String studentId = body.getString("userId");
+            if (!school.findClassroom(m.getClassroomId()).getStudentIds().contains(studentId)) {
+                throw ApiException.badRequest("Người này không phải học sinh của lớp");
+            }
+            meetings.mark(m, studentId, body.getString("status"));
             req.sendOk();
             return true;
         }

@@ -29,6 +29,8 @@ public class AuthService {
 
     private static final int MAX_FULL_NAME = 100;
     private static final int MAX_CODE = 40;
+    /** Khop voi cot users.student_code VARCHAR(30). */
+    private static final int MAX_STUDENT_CODE = 30;
 
     private final UserRepository users;
     private final PasswordService passwords;
@@ -82,7 +84,7 @@ public class AuthService {
         // Tao dung lop con theo vai tro duoc chon.
         User user;
         if (role == null || role.isEmpty() || User.ROLE_STUDENT.equals(role)) {
-            String cleanCode = optionalText(studentCode, "Mã sinh viên", MAX_CODE);
+            String cleanCode = optionalText(studentCode, "Mã sinh viên", MAX_STUDENT_CODE);
             String cleanClass = optionalText(className, "Lớp", MAX_CODE);
             user = new Student(newUserId(), cleanUsername, cleanFullName, cleanCode, cleanClass);
         } else if (User.ROLE_TEACHER.equals(role)) {
@@ -133,22 +135,36 @@ public class AuthService {
     }
 
     /** Doi mat khau cua chinh minh: phai nhap dung mat khau hien tai. */
-    public synchronized void changePassword(User user, String oldPassword, String newPassword) {
+    public synchronized void changePassword(User user, String oldPassword, String newPassword, String currentToken) {
         Optional<Credentials> credentials = users.findCredentials(user.getId());
         if (oldPassword == null || !credentials.isPresent() || !passwords.matches(oldPassword, credentials.get())) {
             throw new AuthException(400, "Mật khẩu hiện tại không đúng");
         }
+        passwords.validate(newPassword);
         users.saveWithCredentials(user, passwords.hash(newPassword));
+        // Dang xuat moi thiet bi khac: ai dang giu token cu khong dung tiep duoc.
+        sessions.invalidateUser(user.getId(), currentToken);
     }
 
     // -------------------------------------------------------------- dang nhap
+
+    private Credentials dummy;
+
+    private synchronized Credentials dummyCredentials() {
+        if (dummy == null) dummy = passwords.hash("mat-khau-gia-de-can-bang-thoi-gian");
+        return dummy;
+    }
 
     public LoginResult login(String username, String rawPassword) {
         if (username == null || username.trim().isEmpty() || rawPassword == null || rawPassword.isEmpty()) {
             throw new AuthException(400, "Thiếu tên đăng nhập hoặc mật khẩu");
         }
-        Optional<User> found = users.findByUsername(username.trim());
+        // Ten dang nhap hop le dai toi da 32 ky tu: ten dai hon chac chan khong ton tai.
+        Optional<User> found = username.trim().length() > 64
+                ? Optional.empty() : users.findByUsername(username.trim());
         if (!found.isPresent()) {
+            // Van bam mat khau mot lan de thoi gian tra loi khong tiet lo ten nao co that.
+            passwords.matches(rawPassword, dummyCredentials());
             throw new AuthException(401, "Sai tên đăng nhập hoặc mật khẩu");
         }
         User user = found.get();
@@ -202,7 +218,7 @@ public class AuthService {
             }
         }
 
-        String fromEnv = System.getenv(ADMIN_PASSWORD_ENV);
+        String fromEnv = com.ptit.oj.dao.DatabaseConfig.setting(ADMIN_PASSWORD_ENV);
         boolean generated = fromEnv == null || fromEnv.trim().isEmpty();
         String password = generated ? passwords.generateRandomPassword() : fromEnv;
         try {

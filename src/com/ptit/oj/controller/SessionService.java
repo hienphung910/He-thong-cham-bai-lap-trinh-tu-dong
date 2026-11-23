@@ -70,6 +70,15 @@ public class SessionService {
         return token != null && sessions.remove(token) != null;
     }
 
+    /**
+     * Huy moi phien cua mot tai khoan, tru phien keepToken (null = huy het).
+     * Goi khi doi mat khau: token bi lo truoc do khong con dung duoc nua.
+     */
+    public void invalidateUser(String userId, String keepToken) {
+        sessions.entrySet().removeIf(e -> e.getValue().getUserId().equals(userId)
+                && !e.getKey().equals(keepToken));
+    }
+
     /** Doc header "Authorization: Bearer xxx" -> "xxx". */
     public static String extractBearerToken(String authorizationHeader) {
         if (authorizationHeader == null) return null;

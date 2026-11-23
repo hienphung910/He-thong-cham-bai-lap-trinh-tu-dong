@@ -52,4 +52,11 @@ public class AssignmentService {
     public void delete(String id) {
         assignments.deleteById(id);
     }
+
+    /** Xoa moi bai tap giao cua mot lop (goi khi lop bi xoa). */
+    public void deleteByClassroom(String classroomId) {
+        for (Assignment a : assignments.findAll()) {
+            if (classroomId.equals(a.getClassroomId())) assignments.deleteById(a.getId());
+        }
+    }
 }

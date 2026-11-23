@@ -1,8 +1,8 @@
 package com.ptit.oj.model;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /** Mot chu de tren dien dan (Module 31) kem cac cau tra loi. */
 public class ForumPost extends Entity {
@@ -29,7 +29,7 @@ public class ForumPost extends Entity {
     private final String authorName;
     private final String problemId;        // "" neu khong hoi ve bai cu the
     private final LocalDateTime createdAt = LocalDateTime.now();
-    private final List<Reply> replies = new ArrayList<>();
+    private final List<Reply> replies = new CopyOnWriteArrayList<>();   // doc duoc trong luc request khac tra loi
 
     public ForumPost(String id, String title, String body, String authorId, String authorName, String problemId) {
         super(id);

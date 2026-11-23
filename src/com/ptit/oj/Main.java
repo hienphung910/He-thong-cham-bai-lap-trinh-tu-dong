@@ -145,7 +145,7 @@ public class Main {
      * Cac lan chay sau khong dat lai mat khau cua ai ca.
      */
     private static void prepareAccounts(JudgeService service) {
-        String seedPassword = System.getenv(SEED_PASSWORD_ENV);
+        String seedPassword = DatabaseConfig.setting(SEED_PASSWORD_ENV);
         if (seedPassword == null || seedPassword.trim().isEmpty()) {
             seedPassword = DEFAULT_SEED_PASSWORD;
         }

@@ -101,7 +101,10 @@ public class ApiServer {
     public void start() throws IOException {
         InetAddress address = bindAddress();
         server = HttpServer.create(new InetSocketAddress(address, port), 0);
-        pool = Executors.newFixedThreadPool(4);
+        // Bai nop duoc cham tuan tu va giu luon thread cua request cho toi khi cham xong.
+        // 4 thread thi bon nguoi nop cung luc la ca trang web dung; 32 thread de cac request
+        // doc du lieu van duoc phuc vu trong luc co bai dang cho cham.
+        pool = Executors.newFixedThreadPool(32);
         server.setExecutor(pool);
         server.createContext("/api/", this::handleApi);
         server.createContext("/", this::handleStatic);
@@ -125,7 +128,7 @@ public class ApiServer {
 
     /** Doc OJ_BIND_ADDRESS; khong dat thi chi nghe loopback nhu truoc. */
     private static InetAddress bindAddress() throws IOException {
-        String configured = System.getenv(BIND_ADDRESS_ENV);
+        String configured = com.ptit.oj.dao.DatabaseConfig.setting(BIND_ADDRESS_ENV);
         if (configured == null || configured.trim().isEmpty()) {
             return InetAddress.getLoopbackAddress();
         }
@@ -550,6 +553,12 @@ public class ApiServer {
 
         Problem problem = service.findProblem(problemId)
                 .orElseThrow(() -> ApiException.notFound("Không có bài " + problemId));
+        // Cung quy tac voi danh sach bai: bai kho rieng chua duoc dua vao ky thi / bai tap giao /
+        // bai hoc thi chi chu bai va quan tri vien nop duoc, du nguoi khac co doan dung ma bai.
+        if (!problem.isShared() && !author.canEditProblem(problem)
+                && !platform.publishedProblemIds().contains(problem.getId())) {
+            throw ApiException.notFound("Không có bài " + problemId);
+        }
         Language language = service.findLanguage(languageName)
                 .orElseThrow(() -> ApiException.badRequest("Không hỗ trợ ngôn ngữ " + languageName));
         if (!language.isAvailable()) {
@@ -698,8 +707,12 @@ public class ApiServer {
     private Path safeResolve(String urlPath) {
         String relative = urlPath.startsWith("/") ? urlPath.substring(1) : urlPath;
         if (relative.isEmpty()) relative = "index.html";
-        Path resolved = webRoot.resolve(relative).normalize().toAbsolutePath();
-        return resolved.startsWith(webRoot.toAbsolutePath().normalize()) ? resolved : null;
+        try {
+            Path resolved = webRoot.resolve(relative).normalize().toAbsolutePath();
+            return resolved.startsWith(webRoot.toAbsolutePath().normalize()) ? resolved : null;
+        } catch (java.nio.file.InvalidPathException e) {
+            return null;        // ky tu khong hop le trong duong dan (vi du ? * | tren Windows)
+        }
     }
 
     private String contentType(String fileName) {

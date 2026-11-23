@@ -49,7 +49,12 @@ public abstract class ApiModule {
     protected static LocalDateTime parseTime(String text) {
         if (text == null || text.trim().isEmpty()) return null;
         try {
-            return LocalDateTime.parse(text.trim());
+            LocalDateTime time = LocalDateTime.parse(text.trim());
+            // Nam qua xa lam phep cong thoi luong bi tran (DateTimeException) o moi lan doc lai.
+            if (time.getYear() < 2000 || time.getYear() > 2100) {
+                throw ApiException.badRequest("Thời gian phải nằm trong khoảng năm 2000 - 2100");
+            }
+            return time;
         } catch (DateTimeParseException e) {
             throw ApiException.badRequest("Thời gian không hợp lệ: " + text);
         }

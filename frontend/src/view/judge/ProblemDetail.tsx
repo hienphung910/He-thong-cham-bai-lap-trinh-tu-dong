@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../../shared/api";
+import { useAuth } from "../account/auth";
 import CodeEditor from "./CodeEditor";
 import TestTable from "./TestTable";
 import SubmitInsight from "./SubmitInsight";
@@ -66,8 +67,30 @@ export default function ProblemDetail({
   onNext?: () => void;
 }) {
   const diff = DIFFICULTY_META[problem.difficulty];
-  const [language, setLanguage] = useState(languages[0]?.name ?? "Java");
-  const [code, setCode] = useState("");
+  const { user } = useAuth();
+  // Ban nhap luu theo tai khoan + bai trong sessionStorage: het phien dang nhap (8 gio) hoac may chu
+  // khoi dong lai lam trang quay ve man hinh dang nhap, dang nhap lai van con ma dang go do.
+  const draftKey = `oj-draft:${user?.username ?? ""}:${problem.id}`;
+  const draft = useMemo(() => {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(draftKey) ?? "null") as { language?: string; code?: string } | null;
+      return saved && typeof saved.code === "string" ? saved : null;
+    } catch {
+      return null;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey]);
+  const [language, setLanguage] = useState(
+    draft?.language && languages.some((l) => l.name === draft.language) ? draft.language : languages[0]?.name ?? "Java");
+  const [code, setCode] = useState(draft?.code ?? "");
+  useEffect(() => {
+    try {
+      if (code === "") sessionStorage.removeItem(draftKey);
+      else sessionStorage.setItem(draftKey, JSON.stringify({ language, code }));
+    } catch {
+      // sessionStorage day hoac bi chan: bo qua, chi mat tinh nang giu ban nhap
+    }
+  }, [draftKey, language, code]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<Submission | null>(null);

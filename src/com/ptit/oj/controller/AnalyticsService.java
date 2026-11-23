@@ -107,6 +107,19 @@ public class AnalyticsService {
         return solved;
     }
 
+    /**
+     * Nhu solvedByUser() nhung chi tinh bai KHO CHUNG. Dung cho bang diem thuong va so bai da giai
+     * hien cho nguoi khac: giang vien khong the tu tao bai trong kho rieng roi giai de tang thanh tich.
+     */
+    public Map<String, Set<String>> sharedSolvedByUser() {
+        Map<String, Set<String>> result = new HashMap<>();
+        for (Submission s : judge.getSubmissionsNewestFirst()) {
+            if (!isAccepted(s) || !s.getProblem().isShared()) continue;
+            result.computeIfAbsent(s.getAuthor().getId(), k -> new HashSet<>()).add(s.getProblem().getId());
+        }
+        return result;
+    }
+
     /** userId -> ma cac bai nguoi do da AC. Duyet toan bo lich su dung mot lan. */
     public Map<String, Set<String>> solvedByUser() {
         Map<String, Set<String>> result = new HashMap<>();
@@ -282,7 +295,11 @@ public class AnalyticsService {
     }
 
     public List<Badge> badges(List<Submission> submissions) {
-        Set<String> solved = solvedIds(submissions);
+        // Huy hieu theo so bai chi tinh bai kho chung, cung quy tac voi bang xep hang.
+        Set<String> solved = new HashSet<>();
+        for (Submission s : submissions) {
+            if (isAccepted(s) && s.getProblem().isShared()) solved.add(s.getProblem().getId());
+        }
         Set<String> acLanguages = new HashSet<>();
         Set<String> triedBefore = new HashSet<>();
         boolean firstTry = false;

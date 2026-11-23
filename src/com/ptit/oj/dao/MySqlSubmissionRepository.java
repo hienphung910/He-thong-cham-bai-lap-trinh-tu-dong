@@ -162,6 +162,11 @@ public class MySqlSubmissionRepository implements SubmissionRepository {
         } catch (SQLException e) {
             rollbackQuietly(c);
             throw new DataAccessException("Không lưu được bài nộp " + submission.getId(), e);
+        } catch (RuntimeException e) {
+            // closeQuietly bat lai autocommit, tuc la COMMIT phan da ghi. Phai rollback truoc
+            // de khong con ban ghi do dang khi co loi khong phai cua CSDL.
+            rollbackQuietly(c);
+            throw e;
         } finally {
             closeQuietly(c);
         }
@@ -238,16 +243,18 @@ public class MySqlSubmissionRepository implements SubmissionRepository {
         for (Row r : rows) ids.add(r.id);
         Map<String, List<TestRow>> testsBySubmission = loadTestRows(ids);
 
+        // Moi nguoi nop chi tra CSDL mot lan cho ca danh sach, khong phai moi dong mot lan.
+        Map<String, Optional<User>> authors = new LinkedHashMap<>();
         List<Submission> list = new ArrayList<>(rows.size());
         for (Row r : rows) {
-            Submission s = build(r, testsBySubmission.getOrDefault(r.id, Collections.emptyList()));
+            Submission s = build(r, testsBySubmission.getOrDefault(r.id, Collections.emptyList()), authors);
             if (s != null) list.add(s);
         }
         return list;
     }
 
-    private Submission build(Row row, List<TestRow> testRows) {
-        User author = users.findById(row.userId).orElse(null);
+    private Submission build(Row row, List<TestRow> testRows, Map<String, Optional<User>> authors) {
+        User author = authors.computeIfAbsent(row.userId, users::findById).orElse(null);
         if (author == null) return null;        // tai khoan da bi xoa -> bo qua dong nay
 
         Problem problem = problems.findById(row.problemId)

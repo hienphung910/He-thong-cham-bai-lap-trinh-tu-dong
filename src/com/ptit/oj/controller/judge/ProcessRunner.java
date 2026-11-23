@@ -22,8 +22,29 @@ public class ProcessRunner {
 
         ProcessBuilder pb = new ProcessBuilder(command);
         pb.directory(workDir.toFile());
+        // Khong truyen cau hinh cua may chu (mat khau CSDL, mat khau admin...) cho tien trinh con.
+        // Day chi la mot lop chan them, KHONG thay duoc sandbox.
+        pb.environment().keySet().removeIf(name -> name.toUpperCase().startsWith("OJ_"));
         Process process = pb.start();
+        try {
+            return collect(process, stdin, timeLimitMs);
+        } finally {
+            // Chay ca khi thread cham bi ngat (may chu dang dung): khong de lai tien trinh mo coi.
+            killTree(process);
+        }
+    }
 
+    /** Dung tien trinh va moi tien trinh con chau con song cua no. */
+    private static void killTree(Process process) {
+        try {
+            process.descendants().forEach(ProcessHandle::destroyForcibly);
+        } catch (RuntimeException ignored) {
+            // khong liet ke duoc tien trinh con tren he dieu hanh nay -> van dung tien trinh chinh
+        }
+        if (process.isAlive()) process.destroyForcibly();
+    }
+
+    private ExecutionResult collect(Process process, String stdin, long timeLimitMs) throws InterruptedException {
         long start = System.nanoTime();
 
         Thread feeder = new Thread(() -> {
@@ -47,7 +68,7 @@ public class ProcessRunner {
         long elapsedMs = (System.nanoTime() - start) / 1_000_000L;
 
         if (!finished) {
-            process.destroyForcibly();
+            killTree(process);
             process.waitFor();
         }
 

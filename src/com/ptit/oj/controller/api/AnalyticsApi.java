@@ -43,8 +43,8 @@ public class AnalyticsApi extends ApiModule {
             return true;
         }
         if (req.is("GET", "dashboard")) {
-            req.staff();
-            req.send(dashboardJson());
+            User viewer = req.staff();
+            req.send(dashboardJson(viewer));
             return true;
         }
         if (req.is("GET", "gamification", "leaderboard")) {
@@ -120,7 +120,7 @@ public class AnalyticsApi extends ApiModule {
 
     // ------------------------------------------------- bao cao toan he thong
 
-    private String dashboardJson() {
+    private String dashboardJson(User viewer) {
         List<Submission> all = judge.getSubmissionsNewestFirst();
         int students = 0;
         int teachers = 0;
@@ -134,6 +134,8 @@ public class AnalyticsApi extends ApiModule {
         Map<String, Integer> attempts = new HashMap<>();
         Map<String, Integer> accepted = new HashMap<>();
         for (Submission s : all) {
+            // Chi thong ke bai kho chung: bai kho rieng cua giang vien khac khong lo ma va ten o day.
+            if (!s.getProblem().isShared()) continue;
             String id = s.getProblem().getId();
             attempts.merge(id, 1, Integer::sum);
             if (s.isJudged() && s.getResult().getOverallVerdict().isAccepted()) accepted.merge(id, 1, Integer::sum);
@@ -159,7 +161,9 @@ public class AnalyticsApi extends ApiModule {
                 .put("classrooms", platform.getSchool().getClassrooms().size())
                 .put("courses", platform.getCourses().getCourses().size())
                 .put("contests", platform.getContests().getContests().size())
-                .put("revenue", platform.getBilling().totalRevenue())
+                // Doanh thu chi quan tri vien xem duoc (giong /api/admin/payments).
+                .put("revenue", User.ROLE_ADMIN.equals(viewer.getRoleCode())
+                        ? platform.getBilling().totalRevenue() : 0)
                 .putRaw("verdicts", countsJson(analytics.verdictCounts(all)))
                 .putRaw("activity", countsJson(analytics.activityByDay(all, 14)))
                 .putRaw("topProblems", Json.array(topProblems))
@@ -169,7 +173,7 @@ public class AnalyticsApi extends ApiModule {
     // ---------------------------------------------------------- bang diem thuong
 
     private String leaderboardJson() {
-        Map<String, Set<String>> solvedByUser = analytics.solvedByUser();
+        Map<String, Set<String>> solvedByUser = analytics.sharedSolvedByUser();
         Map<String, Integer> pointsByUser = new HashMap<>();
         List<User> ranked = new ArrayList<>();
         for (User u : judge.getUsers()) {

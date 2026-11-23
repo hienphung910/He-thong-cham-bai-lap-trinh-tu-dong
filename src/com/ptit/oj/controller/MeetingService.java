@@ -100,6 +100,30 @@ public class MeetingService {
         meetings.deleteById(id);
     }
 
+    /** Xoa moi buoi hoc, phong va ban ghi cua mot lop (goi khi lop bi xoa). */
+    public synchronized void deleteByClassroom(String classroomId) {
+        for (Meeting m : meetings.findAll()) {
+            if (classroomId.equals(m.getClassroomId())) {
+                meetings.deleteById(m.getId());
+                rooms.remove(m.getId());
+            }
+        }
+        for (Recording r : recordings.findAll()) {
+            if (classroomId.equals(r.getClassroomId())) recordings.deleteById(r.getId());
+        }
+    }
+
+    /** Chi sua duoc phong khi buoi hoc dang dien ra - khong ve bang, gio tay truoc hay sau gio hoc. */
+    private static void requireLive(Meeting meeting) {
+        if (!meeting.isLive()) throw ApiException.badRequest("Buổi học chưa mở hoặc đã kết thúc");
+    }
+
+    /** Chu phong bat / tat che do ca lop cung lap trinh. */
+    public synchronized void setCollaborative(Meeting meeting, boolean on) {
+        requireLive(meeting);
+        room(meeting).setCollaborative(on);
+    }
+
     /** Ten kenh chat cua phong hoc. */
     public static String chatChannel(Meeting meeting) {
         return "meeting-" + meeting.getId();
@@ -122,8 +146,9 @@ public class MeetingService {
 
         boolean isStudent = User.ROLE_STUDENT.equals(user.getRoleCode());
         if (isStudent && !attendance.findById(meeting.getId() + ":" + user.getId()).isPresent()) {
-            long minutesLate = Duration.between(meeting.getEffectiveStart(), LocalDateTime.now()).toMinutes();
-            String status = minutesLate > LATE_AFTER_MIN ? Attendance.LATE : Attendance.PRESENT;
+            // So theo giay: toMinutes() cat phan le nen vao muon 10 phut 59 giay van bi tinh la dung gio.
+            long secondsLate = Duration.between(meeting.getEffectiveStart(), LocalDateTime.now()).getSeconds();
+            String status = secondsLate > LATE_AFTER_MIN * 60 ? Attendance.LATE : Attendance.PRESENT;
             attendance.save(new Attendance(meeting.getId(), user.getId(), status, LocalDateTime.now()));
         }
         return room;
@@ -145,6 +170,7 @@ public class MeetingService {
     }
 
     public synchronized void updateCode(Meeting meeting, User user, String code, String language) {
+        requireLive(meeting);
         MeetingRoom room = room(meeting);
         if (!canEditCode(meeting, room, user)) {
             throw ApiException.forbidden("Giảng viên chưa bật chế độ cùng lập trình");
@@ -158,6 +184,7 @@ public class MeetingService {
                 || points == null || !POINTS.matcher(points).matches()) {
             throw ApiException.badRequest("Nét vẽ không hợp lệ");
         }
+        requireLive(meeting);
         MeetingRoom room = room(meeting);
         if (room.getStrokes().size() >= MAX_STROKES) {
             throw ApiException.badRequest("Bảng đã đầy, hãy xoá bảng để vẽ tiếp");
@@ -166,11 +193,13 @@ public class MeetingService {
     }
 
     public synchronized void clearBoard(Meeting meeting) {
-        room(meeting).getStrokes().clear();
+        requireLive(meeting);
+        room(meeting).clearBoard();
     }
 
     /** Gio tay / ha tay. */
     public synchronized void toggleHand(Meeting meeting, User user) {
+        requireLive(meeting);
         MeetingRoom room = room(meeting);
         if (!room.getRaisedHands().remove(user.getId())) room.getRaisedHands().add(user.getId());
     }

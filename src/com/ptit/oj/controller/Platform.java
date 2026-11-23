@@ -44,7 +44,10 @@ public class Platform {
      */
     public Set<String> publishedProblemIds() {
         Set<String> ids = new HashSet<>();
-        for (Contest c : contests.getContests()) ids.addAll(c.getProblemIds());
+        // Ky thi CHUA bat dau thi chua cong bo bai: neu khong, thi sinh xem duoc de truoc gio thi.
+        for (Contest c : contests.getContests()) {
+            if (!"UPCOMING".equals(c.getStatus())) ids.addAll(c.getProblemIds());
+        }
         for (Assignment a : assignments.getAll()) ids.addAll(a.getProblemIds());
         for (Course c : courses.getCourses()) {
             for (Lesson l : c.getLessons()) ids.addAll(l.getProblemIds());

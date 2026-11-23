@@ -36,13 +36,19 @@ export default function Room({ meetingId, languages, onLeave }: {
   // ---- bang trang ----
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const knownStrokesRef = useRef(0);  // so net da nhan tu may chu
+  const boardVersionRef = useRef(-1); // phien ban bang (tang moi lan bang bi xoa); -1 = chua biet
+  const pollingRef = useRef(false);   // dang co mot lan hoi chua xong
 
   // Hoi trang thai phong lien tuc cho den khi roi phong.
   useEffect(() => {
     let alive = true;
     async function poll() {
+      // Lan hoi truoc chua tra loi thi bo qua lan nay: hai tra loi cung dua tren mot so net cu
+      // se lam mat net (tra loi den sau bi hieu nham la "bang da xoa").
+      if (pollingRef.current) return;
+      pollingRef.current = true;
       try {
-        const state = await papi.room(meetingId, knownStrokesRef.current);
+        const state = await papi.room(meetingId, knownStrokesRef.current, boardVersionRef.current);
         if (!alive) return;
         setRoom(state);
         setError("");
@@ -55,11 +61,15 @@ export default function Room({ meetingId, languages, onLeave }: {
         }
 
         // Bang trang: may chu chi gui cac net moi ke tu vi tri strokesFrom.
-        if (state.strokesFrom < knownStrokesRef.current) setStrokes(state.strokes);          // bang da bi xoa
+        // strokesFrom = 0 nghia la may chu gui lai toan bo bang (lan dau, hoac bang da bi xoa).
+        if (state.strokesFrom === 0 || state.strokesFrom < knownStrokesRef.current) setStrokes(state.strokes);
         else if (state.strokes.length > 0) setStrokes((old) => [...old, ...state.strokes]);
         knownStrokesRef.current = state.strokeCount;
+        boardVersionRef.current = state.boardVersion;
       } catch (e) {
         if (alive) setError(errorText(e));
+      } finally {
+        pollingRef.current = false;
       }
     }
     void poll();

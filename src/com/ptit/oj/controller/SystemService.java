@@ -35,7 +35,7 @@ public class SystemService {
     public static final String ALLOW_REGISTER_ENV = "OJ_ALLOW_REGISTER";
 
     public SystemService() {
-        boolean closed = "false".equalsIgnoreCase(String.valueOf(System.getenv(ALLOW_REGISTER_ENV)).trim());
+        boolean closed = "false".equalsIgnoreCase(String.valueOf(com.ptit.oj.dao.DatabaseConfig.setting(ALLOW_REGISTER_ENV)).trim());
         settings.put(ALLOW_REGISTER, closed ? "false" : "true");
         settings.put(ANNOUNCEMENT, "");
     }
@@ -80,8 +80,16 @@ public class SystemService {
     // -------------------------------------------------------------- nhat ky
 
     public synchronized void log(String username, String action, String detail, boolean success) {
-        auditLogs.add(new AuditLog(IdGenerator.next("LOG"), username, action, detail, success));
+        // Ten dang nhap sai lay thang tu body cua request chua dang nhap: cat ngan de mot nguoi la
+        // khong the nhoi day bo nho bang cac lan dang nhap voi ten dai hang tram KB.
+        auditLogs.add(new AuditLog(IdGenerator.next("LOG"), clip(username, 64), clip(action, 200),
+                clip(detail, 500), success));
         if (auditLogs.size() > MAX_AUDIT_LOGS) auditLogs.remove(0);
+    }
+
+    private static String clip(String text, int max) {
+        if (text == null) return "";
+        return text.length() <= max ? text : text.substring(0, max) + "...";
     }
 
     /** Nhat ky moi nhat truoc; keyword rong = lay het, khac rong = loc theo nguoi dung hoac hanh dong. */

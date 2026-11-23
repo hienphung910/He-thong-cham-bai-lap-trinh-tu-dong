@@ -14,25 +14,30 @@ export default function ChatBox({ channel, height = 300 }: { channel: string; he
   const countRef = useRef(0);        // so tin da nhan ve
   const busyRef = useRef(false);     // dang co mot lan hoi chua xong -> bo qua lan nay
   const bottomRef = useRef<HTMLDivElement>(null);
+  const channelRef = useRef(channel);   // kenh dang hien; tra loi cua kenh cu se bi bo qua
 
   const fetchNew = useCallback(async () => {
     if (busyRef.current) return;
     busyRef.current = true;
     try {
       const more = await papi.chat(channel, countRef.current);
+      // Trong luc cho, nguoi dung da chuyen sang kenh khac: khong tron tin cua kenh cu vao.
+      if (channelRef.current !== channel) return;
       if (more.length > 0) {
         countRef.current += more.length;
         setMessages((old) => [...old, ...more]);
       }
       setError("");
     } catch (e) {
-      setError(errorText(e));
+      if (channelRef.current === channel) setError(errorText(e));
     } finally {
-      busyRef.current = false;
+      if (channelRef.current === channel) busyRef.current = false;
     }
   }, [channel]);
 
   useEffect(() => {
+    channelRef.current = channel;
+    busyRef.current = false;     // lan hoi dang do cua kenh cu khong duoc chan lan hoi dau cua kenh moi
     countRef.current = 0;
     setMessages([]);
     void fetchNew();

@@ -37,7 +37,7 @@ public class TestcaseApi extends ApiModule {
         }
         if (req.is("POST", "admin", "problems", "*", "tests")) {
             User user = req.staff();
-            Json.Value body = req.body();
+            Json.Value body = req.largeBody();
             Problem updated = judge.addTest(user, req.arg(0), new ProblemDraft.TestDraft(
                     body.getString("name"), body.getString("input"), body.getString("output"),
                     body.getBoolean("sample", false)));

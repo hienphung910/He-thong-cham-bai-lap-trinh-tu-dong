@@ -22,7 +22,7 @@ Backend chỉ dùng API chuẩn của JDK. Máy chủ HTTP, bộ đọc/ghi JSON
 - Đủ 6 verdict, chấm điểm từng phần theo test.
 - Chấm xong, trang làm bài hiện verdict chung, điểm và bảng kết quả từng test (verdict, thời gian chạy, điểm, thông báo).
 - 4 kiểu so sánh output: chính xác, theo token, theo dòng (cho bài vẽ hình), số thực có sai số.
-- Test ẩn không bao giờ được gửi xuống trình duyệt, và thông báo WA không làm lộ đáp án.
+- Test ẩn không bao giờ được gửi xuống trình duyệt, và thông báo WA không làm lộ đáp án. Với test ẩn, thông báo WA và RE chỉ ghi loại lỗi; nội dung do chương trình in ra (giá trị sai, dòng đầu của stderr) chỉ hiện ở test ví dụ, để bài nộp không dùng thông báo lỗi làm kênh lấy input của test ẩn.
 
 ### Học tập
 - Hai lớp học, mỗi lớp có lộ trình riêng: lớp Nhập môn gồm 10 chủ đề từ nhập/xuất đến mảng, xâu và sắp xếp; lớp Lộ trình VNOI gồm 26 chặng từ đệ quy, đồ thị đến luồng và quy hoạch động nâng cao. Có theo dõi tiến độ từng chặng, nút *Học tiếp* và *Bài tiếp theo*.
@@ -33,7 +33,7 @@ Backend chỉ dùng API chuẩn của JDK. Máy chủ HTTP, bộ đọc/ghi JSON
 - Chuỗi ngày luyện tập (streak) hiện bằng biểu tượng ngọn lửa trên thanh tiêu đề. Bấm vào để xem 7 ngày gần nhất, mốc tiếp theo và lịch 16 tuần.
 
 ### Lớp học và giảng dạy
-- Giảng viên tạo lớp, gắn lớp vào một tổ chức và một khóa học. Học sinh tham gia bằng mã lớp; giảng viên cũng thêm, xoá được học sinh và trợ giảng.
+- Giảng viên tạo lớp, gắn lớp vào một tổ chức và một khóa học. Học sinh tham gia bằng mã tham gia 8 ký tự sinh ngẫu nhiên cho từng lớp (giảng viên xem ở trang chi tiết lớp); giảng viên cũng thêm, xoá được học sinh và trợ giảng. Học sinh đã bị xoá khỏi lớp không tự tham gia lại được.
 - Khóa học có giáo trình là danh sách bài giảng, mỗi bài giảng kèm các bài tập luyện. Tài liệu học tập là văn bản hoặc đường link.
 - Giao bài cho lớp kèm hạn nộp. Tiến độ của từng học sinh tính từ lịch sử nộp bài, giảng viên xem được bảng tiến độ cả lớp.
 - Mỗi giảng viên có một kho bài riêng: tự tạo bài, sửa bộ test, đổi chủ đề và độ khó của bài mình. Bài kho riêng không hiện ở lộ trình chung. Học sinh mở được bài khi giảng viên đưa nó vào kỳ thi, bài tập giao hoặc bài giảng. Giảng viên không sửa được kho bài chung và không dùng được bài trong kho của giảng viên khác. Bài kho riêng tính điểm trong kỳ thi chứa nó, còn bảng xếp hạng chung, điểm thưởng và thống kê kỹ năng chỉ tính kho bài chung.
@@ -74,7 +74,7 @@ Backend chỉ dùng API chuẩn của JDK. Máy chủ HTTP, bộ đọc/ghi JSON
 
 ### Bảo mật
 - Mật khẩu băm bằng PBKDF2-HMAC-SHA256 (120 000 vòng, salt riêng cho từng tài khoản) và so sánh trong thời gian hằng số.
-- Token phiên 32 byte sinh bằng `SecureRandom`, hết hạn sau 8 giờ.
+- Token phiên 32 byte sinh bằng `SecureRandom`, hết hạn sau 8 giờ. Đổi mật khẩu sẽ huỷ mọi phiên khác của tài khoản đó.
 - Mọi truy vấn dùng `PreparedStatement`; mã bài và tên test được kiểm tra để chặn path traversal.
 - Nhật ký hoạt động ghi mọi request làm thay đổi dữ liệu (POST, PUT, DELETE) và mọi lần đăng nhập, kể cả đăng nhập sai. Chỉ quản trị viên xem được.
 - Máy chủ mặc định chỉ lắng nghe trên `127.0.0.1`; chỉ mở ra ngoài khi đặt `OJ_BIND_ADDRESS`.
@@ -378,7 +378,7 @@ Các biến được đọc từ biến môi trường hoặc file `.env` (biế
 | `OJ_BIND_ADDRESS` | Địa chỉ lắng nghe. Bỏ trống thì chỉ nghe `127.0.0.1`; trong container đặt `0.0.0.0` (Dockerfile đã đặt sẵn) |
 | `OJ_ALLOW_REGISTER` | Đặt `false` để khoá tự đăng ký ngay từ lúc khởi động. Quản trị viên vẫn bật lại được trong Quản trị → Hệ thống cho tới lần khởi động sau |
 
-`OJ_ADMIN_PASSWORD`, `OJ_SEED_PASSWORD`, `OJ_BIND_ADDRESS` và `OJ_ALLOW_REGISTER` chỉ đọc từ biến môi trường, không đọc từ file `.env`.
+Mọi biến ở bảng trên đều đọc được từ biến môi trường hoặc từ file `.env`.
 
 ## Triển khai bằng Docker (Railway + Aiven)
 
@@ -435,7 +435,7 @@ Trừ 4 endpoint công khai, mọi request phải gửi header `Authorization: B
 | POST | `/api/classrooms` | GV / admin | Tạo lớp |
 | GET | `/api/classrooms/{id}` | thành viên lớp | Chi tiết lớp: học sinh, trợ giảng |
 | DELETE | `/api/classrooms/{id}` | quản lý lớp | Xoá lớp |
-| POST | `/api/classrooms/{id}/join` | đăng nhập | Tham gia lớp bằng mã lớp |
+| POST | `/api/classrooms/{mã tham gia}/join` | học sinh | Tham gia lớp bằng mã tham gia (không phải mã lớp) |
 | POST, DELETE | `/api/classrooms/{id}/students`, `.../students/{userId}` | quản lý lớp | Thêm, xoá học sinh |
 | POST, DELETE | `/api/classrooms/{id}/assistants`, `.../assistants/{userId}` | quản lý lớp | Thêm, xoá trợ giảng |
 | GET, POST, DELETE | `/api/parents`, `/api/parents/{id}` | GV / admin | Danh bạ phụ huynh |
@@ -536,7 +536,7 @@ Các module mở rộng mới được thử ở chế độ `--no-db`, bằng c
 - Bài được chấm tuần tự để số đo thời gian ổn định, và người nộp phải chờ chấm xong mới thấy kết quả; có thể chuyển sang hàng đợi, nhiều worker và đẩy kết quả từng test theo thời gian thực. Một lần stress test cũng giữ bộ chấm tối đa 25 giây.
 - Chưa sửa được nội dung đề và chưa xoá được bài qua giao diện; lộ trình (`topics.txt`) và thứ tự bài trong chủ đề (`order`) vẫn sửa tay.
 - Giảng viên tự đăng ký là dùng được ngay, chưa có bước quản trị viên duyệt. Muốn chặn thì tắt tự đăng ký ở Quản trị → Hệ thống rồi tạo tài khoản giảng viên bằng tay.
-- Kho bài riêng gắn với tên đăng nhập. Ở chế độ `--no-db` tài khoản mất khi tắt máy chủ còn bài vẫn nằm trên đĩa, nên người đăng ký lại đúng tên đó sẽ nhận kho bài cũ. Máy chủ cũng chưa chặn việc nộp bài vào một bài kho riêng khi người nộp biết mã bài.
+- Kho bài riêng gắn với tên đăng nhập. Ở chế độ `--no-db` tài khoản mất khi tắt máy chủ còn bài vẫn nằm trên đĩa, nên người đăng ký lại đúng tên đó sẽ nhận kho bài cũ.
 - Phiên đăng nhập lưu trong RAM; chưa có connection pool và phân trang cho lịch sử nộp bài.
 - Dữ liệu của các module mở rộng nằm trong RAM, khởi động lại là mất. Hướng phát triển: thêm bảng MySQL và lớp DAO cho từng thực thể.
 - Các module mở rộng chưa được chạy thử ở chế độ MySQL. Các trang phân tích, tổng quan, chi tiết lớp và xem lại kỳ thi đọc lại toàn bộ lịch sử nộp bài ở mỗi request, nên sẽ chậm dần khi CSDL lớn.

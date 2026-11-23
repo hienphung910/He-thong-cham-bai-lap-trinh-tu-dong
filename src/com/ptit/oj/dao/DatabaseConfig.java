@@ -71,6 +71,16 @@ public final class DatabaseConfig {
         return new DatabaseConfig(url.trim(), user.trim(), password == null ? "" : password);
     }
 
+    /**
+     * Doc mot bien cau hinh bat ky (khong chi cua CSDL) theo cung thu tu: bien moi truong that
+     * truoc, roi den file .env. Tra ve null neu khong dat. Dung cho OJ_ADMIN_PASSWORD,
+     * OJ_SEED_PASSWORD... de nhung gi ghi trong .env.example thuc su co tac dung.
+     */
+    public static String setting(String key) {
+        String found = value(key);
+        return isBlank(found) ? null : found;
+    }
+
     /** Bien moi truong that truoc, sau do moi den file .env. */
     private static String value(String key) {
         String fromEnv = System.getenv(key);

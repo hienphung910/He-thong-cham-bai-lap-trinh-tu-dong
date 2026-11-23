@@ -61,8 +61,10 @@ public class ProblemWriter {
             Path testsDir = temp.resolve("tests");
             Files.createDirectory(testsDir);
             for (ProblemDraft.TestDraft t : draft.getTests()) {
-                writeText(testsDir.resolve(t.getName() + ".in"), t.getInput());
-                writeText(testsDir.resolve(t.getName() + ".out"), t.getOutput());
+                // Ten da duoc kiem tra o dang da cat khoang trang -> ghi dung dang do.
+                String name = t.getName().trim();
+                writeText(testsDir.resolve(name + ".in"), t.getInput());
+                writeText(testsDir.resolve(name + ".out"), t.getOutput());
             }
 
             Files.move(temp, target);   // doi ten trong cung thu muc cha: xong la co du ca bai

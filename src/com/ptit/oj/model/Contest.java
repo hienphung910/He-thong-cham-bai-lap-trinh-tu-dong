@@ -1,8 +1,8 @@
 package com.ptit.oj.model;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Cuoc thi lap trinh (Module 21): mot khoang thoi gian + danh sach bai.
@@ -25,7 +25,8 @@ public class Contest extends Entity {
         this.description = description;
         this.startAt = startAt;
         this.durationMin = durationMin;
-        this.problemIds = new ArrayList<>(problemIds);     // ban sao rieng de them / bot bai ve sau
+        // Ban sao rieng de them / bot bai ve sau; CopyOnWrite de request khac doc duoc trong luc sua.
+        this.problemIds = new CopyOnWriteArrayList<>(problemIds);
         this.ownerUsername = ownerUsername;
         this.ownerName = ownerName;
     }

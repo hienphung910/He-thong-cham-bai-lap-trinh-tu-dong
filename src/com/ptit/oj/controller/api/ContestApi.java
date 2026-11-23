@@ -103,6 +103,8 @@ public class ContestApi extends ApiModule {
     }
 
     private Json.Obj contestJson(Contest c, User viewer) {
+        // Truoc gio thi chi nguoi quan ly ky thi thay danh sach bai; nguoi khac chi biet so bai.
+        boolean hidden = "UPCOMING".equals(c.getStatus()) && !contests.canManage(viewer, c);
         return Json.obj()
                 .put("id", c.getId())
                 .put("ownerName", c.getOwnerName())
@@ -113,7 +115,9 @@ public class ContestApi extends ApiModule {
                 .put("endAt", time(c.getEndAt()))
                 .put("durationMin", c.getDurationMin())
                 .put("status", c.getStatus())
-                .putRaw("problems", problemsJson(c.getProblemIds()));
+                .put("problemCount", c.getProblemIds().size())
+                .put("problemsHidden", hidden)
+                .putRaw("problems", hidden ? "[]" : problemsJson(c.getProblemIds()));
     }
 
     private String standingsJson(Contest c, int minute) {

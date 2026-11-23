@@ -26,6 +26,9 @@ import java.util.stream.Stream;
  */
 public class Judge {
 
+    /** Do dai toi da cua phan chi tiet (stderr, gia tri in ra) trong thong bao cua mot test. */
+    private static final int MAX_DETAIL_CHARS = 300;
+
     private final ProcessRunner runner = new ProcessRunner();
 
     /** Cham mot bai nop va gan ket qua vao chinh bai nop do. */
@@ -66,6 +69,10 @@ public class Judge {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();   // ton trong co ngat cua thread
             result.markGlobal(Verdict.IE, "Quá trình chấm bị ngắt");
+        } catch (RuntimeException e) {
+            // Vi du problem.properties sua tay ghi sai kieu so sanh: bao IE va van luu bai nop,
+            // thay vi de loi lan ra ngoai thanh HTTP 500.
+            result.markGlobal(Verdict.IE, "Bài " + problem.getId() + " cấu hình sai: " + e.getMessage());
         } finally {
             // Chay ca khi da return o tren: don dep roi gan ket qua vao bai nop.
             deleteRecursively(workDir);
@@ -87,19 +94,37 @@ public class Judge {
             return new TestCaseResult(test, Verdict.TLE, exec.getElapsedMs(), 0,
                     "Chạy quá " + problem.getTimeLimitMs() + " ms");
         }
-        if (looksLikeOutOfMemory(exec.getStderr())) {
-            return new TestCaseResult(test, Verdict.MLE, exec.getElapsedMs(), 0,
-                    "Vượt giới hạn " + problem.getMemoryLimitMb() + " MB");
-        }
         if (exec.getExitCode() != 0) {
+            // Chi xet MLE khi chuong trinh that su chet: bai chay dung ma in chu "out of memory"
+            // ra stderr khong bi cham oan.
+            if (looksLikeOutOfMemory(exec.getStderr())) {
+                return new TestCaseResult(test, Verdict.MLE, exec.getElapsedMs(), 0,
+                        "Vượt giới hạn " + problem.getMemoryLimitMb() + " MB");
+            }
             return new TestCaseResult(test, Verdict.RE, exec.getElapsedMs(), 0,
-                    "Exit code " + exec.getExitCode() + ": " + firstLine(exec.getStderr()));
+                    runtimeErrorMessage(test, exec));
         }
         if (comparator.matches(test.getExpectedOutput(), exec.getStdout())) {
             return new TestCaseResult(test, Verdict.AC, exec.getElapsedMs(), test.getPoints(), "");
         }
         return new TestCaseResult(test, Verdict.WA, exec.getElapsedMs(), 0,
-                comparator.explain(test.getExpectedOutput(), exec.getStdout()));
+                wrongAnswerMessage(test, comparator, exec));
+    }
+
+    /**
+     * Thong bao RE / WA chua noi dung do chinh chuong trinh in ra. Voi test AN, chuong trinh co the
+     * in lai input ra stderr / stdout de lay bo test, nen chi test vi du (input da cong khai) moi
+     * duoc kem noi dung do; test an chi bao loai loi.
+     */
+    private String runtimeErrorMessage(TestCase test, ExecutionResult exec) {
+        String base = "Exit code " + exec.getExitCode();
+        if (!test.isSample()) return base;
+        return base + ": " + Language.clip(firstLine(exec.getStderr()), MAX_DETAIL_CHARS);
+    }
+
+    private String wrongAnswerMessage(TestCase test, OutputComparator comparator, ExecutionResult exec) {
+        if (!test.isSample()) return "Kết quả không khớp đáp án";
+        return Language.clip(comparator.explain(test.getExpectedOutput(), exec.getStdout()), MAX_DETAIL_CHARS);
     }
 
     /**

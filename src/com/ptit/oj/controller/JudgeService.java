@@ -182,10 +182,16 @@ public class JudgeService {
      * synchronized de cham TUAN TU: neu hai bai chay cung luc thi hai tien trinh
      * tranh CPU, thoi gian do duoc sai lech va de bi TLE oan.
      */
-    public synchronized JudgeResult submitCode(Problem problem, User author, Language language, String code) {
+    public JudgeResult submitCode(Problem problem, User author, Language language, String code) {
         String source = TextUtils.stripBom(code == null ? "" : code);
+        // Tao bai nop TRUOC khi vao hang cho cham: gio nop la luc may chu nhan bai, khong phai luc
+        // den luot cham. Neu khong, bai nop sat gio khi hang cho dai se bi tinh la nop sau gio thi.
         Submission submission = new Submission(problem, author, language,
                 language.defaultFileName(source), source);
+        return judgeAndSave(submission);
+    }
+
+    private synchronized JudgeResult judgeAndSave(Submission submission) {
         JudgeResult result = judge.judge(submission);
         // Luu SAU khi cham xong: bai nop va ket qua tung test vao CSDL trong
         // cung mot transaction, khong bao gio con ban ghi do dang.

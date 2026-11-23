@@ -33,7 +33,7 @@ import java.util.regex.Pattern;
 public class ProblemAdminService {
 
     /** Ma bai: chi chu IN HOA, so, gach duoi va gach ngang -> khong the thanh duong dan. */
-    private static final Pattern ID_PATTERN = Pattern.compile("[A-Z0-9_-]{1,32}");
+    private static final Pattern ID_PATTERN = Pattern.compile("[A-Z0-9_-]{1,30}");   // 30 = do rong cot submissions.problem_id
     /** Ten test: chu thuong/hoa, so, gach duoi, gach ngang. Khong co dau cham hay dau gach cheo. */
     private static final Pattern TEST_NAME_PATTERN = Pattern.compile("[A-Za-z0-9_-]{1,64}");
 
@@ -294,7 +294,7 @@ public class ProblemAdminService {
         }
         if (!ID_PATTERN.matcher(id).matches()) {
             throw new ProblemAdminException(400,
-                    "Mã bài chỉ được gồm chữ in hoa, số, gạch dưới hoặc gạch ngang (tối đa 32 ký tự)");
+                    "Mã bài chỉ được gồm chữ in hoa, số, gạch dưới hoặc gạch ngang (tối đa 30 ký tự)");
         }
         return id;
     }

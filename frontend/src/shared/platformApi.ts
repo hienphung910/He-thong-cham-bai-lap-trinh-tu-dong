@@ -67,7 +67,8 @@ export const papi = {
   startMeeting: (id: string) => postJson<Ok>(`/api/meetings/${enc(id)}/start`, {}),
   endMeeting: (id: string) => postJson<Ok>(`/api/meetings/${enc(id)}/end`, {}),
   deleteMeeting: (id: string) => del(`/api/meetings/${enc(id)}`),
-  room: (id: string, knownStrokes: number) => request<RoomState>(`/api/meetings/${enc(id)}/room?strokes=${knownStrokes}`),
+  room: (id: string, knownStrokes: number, knownBoard: number) =>
+    request<RoomState>(`/api/meetings/${enc(id)}/room?strokes=${knownStrokes}&board=${knownBoard}`),
   roomCode: (id: string, code: string, language: string) =>
     putJson<Ok>(`/api/meetings/${enc(id)}/room/code`, { code, language }),
   roomCollab: (id: string, on: boolean) => postJson<Ok>(`/api/meetings/${enc(id)}/room/collab`, { on }),

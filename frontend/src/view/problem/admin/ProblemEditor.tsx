@@ -53,7 +53,7 @@ export default function ProblemEditor({ topics, onClose, onCreated }: { topics: 
 
   function validate(): string {
     const cleanId = id.trim().toUpperCase();
-    if (!/^[A-Z0-9_-]{1,32}$/.test(cleanId)) return "Mã bài chỉ gồm chữ in hoa, số, gạch dưới hoặc gạch ngang (tối đa 32 ký tự).";
+    if (!/^[A-Z0-9_-]{1,30}$/.test(cleanId)) return "Mã bài chỉ gồm chữ in hoa, số, gạch dưới hoặc gạch ngang (tối đa 30 ký tự).";
     if (!title.trim()) return "Tên bài không được để trống.";
     if (!statement.trim()) return "Nội dung đề không được để trống.";
     if (!(Number(timeLimitMs) >= 100 && Number(timeLimitMs) <= 60000)) return "Giới hạn thời gian phải từ 100 đến 60000 ms.";
