@@ -17,9 +17,15 @@ const TEMPLATES: Record<string, string> = {
 
 /** File ma nguon tai len tu may: gioi han 256 KB (may chu nhan body toi da 512 KB). */
 const MAX_SOURCE_BYTES = 256 * 1024;
+const ARCHIVE_EXTENSIONS = ["zip", "rar", "7z", "tar", "gz"];
 const LANGUAGE_BY_EXTENSION: Record<string, string> = {
   java: "Java", cpp: "C++", cc: "C++", cxx: "C++", c: "C++", h: "C++", py: "Python", js: "JavaScript", mjs: "JavaScript",
 };
+
+/** Dung luong file dang de doc: 812 B, 3.4 KB. */
+function formatBytes(bytes: number): string {
+  return bytes < 1024 ? `${bytes} B` : `${(bytes / 1024).toFixed(1)} KB`;
+}
 
 /** Nut sao chep o goc o vi du: khung vien nho, bieu tuong hai o vuong chong nhau; bam xong hien dau tich. */
 function CopyButton({ text }: { text: string }) {
@@ -100,16 +106,25 @@ export default function ProblemDetail({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<Submission | null>(null);
-  /** O chon file an; nut "Tai file ma nguon" bam ho vao day. */
+  /** O chon file an; vung keo tha bam ho vao day khi nguoi dung muon chon file bang hop thoai. */
   const fileInput = useRef<HTMLInputElement>(null);
-  const [uploadedName, setUploadedName] = useState("");
+  /** File ma nguon vua nap vao o soan (de hien ten, dung luong, so dong); null = chua nap file nao. */
+  const [uploaded, setUploaded] = useState<{ name: string; size: number; lines: number } | null>(null);
+  /** Dang keo mot file ngang qua vung tha: to sang vien de nguoi dung biet tha duoc o day. */
+  const [dragging, setDragging] = useState(false);
 
-  /** Doc file ma nguon nguoi dung chon tu may va dua vao o soan; duoi file quyet dinh ngon ngu. */
-  async function loadSourceFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";            // de chon lai dung file do van kich hoat onChange
+  /**
+   * Doc file ma nguon (chon bang hop thoai hoac keo tha vao) va dua vao o soan; duoi file quyet
+   * dinh ngon ngu. He thong cham MOT file ma nguon nen file nen (.zip, .rar, .7z) bi tu choi.
+   */
+  async function loadSource(file: File | undefined) {
     if (!file) return;
     setError("");
+    const kind = file.name.slice(file.name.lastIndexOf(".") + 1).toLowerCase();
+    if (ARCHIVE_EXTENSIONS.includes(kind)) {
+      setError(`Chưa hỗ trợ file nén (${file.name}). Hãy tải lên một file mã nguồn .java, .cpp, .py hoặc .js.`);
+      return;
+    }
     if (file.size > MAX_SOURCE_BYTES) {
       setError(`File ${file.name} quá lớn (tối đa ${MAX_SOURCE_BYTES / 1024} KB).`);
       return;
@@ -123,7 +138,13 @@ export default function ProblemDetail({
     const detected = LANGUAGE_BY_EXTENSION[extension];
     if (detected && languages.some((l) => l.name === detected && l.available)) setLanguage(detected);
     setCode(text);
-    setUploadedName(file.name);
+    setUploaded({ name: file.name, size: file.size, lines: text === "" ? 0 : text.replace(/\n$/, "").split("\n").length });
+  }
+
+  function onDropFile(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setDragging(false);
+    void loadSource(e.dataTransfer.files?.[0]);
   }
 
   const langNames = useMemo(() => languages.map((l) => l.name), [languages]);
@@ -232,50 +253,60 @@ export default function ProblemDetail({
 
         {/* ═══ SUBMIT SECTION ═══ */}
         <div style={{ background: "#fff", border: "1px solid #E0E0E0", borderRadius: 8, padding: "20px 24px" }}>
-          <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-              style={{
-                height: 34, padding: "0 12px", border: "1px solid #E0E0E0", borderRadius: 6,
-                fontSize: 13, color: "#212121", background: "#fff", cursor: "pointer", outline: "none",
-              }}
-            >
-              {langNames.map((l) => (
-                <option key={l} value={l} disabled={unavailable.includes(l)}>{l}</option>
-              ))}
-            </select>
-            <button
-              onClick={() => setCode(TEMPLATES[language] ?? "")}
-              disabled={!TEMPLATES[language]}
-              style={{
-                height: 34, padding: "0 14px", border: "1px solid #E0E0E0", borderRadius: 6,
-                fontSize: 12, color: "#616161", background: "#fff", cursor: "pointer",
-                opacity: TEMPLATES[language] ? 1 : 0.4,
-              }}
-            >Chèn code mẫu</button>
-            <input ref={fileInput} type="file" accept=".java,.cpp,.cc,.cxx,.c,.h,.py,.js,.mjs,.txt"
-              style={{ display: "none" }} onChange={(e) => void loadSourceFile(e)} />
-            <button
-              onClick={() => fileInput.current?.click()}
-              title="Chọn một file mã nguồn trên máy để đưa vào ô soạn"
-              style={{
-                height: 34, padding: "0 14px", border: "1px solid #E0E0E0", borderRadius: 6,
-                fontSize: 12, color: "#616161", background: "#fff", cursor: "pointer",
-              }}
-            >Tải file mã nguồn</button>
-            {uploadedName && <span style={{ fontSize: 12, color: "#9E9E9E" }}>Đã nạp {uploadedName}</span>}
-            <div style={{ flex: 1 }} />
-            <button
-              onClick={() => void doSubmit()} disabled={busy}
-              style={{
-                height: 36, padding: "0 20px", border: "none", borderRadius: 6,
-                fontSize: 13, fontWeight: 700, color: "var(--color-on-accent)", background: "var(--color-accent)",
-                cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.6 : 1,
-              }}
-            >
-              {busy ? "Đang chấm..." : "▶ Nộp bài"}
-            </button>
+          {/* ── Vung tha file: keo file ma nguon vao, hoac bam de chon ── */}
+          <input ref={fileInput} type="file" accept=".java,.cpp,.cc,.cxx,.c,.h,.py,.js,.mjs,.txt" style={{ display: "none" }}
+            onChange={(e) => { const file = e.target.files?.[0]; e.target.value = ""; void loadSource(file); }} />
+          <div
+            role="button" tabIndex={0} aria-label="Tải lên file mã nguồn"
+            onClick={() => fileInput.current?.click()}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInput.current?.click(); } }}
+            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={onDropFile}
+            style={{
+              position: "relative", overflow: "hidden", cursor: "pointer", borderRadius: 10, marginBottom: 14,
+              padding: uploaded ? "14px 18px" : "26px 18px",
+              background: dragging ? "#241A0C" : "#161616",
+              border: `2px dashed ${dragging ? "var(--color-accent)" : "#4A4A4A"}`,
+              transition: "background 0.15s, border-color 0.15s",
+            }}
+          >
+            {/* Vach cam o canh trai - net rieng cua CodeHub */}
+            <span style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4, background: "var(--color-accent)" }} />
+            {uploaded ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+                <span style={{ width: 38, height: 38, borderRadius: 8, background: "var(--color-accent)", color: "var(--color-on-accent)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /><path d="m10 13-2 2 2 2" /><path d="m14 13 2 2-2 2" />
+                  </svg>
+                </span>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 13.5, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{uploaded.name}</div>
+                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 11.5, color: "#9E9E9E", marginTop: 2 }}>
+                    {formatBytes(uploaded.size)} · {uploaded.lines} dòng · <span style={{ color: "var(--color-accent)" }}>{language}</span> · đã đưa vào ô soạn bên dưới
+                  </div>
+                </div>
+                <span style={{ fontSize: 12, color: "#BDBDBD", whiteSpace: "nowrap" }}>Bấm hoặc kéo thả để đổi file</span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setUploaded(null); setCode(""); }}
+                  style={{ height: 30, padding: "0 12px", borderRadius: 6, border: "1px solid #5A5A5A", background: "transparent", color: "#E0E0E0", fontSize: 12, cursor: "pointer" }}
+                >Gỡ file</button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, textAlign: "center" }}>
+                <span style={{ width: 46, height: 46, borderRadius: "50%", border: "2px solid var(--color-accent)", color: "var(--color-accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 16V4" /><path d="m7 9 5-5 5 5" /><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" />
+                  </svg>
+                </span>
+                <div style={{ fontSize: 14.5, fontWeight: 600, color: "#fff" }}>
+                  {dragging ? "Thả file vào đây" : <>Kéo thả file mã nguồn vào đây, hoặc <span style={{ color: "var(--color-accent)", textDecoration: "underline" }}>chọn file từ máy</span></>}
+                </div>
+                <div style={{ fontFamily: "var(--font-mono)", fontSize: 11.5, color: "#9E9E9E" }}>
+                  <span style={{ color: "var(--color-accent)" }}>{">_"}</span> .java · .cpp · .py · .js &nbsp;|&nbsp; tối đa {MAX_SOURCE_BYTES / 1024} KB &nbsp;|&nbsp; hoặc soạn trực tiếp ở ô bên dưới
+                </div>
+              </div>
+            )}
           </div>
 
           {currentLang && !currentLang.available && (
@@ -285,6 +316,43 @@ export default function ProblemDetail({
           )}
 
           <CodeEditor value={code} language={language} onChange={setCode} />
+
+          {/* ── Hang nut duoi cung: code mau ben trai; ngon ngu va nop bai ben phai ── */}
+          <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 14, flexWrap: "wrap" }}>
+            <button
+              onClick={() => { setCode(TEMPLATES[language] ?? ""); setUploaded(null); }}
+              disabled={!TEMPLATES[language]}
+              style={{
+                height: 38, padding: "0 14px", border: "1px solid #E0E0E0", borderRadius: 6,
+                fontSize: 12.5, color: "#616161", background: "#fff", cursor: "pointer",
+                opacity: TEMPLATES[language] ? 1 : 0.4,
+              }}
+            >Chèn code mẫu</button>
+            <div style={{ flex: 1 }} />
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              title="Ngôn ngữ của bài nộp"
+              style={{
+                height: 38, minWidth: 170, padding: "0 12px", border: "1px solid #D0D0D0", borderRadius: 6,
+                fontSize: 13.5, color: "#212121", background: "#fff", cursor: "pointer", outline: "none",
+              }}
+            >
+              {langNames.map((l) => (
+                <option key={l} value={l} disabled={unavailable.includes(l)}>{l}</option>
+              ))}
+            </select>
+            <button
+              onClick={() => void doSubmit()} disabled={busy}
+              style={{
+                height: 38, padding: "0 24px", border: "none", borderRadius: 6,
+                fontSize: 14, fontWeight: 700, color: "var(--color-on-accent)", background: "var(--color-accent)",
+                cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.6 : 1,
+              }}
+            >
+              {busy ? "Đang chấm..." : "▶ Nộp bài"}
+            </button>
+          </div>
         </div>
 
         {/* ═══ RESULTS ═══ */}

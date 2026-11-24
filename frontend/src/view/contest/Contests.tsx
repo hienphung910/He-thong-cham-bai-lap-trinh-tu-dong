@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { papi } from "../../shared/platformApi";
 import { Btn, Card, ErrorBox, Field, INPUT, Muted, Page, Row, Table, Tag, errorText, fmtTime, localDateTime, useLoad } from "../../shared/kit";
 import { parseIds } from "../../shared/nav";
@@ -59,18 +59,11 @@ export default function Contests() {
   );
 }
 
-/**
- * Chi tiet mot ky thi + Module 22 (xem lai): keo thanh truot de xem bang xep hang
- * tai mot phut bat ky. May chu tinh lai bang xep hang tu cac bai nop truoc phut do.
- */
+/** Chi tiet mot ky thi: de thi, bang xep hang hien tai va danh sach cac luot nop. */
 function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
-  /** null = bang xep hang hien tai; so = dang xem lai tai phut do. */
-  const [minute, setMinute] = useState<number | null>(null);
-  const [playing, setPlaying] = useState(false);
-  const contest = useLoad(() => papi.contest(id, minute ?? undefined), [id, minute]);
+  const contest = useLoad(() => papi.contest(id), [id]);
   const events = useLoad(() => papi.contestEvents(id), [id]);
   const c = contest.data;
-  const duration = c?.durationMin ?? 0;
   // Them / bot bai: chi nguoi tao ky thi (c.canManage) moi thay cac nut nay.
   const [newProblem, setNewProblem] = useState("");
   const [editError, setEditError] = useState("");
@@ -80,22 +73,7 @@ function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
     try { await work(); setNewProblem(""); contest.reload(); } catch (e) { setEditError(errorText(e)); }
   }
 
-  // Che do tu phat: moi 400 ms tien them mot doan cho den het gio thi.
-  useEffect(() => {
-    if (!playing) return;
-    const step = Math.max(1, Math.round(duration / 40));
-    const timer = setInterval(() => {
-      setMinute((m) => {
-        const next = Math.min(duration, (m ?? 0) + step);
-        if (next >= duration) setPlaying(false);
-        return next;
-      });
-    }, 400);
-    return () => clearInterval(timer);
-  }, [playing, duration]);
-
-  const shownMinute = minute ?? duration;
-  const pastEvents = (events.data ?? []).filter((e) => e.minute <= shownMinute);
+  const pastEvents = events.data ?? [];
 
   return (
     <Page title={c ? c.title : "Kỳ thi"} subtitle={c ? `${fmtTime(c.startAt)} → ${fmtTime(c.endAt)} · ${c.description}` : ""}
@@ -131,18 +109,7 @@ function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
             <div style={{ marginTop: 8 }}><Muted>Bấm vào mã bài để làm. Bài nộp trong khung giờ thi được tính vào bảng xếp hạng.</Muted></div>
           </Card>
 
-          <Card title="Xem lại diễn biến" right={<>
-            <Btn small onClick={() => { if (minute === null || minute >= duration) setMinute(0); setPlaying(!playing); }}>{playing ? "Tạm dừng" : "▶ Phát lại"}</Btn>
-            <Btn small kind="ghost" onClick={() => { setPlaying(false); setMinute(null); }}>Về hiện tại</Btn>
-          </>}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <input type="range" min={0} max={duration} value={shownMinute} style={{ flex: 1 }}
-                onChange={(e) => { setPlaying(false); setMinute(Number(e.target.value)); }} />
-              <b style={{ fontSize: 13, minWidth: 110 }}>Phút {shownMinute}/{duration}</b>
-            </div>
-          </Card>
-
-          <Card title={minute === null ? "Bảng xếp hạng" : `Bảng xếp hạng tại phút ${minute}`}>
+          <Card title="Bảng xếp hạng">
             <Table head={["#", "Thí sinh", "Số bài", "Phút phạt", ...c.problems.map((p) => p.id)]}
               empty="Chưa có ai nộp bài trong khoảng thời gian này."
               rows={(c.standings ?? []).map((r) => [
