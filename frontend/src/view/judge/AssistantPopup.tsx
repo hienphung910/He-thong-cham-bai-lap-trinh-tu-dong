@@ -62,7 +62,7 @@ export default function AssistantPopup({ problem, code, autoAskKey }: {
       <button onClick={() => { setOpen(!open); setUnread(false); }} title={open ? "Đóng trợ lý" : "Hỏi trợ lý về bài này"}
         aria-label={open ? "Đóng trợ lý" : "Hỏi trợ lý về bài này"} style={{
           position: "fixed", right: 24, bottom: 24, zIndex: 250, width: 52, height: 52, borderRadius: "50%",
-          border: "none", background: "var(--color-red)", color: "#fff", cursor: "pointer",
+          border: "none", background: "#111111", color: "var(--color-accent)", cursor: "pointer",
           display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 20px rgba(0,0,0,0.25)",
         }}>
         {open ? (

@@ -26,7 +26,7 @@ export function Select({
     <div ref={ref} style={{ position: "relative" }}>
       <button onClick={() => setOpen((v) => !v)} style={{
         display: "flex", alignItems: "center", gap: 6, height: 34, padding: "0 12px",
-        background: value ? "#FDECEA" : "#fff", border: `1px solid ${value ? "var(--color-red)" : "#E0E0E0"}`,
+        background: value ? "var(--color-red-light)" : "#fff", border: `1px solid ${value ? "var(--color-red)" : "#E0E0E0"}`,
         borderRadius: 6, color: value ? "var(--color-red)" : "#9E9E9E",
         fontSize: 13, cursor: "pointer", fontWeight: value ? 600 : 400, whiteSpace: "nowrap",
       }}>
@@ -47,7 +47,7 @@ export function Select({
               <button key={opt} disabled={disabled} onClick={() => { onChange(selected ? "" : opt); setOpen(false); }}
                 style={{
                   width: "100%", display: "block", textAlign: "left", padding: "7px 12px",
-                  background: selected ? "#FDECEA" : "none", border: "none",
+                  background: selected ? "var(--color-red-light)" : "none", border: "none",
                   color: disabled ? "#BDBDBD" : selected ? "var(--color-red)" : "#616161",
                   fontSize: 13, cursor: disabled ? "not-allowed" : "pointer", borderRadius: 4,
                   fontWeight: selected ? 600 : 400, textDecoration: disabled ? "line-through" : "none",

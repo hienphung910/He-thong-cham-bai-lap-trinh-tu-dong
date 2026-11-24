@@ -1,11 +1,13 @@
 package com.ptit.oj.controller.api;
 
+import com.ptit.oj.controller.ApiException;
 import com.ptit.oj.controller.Json;
 import com.ptit.oj.controller.Platform;
 import com.ptit.oj.controller.SchoolService;
 import com.ptit.oj.model.Classroom;
 import com.ptit.oj.model.Organization;
 import com.ptit.oj.model.ParentContact;
+import com.ptit.oj.model.Problem;
 import com.ptit.oj.model.User;
 
 import java.io.IOException;
@@ -130,6 +132,25 @@ public class SchoolApi extends ApiModule {
             req.sendOk();
             return true;
         }
+        // Bai luyen tap rieng cua lop: giang vien chi dung duoc bai kho chung va bai kho cua minh.
+        if (req.is("POST", "classrooms", "*", "problems")) {
+            User user = req.staff();
+            Classroom c = school.findClassroom(req.arg(0));
+            school.requireManager(user, c);
+            List<String> ids = problemIds(req.body(), "problemIds", user);
+            if (ids.isEmpty()) throw ApiException.badRequest("Hãy nhập ít nhất một mã bài");
+            school.addPracticeProblems(c, ids);
+            platform.getCommunity().notifyMany(c.getStudentIds(), "Bài luyện tập mới của " + c.getName(),
+                    "Giảng viên vừa thêm " + ids.size() + " bài luyện tập. Vào Lớp của tôi để làm.");
+            req.sendOk();
+            return true;
+        }
+        if (req.is("DELETE", "classrooms", "*", "problems", "*")) {
+            Classroom c = managedClassroom(req);
+            school.removePracticeProblem(c, req.arg(1));
+            req.sendOk();
+            return true;
+        }
         if (req.is("POST", "classrooms", "*", "assistants")) {
             Classroom c = managedClassroom(req);
             school.addAssistant(c, requireUsername(req.body().getString("username")));
@@ -163,6 +184,7 @@ public class SchoolApi extends ApiModule {
                 .put("courseTitle", platform.getCourses().courseTitle(c.getCourseId()))
                 .put("teacherName", nameOf(users, c.getTeacherId()))
                 .put("studentCount", c.getStudentIds().size())
+                .put("practiceCount", c.getPracticeProblemIds().size())
                 .put("canManage", school.canManage(viewer, c))
                 // Ma tham gia chi nguoi quan ly lop thay, de dua cho hoc sinh.
                 .put("joinCode", school.canManage(viewer, c) ? c.getJoinCode() : "");
@@ -184,7 +206,18 @@ public class SchoolApi extends ApiModule {
             User u = users.get(id);
             if (u != null) assistants.add(userJson(u).build());
         }
+        // Bai luyen tap cua lop, kem viec nguoi dang xem da giai chua.
+        Set<String> mySolved = platform.getAnalytics().solvedByUser().get(viewer.getId());
+        List<String> practice = new ArrayList<>();
+        for (String problemId : c.getPracticeProblemIds()) {
+            Problem p = platform.getJudge().findProblem(problemId).orElse(null);
+            if (p == null) continue;        // bai da bi xoa khoi dia
+            practice.add(Json.obj().put("id", p.getId()).put("title", p.getTitle())
+                    .put("difficulty", p.getDifficulty())
+                    .put("solved", mySolved != null && mySolved.contains(p.getId())).build());
+        }
         return classroomJson(c, viewer, users)
+                .putRaw("practice", Json.array(practice))
                 .putRaw("students", Json.array(students))
                 .putRaw("assistants", Json.array(assistants))
                 .build();

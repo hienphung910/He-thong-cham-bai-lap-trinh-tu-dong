@@ -34,6 +34,10 @@ export const papi = {
   joinClassroom: (id: string) => postJson<Classroom>(`/api/classrooms/${enc(id)}/join`, {}),
   addStudent: (id: string, username: string) => postJson<Ok>(`/api/classrooms/${enc(id)}/students`, { username }),
   removeStudent: (id: string, userId: string) => del(`/api/classrooms/${enc(id)}/students/${enc(userId)}`),
+  addPracticeProblems: (id: string, problemIds: string[]) =>
+    postJson<Ok>(`/api/classrooms/${enc(id)}/problems`, { problemIds }),
+  removePracticeProblem: (id: string, problemId: string) =>
+    del(`/api/classrooms/${enc(id)}/problems/${enc(problemId)}`),
   addAssistant: (id: string, username: string) => postJson<Ok>(`/api/classrooms/${enc(id)}/assistants`, { username }),
   removeAssistant: (id: string, userId: string) => del(`/api/classrooms/${enc(id)}/assistants/${enc(userId)}`),
 
@@ -62,8 +66,10 @@ export const papi = {
 
   // --- buoi hoc, phong hoc, diem danh, ban ghi (Module 14-20, 37) ---
   meetings: () => request<Meeting[]>("/api/meetings"),
-  createMeeting: (body: { classroomId: string; title: string; startAt: string; durationMin: number; recorded: boolean }) =>
+  createMeeting: (body: { classroomId: string; title: string; startAt: string; durationMin: number; link: string }) =>
     postJson<Ok>("/api/meetings", body),
+  /** Dan / sua link phong hoc cua mot buoi trong lich; link rong = go link. */
+  setMeetingLink: (id: string, link: string) => putJson<Ok>(`/api/meetings/${enc(id)}/link`, { link }),
   startMeeting: (id: string) => postJson<Ok>(`/api/meetings/${enc(id)}/start`, {}),
   endMeeting: (id: string) => postJson<Ok>(`/api/meetings/${enc(id)}/end`, {}),
   deleteMeeting: (id: string) => del(`/api/meetings/${enc(id)}`),

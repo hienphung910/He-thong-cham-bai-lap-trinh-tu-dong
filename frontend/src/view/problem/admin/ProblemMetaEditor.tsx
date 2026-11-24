@@ -70,7 +70,7 @@ export default function ProblemMetaEditor({ problem, topics, onClose, onSaved }:
 
         <div style={{ padding: "22px 28px", display: "flex", flexDirection: "column", gap: 14 }}>
           {error && (
-            <div style={{ padding: "10px 14px", borderRadius: 7, fontSize: 12.5, background: "var(--color-red-bg)", border: "1px solid var(--color-red-border)", color: "var(--color-red)", fontFamily: "var(--font-mono)", whiteSpace: "pre-wrap" }}>{error}</div>
+            <div style={{ padding: "10px 14px", borderRadius: 7, fontSize: 12.5, background: "var(--color-red-bg)", border: "1px solid var(--color-red-border)", color: "#C62828", fontFamily: "var(--font-mono)", whiteSpace: "pre-wrap" }}>{error}</div>
           )}
 
           <div style={{ fontFamily: "var(--font-sans)", fontSize: 12.5, color: "var(--color-text-secondary)" }}>

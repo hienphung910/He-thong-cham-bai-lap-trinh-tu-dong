@@ -65,10 +65,27 @@ public class MeetingApi extends ApiModule {
             school.requireManager(host, classroom);
             Meeting created = meetings.schedule(classroom, body.getString("title"),
                     parseTime(body.getString("startAt")), (int) body.getLong("durationMin", 60),
-                    host, body.getBoolean("recorded", true));
+                    host, body.getBoolean("recorded", false));
+            // Co the dan link ngay luc len lich, hoac de trong roi dan sau khi toi ngay hoc.
+            meetings.setLink(created, body.getString("link", ""));
             platform.getCommunity().notifyMany(classroom.getStudentIds(),
                     "Buổi học mới: " + created.getTitle(),
                     classroom.getName() + " học lúc " + time(created.getStartAt()).replace('T', ' '));
+            req.sendOk();
+            return true;
+        }
+        // Giang vien dan link phong hoc vao mot buoi da len lich (gui link rong de go link).
+        if (req.is("PUT", "meetings", "*", "link")) {
+            Meeting m = managedMeeting(req);
+            boolean hadLink = !m.getLink().isEmpty();
+            meetings.setLink(m, req.body().getString("link", ""));
+            if (!hadLink && !m.getLink().isEmpty()) {
+                Classroom classroom = school.findClassroom(m.getClassroomId());
+                platform.getCommunity().notifyMany(classroom.getStudentIds(),
+                        "Đã có link phòng học: " + m.getTitle(),
+                        classroom.getName() + " học lúc " + time(m.getStartAt()).replace('T', ' ')
+                                + ". Vào Lịch học để tham gia khi tới giờ.");
+            }
             req.sendOk();
             return true;
         }
@@ -117,7 +134,12 @@ public class MeetingApi extends ApiModule {
                 .put("hostName", nameOf(users, m.getHostId()))
                 .put("status", m.getStatus())
                 .put("recorded", m.isRecorded())
-                .put("canManage", school.canManage(viewer, classroom));
+                .put("canManage", school.canManage(viewer, classroom))
+                .put("endAt", time(m.getEndAt()))
+                .put("phase", m.getPhase())
+                .put("hasLink", !m.getLink().isEmpty())
+                // Nguoi quan ly lop luon thay link de sua; hoc sinh chi nhan link khi da toi gio hoc.
+                .put("link", school.canManage(viewer, classroom) || "OPEN".equals(m.getPhase()) ? m.getLink() : "");
     }
 
     // -------------------------------------------------------------- phong hoc

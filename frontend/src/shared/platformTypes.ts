@@ -30,6 +30,9 @@ export interface Classroom {
   canManage: boolean;
   /** Ma de hoc sinh tu tham gia lop; "" voi nguoi khong quan ly lop. */
   joinCode: string;
+  practiceCount: number;
+  /** Bai luyen tap giang vien them rieng cho lop - chi co khi lay chi tiet mot lop. */
+  practice?: { id: string; title: string; difficulty: number; solved: boolean }[];
   /** Chi co khi lay chi tiet mot lop. */
   students?: (BasicUser & { solved: number })[];
   assistants?: BasicUser[];
@@ -63,6 +66,12 @@ export interface Meeting {
   id: string; classroomId: string; classroomName: string; title: string; startAt: string;
   durationMin: number; hostName: string; status: "SCHEDULED" | "LIVE" | "ENDED";
   recorded: boolean; canManage: boolean;
+  endAt: string;
+  /** Theo gio: UPCOMING chua toi gio, OPEN dang trong gio hoc (vao phong duoc), ENDED da het gio. */
+  phase: "UPCOMING" | "OPEN" | "ENDED";
+  hasLink: boolean;
+  /** Link phong hoc. Hoc sinh chi nhan duoc khi phase = OPEN; nguoi quan ly lop luon nhan duoc. */
+  link: string;
 }
 export interface Stroke { color: string; points: string }
 export interface RoomState {

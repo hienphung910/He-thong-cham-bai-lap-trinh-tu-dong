@@ -15,17 +15,14 @@ import Submissions from "./view/history/Submissions";
 import MySubmissions from "./view/history/MySubmissions";
 import Leaderboard from "./view/history/Leaderboard";
 import Classrooms from "./view/school/Classrooms";
-import Courses from "./view/school/Courses";
 import Assignments from "./view/school/Assignments";
 import Contests from "./view/contest/Contests";
-import Meetings from "./view/meeting/Meetings";
+import Schedule from "./view/schedule/Schedule";
 import Playground from "./view/tools/Playground";
 import CpTools from "./view/tools/CpTools";
 import StressTest from "./view/tools/StressTest";
 import Assistant from "./view/tools/Assistant";
 import Analytics from "./view/profile/Analytics";
-import Achievements from "./view/profile/Achievements";
-import Billing from "./view/profile/Billing";
 import Forum from "./view/community/Forum";
 import ChatPage from "./view/community/ChatPage";
 import Notifications from "./view/community/Notifications";
@@ -63,10 +60,9 @@ const NAV_GROUPS: { title: string; icon: ReactNode; items: NavItem[] }[] = [
     items: [
       { key: "Problems", label: "Lớp học (lộ trình)" },
       { key: "Classrooms", label: "Lớp của tôi" },
-      { key: "Courses", label: "Khóa học, tài liệu" },
       { key: "Assignments", label: "Bài tập được giao" },
       { key: "Contests", label: "Kỳ thi" },
-      { key: "Meetings", label: "Phòng học trực tuyến" },
+      { key: "Meetings", label: "Lịch học" },
     ],
   },
   {
@@ -86,8 +82,6 @@ const NAV_GROUPS: { title: string; icon: ReactNode; items: NavItem[] }[] = [
     icon: <NavIcon><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></NavIcon>,
     items: [
       { key: "Analytics", label: "Phân tích học tập" },
-      { key: "Achievements", label: "Thành tích" },
-      { key: "Billing", label: "Gói dịch vụ" },
       { key: "Account", label: "Tài khoản của tôi" },
     ],
   },
@@ -294,13 +288,6 @@ function AppShell() {
           <div style={{ flex: 1 }} />
 
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {/* Cham trang thai ket noi may chu */}
-            <span title={online === false ? "Mất kết nối máy chủ" : "Đã kết nối máy chủ"} style={{
-              width: 6, height: 6, borderRadius: "50%",
-              background: online === false ? "#ff5252" : online ? "#69f0ae" : "rgba(255,255,255,0.4)",
-              animation: online === null ? "livePulse 1.4s infinite" : "none",
-            }} />
-
             {/* Chuoi ngay luyen tap: bam vao ngon lua de xem chi tiet */}
             <StreakBadge info={streak.info} />
 
@@ -359,24 +346,21 @@ function AppShell() {
               <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12 }}>
                 <div style={{ fontSize: 14, color: "#F44336", fontWeight: 600 }}>Không kết nối được máy chủ</div>
                 <div style={{ fontSize: 13, color: "#9E9E9E", textAlign: "center", lineHeight: 1.7 }}>
-                  Chạy <code style={{ color: "var(--color-red)", background: "#FDECEA", padding: "2px 6px", borderRadius: 4 }}>java ... com.ptit.oj.Main --serve</code> (xem README) rồi tải lại trang.
+                  Chạy <code style={{ color: "var(--color-red)", background: "var(--color-red-light)", padding: "2px 6px", borderRadius: 4 }}>java ... com.ptit.oj.Main --serve</code> (xem README) rồi tải lại trang.
                 </div>
               </div>
             ) : !allowed(page) ? null : (
               <>
                 {page === "Problems" && <Problems problems={sharedProblems} allProblems={problems} topics={topics} languages={languages} onSubmitted={onSubmitted} reloadKey={reloadKey} openId={openProblemId} homeKey={homeKey} />}
                 {page === "Classrooms" && <Classrooms />}
-                {page === "Courses" && <Courses />}
                 {page === "Assignments" && <Assignments />}
                 {page === "Contests" && <Contests />}
-                {page === "Meetings" && <Meetings languages={languages} />}
+                {page === "Meetings" && <Schedule />}
                 {page === "Playground" && <Playground languages={languages} />}
                 {page === "CpTools" && <CpTools />}
                 {page === "StressTest" && <StressTest languages={languages} />}
                 {page === "Assistant" && <Assistant problems={problems} />}
                 {page === "Analytics" && <Analytics />}
-                {page === "Achievements" && <Achievements />}
-                {page === "Billing" && <Billing />}
                 {page === "Account" && <MyAccount />}
                 {page === "Forum" && <Forum />}
                 {page === "Chat" && <ChatPage />}

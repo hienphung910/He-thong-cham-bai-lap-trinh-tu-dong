@@ -14,32 +14,41 @@ body {
 
 @theme inline {
   /* Page background */
-  --color-page-bg: #EEF1F5;
+  --color-page-bg: #F4F3EF;
   --color-card-bg: #FFFFFF;
 
   /* Header */
-  --color-header: #C62828;
-  --color-header-dark: #B71C1C;
+  --color-header: #111111;
+  --color-header-dark: #000000;
 
   /* Table */
-  --color-table-header-bg: #FDECEA;
-  --color-table-row-alt: #FFF8F7;
-  --color-table-border: #F0E0DE;
-  --color-table-hover: #FFF0EE;
+  --color-table-header-bg: #FFF3D6;
+  --color-table-row-alt: #FFFCF3;
+  --color-table-border: #EFE6CF;
+  --color-table-hover: #FFF1CC;
 
   /* Text */
   --color-text-primary: #212121;
   --color-text-secondary: #616161;
   --color-text-muted: #9E9E9E;
-  --color-text-red: #C62828;
+  --color-text-red: #9A5B00;
 
   /* Borders */
   --color-border: #E0E0E0;
   --color-border-light: #F0F0F0;
 
-  /* Accent */
-  --color-red: #C62828;
-  --color-red-light: #FDECEA;
+  /*
+   * Accent - theme vang den theo logo (khoi cam #F7931E tren nen den).
+   *   --color-accent    : mau NEN cua nut va cac o noi bat, chu dat len tren dung --color-on-accent (den).
+   *   --color-red       : mau CHU / vien nhan manh tren nen trang. Ten bien giu tu theme do cu de
+   *                       khong phai sua hang chuc cho; gia tri la ho phach dam, du tuong phan de doc.
+   * Mau do cua thong bao loi va verdict WA khong nam o day - chung giu nguyen mau do.
+   */
+  --color-accent: #F7931E;
+  --color-accent-dark: #E07F0A;
+  --color-on-accent: #111111;
+  --color-red: #9A5B00;
+  --color-red-light: #FFF1D6;
   --color-green: #2E7D32;
   --color-green-bg: rgba(46,125,50,0.08);
   --color-green-border: rgba(46,125,50,0.2);
@@ -65,13 +74,13 @@ body {
  * nut "Add Problem", nut luu va nen hop thoai bi trong suot -> tro sang bang mau hien tai.
  */
 :root {
-  --color-maroon: #C62828;
-  --color-maroon-pale: #FDECEA;
+  --color-maroon: #111111;
+  --color-maroon-pale: #FFF1D6;
   --color-bg-base: #FFFFFF;
   --color-bg-panel: #FFFFFF;
   --color-bg-raised: #FAFAFA;
   --color-border-subtle: #F0F0F0;
-  --color-border-active: #C62828;
+  --color-border-active: #F7931E;
   --color-red-bg: #FDECEA;
   --color-red-border: #F5C6C2;
   --color-amber-bg: rgba(245,127,23,0.08);

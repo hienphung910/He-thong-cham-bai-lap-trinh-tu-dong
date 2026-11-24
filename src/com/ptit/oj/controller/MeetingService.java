@@ -59,6 +59,28 @@ public class MeetingService {
         return meeting;
     }
 
+    /** Giang vien dan (hoac xoa, khi de trong) link phong hoc cua mot buoi trong lich. */
+    public synchronized void setLink(Meeting meeting, String link) {
+        meeting.setLink(checkLink(link));
+    }
+
+    /** Chi nhan link http(s): hoc sinh bam "Tham gia" la trinh duyet mo thang link nay. */
+    public static String checkLink(String link) {
+        String clean = link == null ? "" : link.trim();
+        if (clean.isEmpty()) return "";
+        if (clean.length() > 500) throw ApiException.badRequest("Link phòng học quá dài (tối đa 500 ký tự)");
+        String lower = clean.toLowerCase();
+        if (!lower.startsWith("https://") && !lower.startsWith("http://")) {
+            throw ApiException.badRequest("Link phòng học phải bắt đầu bằng http:// hoặc https://");
+        }
+        for (int i = 0; i < clean.length(); i++) {
+            if (Character.isWhitespace(clean.charAt(i)) || Character.isISOControl(clean.charAt(i))) {
+                throw ApiException.badRequest("Link phòng học không được chứa khoảng trắng");
+            }
+        }
+        return clean;
+    }
+
     public Meeting find(String id) {
         return meetings.findById(id).orElseThrow(() -> ApiException.notFound("Không có buổi học " + id));
     }

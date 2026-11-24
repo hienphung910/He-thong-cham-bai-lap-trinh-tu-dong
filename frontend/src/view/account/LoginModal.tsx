@@ -1,3 +1,4 @@
+import Logo from "../../shared/Logo";
 import { useState } from "react";
 import { useAuth } from "./auth";
 
@@ -61,12 +62,12 @@ export default function LoginModal() {
   return (
     <div style={{ height: "100%", display: "flex", background: "var(--color-page-bg)" }}>
       {/* Left panel */}
-      <div style={{ flex: "0 0 42%", background: "linear-gradient(160deg, #E3F2FD 0%, #EEF1F5 100%)", display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 60px" }}>
-        <h1 style={{ fontSize: 32, fontWeight: 800, color: "#212121", margin: "0 0 12px", lineHeight: 1.25 }}>CodeHub</h1>
-        <p style={{ fontSize: 15, color: "#757575", margin: 0, lineHeight: 1.6 }}>
+      <div style={{ flex: "0 0 42%", background: "#111111", display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 60px" }}>
+        <div style={{ marginBottom: 20 }}><Logo size={64} /></div>
+        <p style={{ fontSize: 15, color: "#BDBDBD", margin: 0, lineHeight: 1.6 }}>
           Luyện tập và thi lập trình trực tuyến — chấm bài tự động, nhanh và chính xác.
         </p>
-        <p style={{ fontSize: 13, color: "#BDBDBD", marginTop: 24, fontFamily: "var(--font-mono)" }}>{">_"} ready to judge</p>
+        <p style={{ fontSize: 13, color: "var(--color-accent)", marginTop: 24, fontFamily: "var(--font-mono)" }}>{">_"} ready to judge</p>
       </div>
       {/* Right panel - inline form */}
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 40 }}>
@@ -96,9 +97,9 @@ export default function LoginModal() {
                 {([["STUDENT", "Học sinh"], ["TEACHER", "Giảng viên"]] as const).map(([value, label]) => (
                   <button key={value} type="button" onClick={() => setRole(value)} style={{
                     flex: 1, height: 40, borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer",
-                    border: role === value ? "1px solid var(--color-red)" : "1px solid #E0E0E0",
-                    background: role === value ? "var(--color-red)" : "#fff",
-                    color: role === value ? "#fff" : "#616161",
+                    border: role === value ? "1px solid var(--color-accent-dark)" : "1px solid #E0E0E0",
+                    background: role === value ? "var(--color-accent)" : "#fff",
+                    color: role === value ? "var(--color-on-accent)" : "#616161",
                   }}>{label}</button>
                 ))}
               </div>
@@ -136,8 +137,8 @@ export default function LoginModal() {
           )}
 
           <button type="submit" disabled={busy} style={{
-            height: 44, background: "var(--color-red)", border: "none", borderRadius: 8,
-            color: "#fff", fontSize: 15, fontWeight: 600, cursor: busy ? "not-allowed" : "pointer",
+            height: 44, background: "var(--color-accent)", border: "none", borderRadius: 8,
+            color: "var(--color-on-accent)", fontSize: 15, fontWeight: 700, cursor: busy ? "not-allowed" : "pointer",
             opacity: busy ? 0.6 : 1,
           }}>
             {busy ? "Đang xử lý..." : mode === "login" ? "Đăng nhập" : "Tạo tài khoản"}

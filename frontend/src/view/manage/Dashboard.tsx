@@ -1,7 +1,6 @@
 import { papi } from "../../shared/platformApi";
 import { Bars, Card, ErrorBox, Page, Stat, Table, useLoad } from "../../shared/kit";
 import ProblemChip from "../../shared/ProblemChip";
-import { money } from "../profile/Billing";
 
 /** Module 33 (bao cao va thong ke): so lieu toan he thong cho giang vien va quan tri vien. */
 export default function Dashboard() {
@@ -20,9 +19,7 @@ export default function Dashboard() {
             <Stat label="Bài tập" value={d.problems} color="var(--color-orange)" />
             <Stat label="Lượt nộp" value={d.submissions} color="var(--color-green)" />
             <Stat label="Lớp học" value={d.classrooms} />
-            <Stat label="Khóa học" value={d.courses} color="var(--color-blue)" />
             <Stat label="Kỳ thi" value={d.contests} color="var(--color-purple)" />
-            <Stat label="Doanh thu (mô phỏng)" value={money(d.revenue)} color="var(--color-amber)" />
           </div>
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
             <Card title="Lượt nộp 14 ngày gần đây" style={{ flex: "2 1 420px", minWidth: 0 }}>

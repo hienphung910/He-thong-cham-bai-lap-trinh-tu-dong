@@ -9,13 +9,22 @@ Nền tảng dạy và luyện lập trình thi đấu: chấm bài tự động
 
 ## Giới thiệu
 
-Phần lõi của CodeHub là một trình chấm bài theo kiểu Codeforces. Người dùng nộp mã nguồn; hệ thống biên dịch, chạy trên bộ test với giới hạn thời gian và bộ nhớ, so sánh output với đáp án rồi trả verdict AC / WA / TLE / MLE / RE / CE cho từng test. Hệ thống có sẵn hai lớp học: lớp Nhập môn (10 chủ đề, 300 bài cho người mới bắt đầu) và lớp Lộ trình VNOI (26 chặng lập trình thi đấu theo [lộ trình tổng quát của VNOI Wiki](https://wiki.vnoi.info/roadmap/general-roadmap), tổng cộng 300 bài).
+Phần lõi của CodeHub là một trình chấm bài theo kiểu Codeforces. Người dùng nộp mã nguồn; hệ thống biên dịch, chạy trên bộ test với giới hạn thời gian và bộ nhớ, so sánh output với đáp án rồi trả verdict AC / WA / TLE / MLE / RE / CE cho từng test. Hệ thống có sẵn hai lớp học: lớp Nhập môn (10 chủ đề, 300 bài cho người mới bắt đầu) và lớp Lộ trình nâng cao (26 chặng lập trình thi đấu theo [lộ trình tổng quát của VNOI Wiki](https://wiki.vnoi.info/roadmap/general-roadmap), tổng cộng 300 bài).
 
 Quanh phần lõi đó là 40 module chức năng liệt kê trong `cp_teaching_platform_modules.txt`: lớp học, khóa học, bài tập giao, kỳ thi, phòng học, phân tích kết quả, diễn đàn, quản trị. 31 module chạy thật. 9 module còn lại cần hạ tầng mà project không có (truyền video, cổng thanh toán, mô hình AI) nên được làm ở dạng mô phỏng và ghi nhãn "MÔ PHỎNG" ngay trên giao diện. Bảng đầy đủ nằm ở mục [Bốn mươi module](#bốn-mươi-module).
 
 Backend chỉ dùng API chuẩn của JDK. Máy chủ HTTP, bộ đọc/ghi JSON, băm mật khẩu và quản lý phiên đều do nhóm tự viết. Thư viện ngoài duy nhất là MySQL Connector/J; dữ liệu được truy cập bằng JDBC, không qua framework hay ORM.
 
 ## Tính năng
+
+> **Giao diện hiện tại** dùng theme vàng - đen theo logo và đã được rút gọn so với danh sách bên dưới:
+>
+> - **Lịch học** thay cho Phòng học trực tuyến: giảng viên lên lịch buổi học cho lớp và dán link phòng học (Google Meet, Zoom...) vào buổi đó, lúc lên lịch hoặc về sau. Học sinh thấy giờ học, lớp, giảng viên; từ 10 phút trước giờ học tới hết buổi, nút *Tham gia phòng học* mở link đó. Phòng học tự viết (bảng trắng, mã nguồn dùng chung, điểm danh, bản ghi) không còn trên giao diện.
+> - **Lớp của tôi** có thêm mục *Bài tập luyện tập*: các bài giảng viên chọn riêng cho lớp. Giảng viên bấm vào một học sinh trong danh sách lớp để xem phân tích học tập của em đó.
+> - **Đã bỏ khỏi giao diện**: Khóa học và tài liệu, Thành tích, Gói dịch vụ, và phần điểm yếu trong Phân tích học tập.
+> - **Ô soạn mã** (trang làm bài, IDE trực tuyến, xem lại bài nộp) dùng CodeMirror, tô màu cú pháp theo bảng màu Dark+ của Visual Studio Code.
+>
+> API của các phần đã bỏ khỏi giao diện vẫn còn ở backend và trong bảng REST API bên dưới.
 
 ### Chấm bài
 - Hỗ trợ 4 ngôn ngữ: Java, C++, Python, JavaScript. Thêm ngôn ngữ mới chỉ cần viết một lớp con `Language`.
@@ -25,7 +34,7 @@ Backend chỉ dùng API chuẩn của JDK. Máy chủ HTTP, bộ đọc/ghi JSON
 - Test ẩn không bao giờ được gửi xuống trình duyệt, và thông báo WA không làm lộ đáp án. Với test ẩn, thông báo WA và RE chỉ ghi loại lỗi; nội dung do chương trình in ra (giá trị sai, dòng đầu của stderr) chỉ hiện ở test ví dụ, để bài nộp không dùng thông báo lỗi làm kênh lấy input của test ẩn.
 
 ### Học tập
-- Hai lớp học, mỗi lớp có lộ trình riêng: lớp Nhập môn gồm 10 chủ đề từ nhập/xuất đến mảng, xâu và sắp xếp; lớp Lộ trình VNOI gồm 26 chặng từ đệ quy, đồ thị đến luồng và quy hoạch động nâng cao. Có theo dõi tiến độ từng chặng, nút *Học tiếp* và *Bài tiếp theo*.
+- Hai lớp học, mỗi lớp có lộ trình riêng: lớp Nhập môn gồm 10 chủ đề từ nhập/xuất đến mảng, xâu và sắp xếp; lớp Lộ trình nâng cao gồm 26 chặng từ đệ quy, đồ thị đến luồng và quy hoạch động nâng cao. Có theo dõi tiến độ từng chặng, nút *Học tiếp* và *Bài tiếp theo*.
 - Lớp Nhập môn có 300 bài mã `K001` đến `K300`; lớp VNOI có 300 bài mã `V001` đến `V300`, mỗi chặng từ 6 đến 16 bài, xếp từ dễ đến khó. Mỗi bài có test ví dụ, test ẩn và lời giải mẫu C++ trong `data/submissions/`.
 - Lọc bài theo độ khó, tìm bài theo mã hoặc tên, bảng xếp hạng.
 - Sau mỗi lần nộp, ngay dưới kết quả chấm có thẻ "Phân tích sau khi nộp": các lần đã nộp bài đó, nhận xét cho lần nộp vừa rồi, tiến độ chủ đề của bài, các chủ đề đang yếu và ba bài nên làm tiếp.
@@ -438,6 +447,7 @@ Trừ 4 endpoint công khai, mọi request phải gửi header `Authorization: B
 | POST | `/api/classrooms/{mã tham gia}/join` | học sinh | Tham gia lớp bằng mã tham gia (không phải mã lớp) |
 | POST, DELETE | `/api/classrooms/{id}/students`, `.../students/{userId}` | quản lý lớp | Thêm, xoá học sinh |
 | POST, DELETE | `/api/classrooms/{id}/assistants`, `.../assistants/{userId}` | quản lý lớp | Thêm, xoá trợ giảng |
+| POST, DELETE | `/api/classrooms/{id}/problems`, `.../problems/{mã bài}` | quản lý lớp | Thêm (`problemIds`), bỏ bài luyện tập riêng của lớp. Chi tiết lớp trả danh sách này trong `practice` |
 | GET, POST, DELETE | `/api/parents`, `/api/parents/{id}` | GV / admin | Danh bạ phụ huynh |
 | GET | `/api/parents/{id}/report` | GV / admin | Báo cáo học tập của con |
 | GET | `/api/courses`, `/api/documents` | đăng nhập | Khóa học kèm giáo trình; tài liệu |
@@ -448,6 +458,7 @@ Trừ 4 endpoint công khai, mọi request phải gửi header `Authorization: B
 | GET | `/api/assignments/{id}/progress` | quản lý lớp | Bảng tiến độ cả lớp |
 | GET | `/api/meetings` | đăng nhập | Buổi học của các lớp mình thuộc về |
 | POST, DELETE | `/api/meetings`, `/api/meetings/{id}` | quản lý lớp | Lên lịch, xoá buổi học |
+| PUT | `/api/meetings/{id}/link` | quản lý lớp | Dán, sửa link phòng học của một buổi trong lịch (chỉ nhận `http://`, `https://`; gửi rỗng để gỡ). Học sinh chỉ nhận được link trong `GET /api/meetings` khi buổi học đang mở |
 | POST | `/api/meetings/{id}/start`, `.../end` | quản lý lớp | Bắt đầu, kết thúc buổi học |
 | GET | `/api/meetings/{id}/room?strokes=N` | thành viên lớp | Trạng thái phòng; cũng là lệnh báo "tôi còn ở đây" và điểm danh |
 | PUT | `/api/meetings/{id}/room/code` | chủ phòng, hoặc thành viên khi bật cùng lập trình | Cập nhật mã nguồn dùng chung |
@@ -461,7 +472,7 @@ Trừ 4 endpoint công khai, mọi request phải gửi header `Authorization: B
 | POST, DELETE | `/api/contests/{id}/problems`, `/api/contests/{id}/problems/{mã bài}` | người tạo / admin | Thêm, bớt một bài của kỳ thi |
 | DELETE | `/api/contests/{id}` | người tạo / admin | Xoá kỳ thi |
 | GET | `/api/analytics/me` | đăng nhập | Hồ sơ học tập của mình |
-| GET | `/api/analytics/users/{username}` | GV / admin | Hồ sơ học tập của một học sinh |
+| GET | `/api/analytics/users/{username}` | admin; GV với học sinh lớp mình | Hồ sơ học tập của một học sinh |
 | GET | `/api/dashboard` | GV / admin | Số liệu toàn hệ thống |
 | GET | `/api/gamification/leaderboard` | đăng nhập | Bảng điểm thưởng |
 | POST | `/api/assistant/hint` | đăng nhập | Gợi ý cho một bài |

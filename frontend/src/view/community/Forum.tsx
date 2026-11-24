@@ -85,7 +85,7 @@ function PostDetail({ id, onBack }: { id: string; onBack: () => void }) {
           <Card title={`Trả lời (${p.replies?.length ?? 0})`}>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {(p.replies ?? []).map((r, i) => (
-                <div key={i} style={{ borderLeft: "3px solid #FDECEA", paddingLeft: 12 }}>
+                <div key={i} style={{ borderLeft: "3px solid #F3D9A4", paddingLeft: 12 }}>
                   <div style={{ fontSize: 12, color: "#9E9E9E" }}><b style={{ color: "#212121" }}>{r.authorName}</b> · {fmtTime(r.createdAt)}</div>
                   <div style={{ fontSize: 13.5, color: "#424242", whiteSpace: "pre-wrap" }}>{r.body}</div>
                 </div>

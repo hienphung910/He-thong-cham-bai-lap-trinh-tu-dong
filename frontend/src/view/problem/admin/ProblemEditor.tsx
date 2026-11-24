@@ -116,7 +116,7 @@ export default function ProblemEditor({ topics, onClose, onCreated }: { topics: 
 
         <div style={{ padding: "24px 28px", display: "flex", flexDirection: "column", gap: 14 }}>
           {error && (
-            <div style={{ padding: "10px 14px", borderRadius: 7, fontSize: 12.5, background: "var(--color-red-bg)", border: "1px solid var(--color-red-border)", color: "var(--color-red)", fontFamily: "var(--font-mono)", whiteSpace: "pre-wrap" }}>{error}</div>
+            <div style={{ padding: "10px 14px", borderRadius: 7, fontSize: 12.5, background: "var(--color-red-bg)", border: "1px solid var(--color-red-border)", color: "#C62828", fontFamily: "var(--font-mono)", whiteSpace: "pre-wrap" }}>{error}</div>
           )}
           {saved && (
             <div style={{ padding: "10px 14px", borderRadius: 7, fontSize: 12.5, background: "var(--color-green-bg)", border: "1px solid var(--color-green-border)", color: "var(--color-green)", fontFamily: "var(--font-mono)" }}>Đã tạo bài tập.</div>

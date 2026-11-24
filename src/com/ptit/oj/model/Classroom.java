@@ -1,7 +1,9 @@
 package com.ptit.oj.model;
 
 import java.security.SecureRandom;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
@@ -50,6 +52,11 @@ public class Classroom extends Entity {
     public Set<String> getAssistantIds() { return assistantIds; }
     public Set<String> getStudentIds() { return studentIds; }
     public Set<String> getRemovedIds() { return removedIds; }
+
+    /** Ma cac bai giang vien chon rieng cho lop nay luyen tap, theo thu tu them. */
+    private final List<String> practiceProblemIds = new CopyOnWriteArrayList<>();
+
+    public List<String> getPracticeProblemIds() { return practiceProblemIds; }
     public String getJoinCode() { return joinCode; }
 
     /** Giang vien phu trach hoac tro giang cua lop. */

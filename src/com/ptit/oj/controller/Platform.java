@@ -49,6 +49,8 @@ public class Platform {
             if (!"UPCOMING".equals(c.getStatus())) ids.addAll(c.getProblemIds());
         }
         for (Assignment a : assignments.getAll()) ids.addAll(a.getProblemIds());
+        // Bai luyen tap giang vien them rieng cho lop cung coi la da cong bo de hoc sinh mo duoc.
+        for (com.ptit.oj.model.Classroom c : school.getClassrooms()) ids.addAll(c.getPracticeProblemIds());
         for (Course c : courses.getCourses()) {
             for (Lesson l : c.getLessons()) ids.addAll(l.getProblemIds());
         }

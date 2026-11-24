@@ -1,6 +1,7 @@
 package com.ptit.oj.controller.api;
 
 import com.ptit.oj.controller.AnalyticsService;
+import com.ptit.oj.controller.ApiException;
 import com.ptit.oj.controller.Json;
 import com.ptit.oj.controller.Platform;
 import com.ptit.oj.model.Problem;
@@ -38,8 +39,13 @@ public class AnalyticsApi extends ApiModule {
             return true;
         }
         if (req.is("GET", "analytics", "users", "*")) {
-            req.staff();
-            req.send(profileJson(requireUsername(req.arg(0))));
+            User viewer = req.staff();
+            User target = requireUsername(req.arg(0));
+            // Quan tri vien xem duoc moi nguoi; giang vien chi xem hoc sinh trong lop minh quan ly.
+            if (!User.ROLE_ADMIN.equals(viewer.getRoleCode()) && !teaches(viewer, target)) {
+                throw ApiException.forbidden("Bạn chỉ xem được phân tích của học sinh trong lớp mình dạy");
+            }
+            req.send(profileJson(target));
             return true;
         }
         if (req.is("GET", "dashboard")) {
@@ -116,6 +122,14 @@ public class AnalyticsApi extends ApiModule {
             items.add(Json.obj().put("key", e.getKey()).put("count", e.getValue().intValue()).build());
         }
         return Json.array(items);
+    }
+
+    /** Nguoi xem co quan ly mot lop ma target la hoc sinh khong. */
+    private boolean teaches(User viewer, User target) {
+        for (com.ptit.oj.model.Classroom c : platform.getSchool().getClassrooms()) {
+            if (c.isTaughtBy(viewer.getId()) && c.getStudentIds().contains(target.getId())) return true;
+        }
+        return false;
     }
 
     // ------------------------------------------------- bao cao toan he thong

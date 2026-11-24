@@ -143,7 +143,7 @@ export function Btn({ children, onClick, kind = "primary", small, disabled, titl
   small?: boolean; disabled?: boolean; title?: string;
 }) {
   const colors: Record<string, CSSProperties> = {
-    primary: { background: "var(--color-red)", color: "#fff", border: "1px solid var(--color-red)" },
+    primary: { background: "var(--color-accent)", color: "var(--color-on-accent)", border: "1px solid var(--color-accent-dark)" },
     ghost: { background: "#fff", color: "#616161", border: "1px solid #E0E0E0" },
     danger: { background: "#fff", color: "#C62828", border: "1px solid #FFCDD2" },
   };
@@ -254,7 +254,7 @@ export function Progress({ value, color = "var(--color-green)" }: { value: numbe
 }
 
 /** Bieu do cot don gian: moi phan tu mot cot, cao theo ti le voi gia tri lon nhat. */
-export function Bars({ items, color = "var(--color-red)", height = 110 }: {
+export function Bars({ items, color = "var(--color-accent)", height = 110 }: {
   items: { label: string; value: number }[]; color?: string; height?: number;
 }) {
   const max = Math.max(1, ...items.map((i) => i.value));

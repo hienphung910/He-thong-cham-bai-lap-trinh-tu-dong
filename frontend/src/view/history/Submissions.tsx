@@ -63,7 +63,7 @@ export default function Submissions({ reloadKey }: { reloadKey: number }) {
             onClick={() => setAuto((v) => !v)}
             style={{
               width: 44, height: 24, borderRadius: 12, border: "none", cursor: "pointer",
-              background: auto ? "var(--color-red)" : "#E0E0E0",
+              background: auto ? "var(--color-accent)" : "#E0E0E0",
               position: "relative", transition: "background 0.2s",
             }}
           >
@@ -121,7 +121,7 @@ export default function Submissions({ reloadKey }: { reloadKey: number }) {
                 <td style={{ ...TD, textAlign: "left" }}>
                   <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 600, color: "var(--color-red)" }}>{s.problem.id}</span>
                   {" · "}
-                  <span style={{ color: s.verdict === "AC" ? "var(--color-green)" : "var(--color-red)", fontWeight: 500 }}>{s.problem.title}</span>
+                  <span style={{ color: s.verdict === "AC" ? "var(--color-green)" : "var(--color-wa-text)", fontWeight: 500 }}>{s.problem.title}</span>
                 </td>
                 <td style={{ ...TD, fontSize: 13, textAlign: "center" }}>{s.language}</td>
                 <td style={{ ...TD, textAlign: "center" }}><VBadge verdict={s.verdict} /></td>
@@ -180,7 +180,7 @@ export function SubmissionDetail({ detail, onClose }: { detail: Submission; onCl
           {detail.sourceCode && (
             <div>
               <div style={{ fontFamily: "var(--font-mono)", fontSize: 10, color: "#9E9E9E", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>Mã nguồn</div>
-              <CodeEditor value={detail.sourceCode} readOnly maxHeight={300} />
+              <CodeEditor value={detail.sourceCode} language={detail.language} readOnly maxHeight={300} />
             </div>
           )}
         </div>

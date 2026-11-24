@@ -144,6 +144,20 @@ public class SchoolService {
         classroom.getAssistantIds().remove(userId);
     }
 
+    /** Them cac bai luyen tap cho lop; bai da co thi bo qua. */
+    public synchronized void addPracticeProblems(Classroom classroom, List<String> problemIds) {
+        if (classroom.getPracticeProblemIds().size() + problemIds.size() > 300) {
+            throw ApiException.badRequest("Mỗi lớp tối đa 300 bài luyện tập");
+        }
+        for (String id : problemIds) {
+            if (!classroom.getPracticeProblemIds().contains(id)) classroom.getPracticeProblemIds().add(id);
+        }
+    }
+
+    public synchronized void removePracticeProblem(Classroom classroom, String problemId) {
+        classroom.getPracticeProblemIds().remove(problemId == null ? "" : problemId.trim().toUpperCase());
+    }
+
     public void deleteClassroom(String id) {
         classrooms.deleteById(id);
     }

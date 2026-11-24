@@ -231,7 +231,7 @@ export default function ProblemDetail({
               onClick={() => void doSubmit()} disabled={busy}
               style={{
                 height: 36, padding: "0 20px", border: "none", borderRadius: 6,
-                fontSize: 13, fontWeight: 700, color: "#fff", background: "var(--color-red)",
+                fontSize: 13, fontWeight: 700, color: "var(--color-on-accent)", background: "var(--color-accent)",
                 cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.6 : 1,
               }}
             >
@@ -245,7 +245,7 @@ export default function ProblemDetail({
             </div>
           )}
 
-          <CodeEditor value={code} onChange={setCode} />
+          <CodeEditor value={code} language={language} onChange={setCode} />
         </div>
 
         {/* ═══ RESULTS ═══ */}

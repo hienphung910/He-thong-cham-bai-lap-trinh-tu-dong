@@ -1,36 +1,25 @@
-import { useState } from "react";
 import { papi } from "../../shared/platformApi";
-import { Bars, Btn, Card, ErrorBox, Field, INPUT, Muted, Page, Progress, Row, Stat, Table, Tag, useLoad } from "../../shared/kit";
+import { Bars, Btn, Card, ErrorBox, Muted, Page, Progress, Stat, Table, Tag, useLoad } from "../../shared/kit";
 import ProblemChip from "../../shared/ProblemChip";
 import { DIFFICULTY_META } from "../problem/learningPath";
-import { useAuth } from "../account/auth";
 
 /**
- * Module 23 (phan tich ket qua), 24 (danh gia nang luc), 25 (phat hien diem yeu),
- * 26 (goi y bai tap). Ca bon phan doc tu mot lan goi /api/analytics/...
- * Giang vien nhap ten dang nhap de xem ho so cua mot hoc sinh.
+ * Module 23 (phan tich ket qua), 24 (danh gia nang luc), 26 (goi y bai tap). Ca ba phan doc tu
+ * mot lan goi /api/analytics/...
+ *
+ * Khong truyen username: hien ho so cua chinh nguoi dang dang nhap (muc Ca nhan tren menu).
+ * Co username: giang vien dang xem ho so cua mot hoc sinh trong lop minh - mo tu danh sach hoc
+ * sinh o trang Lop cua toi; may chu tu choi neu hoc sinh do khong thuoc lop giang vien quan ly.
  */
-export default function Analytics() {
-  const { user } = useAuth();
-  const isStaff = user?.role !== "STUDENT";
-  const [username, setUsername] = useState("");      // "" = xem cua chinh minh
-  const [typing, setTyping] = useState("");
+export default function Analytics({ username, onBack }: { username?: string; onBack?: () => void }) {
   const profile = useLoad(() => (username ? papi.profileOf(username) : papi.myProfile()), [username]);
   const p = profile.data;
-  const weak = (p?.topics ?? []).filter((t) => t.weak);
   const started = (p?.topics ?? []).filter((t) => t.total > 0);
 
   return (
-    <Page title="Phân tích học tập" subtitle={p ? `Hồ sơ của ${p.user.fullName} (@${p.user.username}) - tính từ lịch sử nộp bài.` : ""}>
-      {isStaff && (
-        <Card title="Xem hồ sơ của học sinh">
-          <Row>
-            <Field label="Tên đăng nhập của học sinh"><input style={INPUT} value={typing} onChange={(e) => setTyping(e.target.value)} placeholder="ví dụ hiennm" /></Field>
-            <Btn onClick={() => setUsername(typing.trim())}>Xem</Btn>
-            <Btn kind="ghost" onClick={() => { setTyping(""); setUsername(""); }}>Của tôi</Btn>
-          </Row>
-        </Card>
-      )}
+    <Page title={username ? `Phân tích học tập — ${p ? p.user.fullName : username}` : "Phân tích học tập"}
+      subtitle={p ? `Hồ sơ của ${p.user.fullName} (@${p.user.username}) - tính từ lịch sử nộp bài.` : ""}
+      actions={onBack ? <Btn kind="ghost" onClick={onBack}>← Quay lại lớp</Btn> : undefined}>
       <ErrorBox text={profile.error} />
       {p && (
         <>
@@ -51,31 +40,20 @@ export default function Analytics() {
           </div>
 
           <Card title="Đánh giá năng lực theo chủ đề">
-            <Table head={["Chủ đề", "Lớp", "Đã giải", "Điểm kỹ năng", "Mức", "Lượt nộp sai"]}
-              rows={started.map((t) => [
-                <b>{t.name}</b>, t.group, `${t.solved}/${t.total}`,
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}><Progress value={t.score} /><span>{t.score}</span></div>,
-                <Tag color={t.score >= 80 ? "green" : t.score >= 50 ? "blue" : t.score >= 20 ? "orange" : "gray"}>{t.level}</Tag>,
-                `${t.failed}/${t.attempts}`,
-              ])} />
+            {started.length === 0 && <Muted>Chưa nộp bài nào trong lộ trình.</Muted>}
+            {started.length > 0 && (
+              <Table head={["Chủ đề", "Lớp", "Đã giải", "Điểm kỹ năng", "Mức"]}
+                rows={started.map((t) => [
+                  <b>{t.name}</b>, t.group, `${t.solved}/${t.total}`,
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}><Progress value={t.score} /><span>{t.score}</span></div>,
+                  <Tag color={t.score >= 80 ? "green" : t.score >= 50 ? "blue" : t.score >= 20 ? "orange" : "gray"}>{t.level}</Tag>,
+                ])} />
+            )}
           </Card>
 
-          <Card title="Điểm yếu cần khắc phục">
+          <Card title={username ? "Bài tập gợi ý" : "Bài tập gợi ý cho bạn"}>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {weak.length === 0
-                ? <Muted>Chưa phát hiện chủ đề yếu (chủ đề yếu = đã nộp từ 3 lần mà ít nhất một nửa là sai).</Muted>
-                : <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", fontSize: 13 }}>
-                    Chủ đề đang yếu: {weak.map((t) => <Tag key={t.id} color="red">{t.name} ({t.failed}/{t.attempts} lượt sai)</Tag>)}
-                  </div>}
-              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13.5, color: "#424242", lineHeight: 1.7 }}>
-                {p.weaknessNotes.map((n, i) => <li key={i}>{n}</li>)}
-              </ul>
-            </div>
-          </Card>
-
-          <Card title="Bài tập gợi ý cho bạn">
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {p.recommendations.length === 0 && <Muted>Bạn đã giải hết các bài trong lộ trình.</Muted>}
+              {p.recommendations.length === 0 && <Muted>Đã giải hết các bài trong lộ trình.</Muted>}
               {p.recommendations.map((r) => {
                 const diff = DIFFICULTY_META[r.difficulty];
                 return (

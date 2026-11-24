@@ -30,7 +30,7 @@ P003 | lananh  | P003/avg_ac.py    | AC
 P001 | tuanpv  | P001/sum_ac.js    | AC
 P002 | lananh  | P002/prime_wa.js  | WA
 
-# --- Lớp Lộ trình VNOI: lời giải mẫu C++ cho 26 bài V001..V026.
+# --- Lớp Lộ trình nâng cao: lời giải mẫu C++ cho 26 bài V001..V026.
 # --- Máy chưa cài g++ thì các dòng này tự động BỎ QUA.
 V001 | hiennm  | V001/ref.cpp   | AC
 V002 | hiennm  | V002/ref.cpp   | AC

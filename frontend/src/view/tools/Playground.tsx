@@ -32,7 +32,7 @@ export default function Playground({ languages }: { languages: LanguageInfo[] })
   }
 
   return (
-    <Page title="IDE trực tuyến" subtitle="Chạy thử mã nguồn với input tự nhập. Không tính là nộp bài, không lưu vào lịch sử."
+    <Page title="IDE trực tuyến"
       actions={<>
         <select style={{ ...INPUT, width: 150 }} value={language} onChange={(e) => setLanguage(e.target.value)}>
           {languages.map((l) => <option key={l.name} value={l.name} disabled={!l.available}>{l.name}{l.available ? "" : " (chưa cài)"}</option>)}
@@ -42,7 +42,7 @@ export default function Playground({ languages }: { languages: LanguageInfo[] })
       <ErrorBox text={error} />
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
         <Card title="Mã nguồn" style={{ flex: "2 1 460px", minWidth: 0 }}>
-          <CodeEditor value={code} onChange={setCode} minHeight={420} placeholder="Viết hoặc dán mã nguồn vào đây..." />
+          <CodeEditor value={code} language={language} onChange={setCode} minHeight={420} placeholder="Viết hoặc dán mã nguồn vào đây..." />
         </Card>
         <div style={{ flex: "1 1 300px", minWidth: 260, display: "flex", flexDirection: "column", gap: 16 }}>
           <Card title="Input (stdin)">

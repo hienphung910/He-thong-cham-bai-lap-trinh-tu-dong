@@ -2,9 +2,9 @@ import { createContext, useContext } from "react";
 
 /** Ten cac trang cua ung dung - cung la khoa cua cac muc trong menu tren cung (xem App.tsx). */
 export type PageKey =
-  | "Problems" | "Classrooms" | "Courses" | "Assignments" | "Contests" | "Meetings"
+  | "Problems" | "Classrooms" | "Assignments" | "Contests" | "Meetings"
   | "Playground" | "CpTools" | "StressTest" | "Assistant"
-  | "Analytics" | "Achievements" | "Billing" | "Account"
+  | "Analytics" | "Account"
   | "Forum" | "Chat" | "Notifications"
   | "Submissions" | "MySubmissions" | "Leaderboard"
   | "Dashboard" | "TeachingAssistant" | "Parents" | "MyProblems"

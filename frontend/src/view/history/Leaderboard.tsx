@@ -117,7 +117,7 @@ export default function Leaderboard({ reloadKey, problems }: { reloadKey: number
                       background: r.rank <= 3 ? "#FFCDD2" : "#F5F5F5",
                       display: "flex", alignItems: "center", justifyContent: "center",
                     }}>
-                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke={r.rank <= 3 ? "#C62828" : "#9E9E9E"} strokeWidth="1.2">
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke={r.rank <= 3 ? "#9A5B00" : "#9E9E9E"} strokeWidth="1.2">
                         <circle cx="8" cy="5" r="3" /><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6" />
                       </svg>
                     </div>

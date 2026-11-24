@@ -163,7 +163,7 @@ export default function Problems({
               onClick={() => setSelectedId(nextToLearn.id)}
               style={{
                 width: "100%", marginTop: 12, padding: "10px 12px", textAlign: "left", cursor: "pointer",
-                background: "#FDECEA", border: "1px solid #F5C6C2", borderRadius: 8,
+                background: "var(--color-red-light)", border: "1px solid #F3D9A4", borderRadius: 8,
               }}
             >
               <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "var(--color-red)" }}>
@@ -237,7 +237,7 @@ export default function Problems({
                 background: "#fff", border: "1px solid #E0E0E0", borderRadius: 6,
                 fontSize: 13, color: "#212121", outline: "none", boxSizing: "border-box",
               }}
-              onFocus={(e) => { e.target.style.borderColor = "#C62828"; }}
+              onFocus={(e) => { e.target.style.borderColor = "#F7931E"; }}
               onBlur={(e) => { e.target.style.borderColor = "#E0E0E0"; }}
             />
           </div>
@@ -249,7 +249,7 @@ export default function Problems({
                 <button key={d} onClick={() => setDiffFilter(d)} style={{
                   height: 30, padding: "0 12px", borderRadius: 15, cursor: "pointer", fontSize: 12, fontWeight: on ? 700 : 500,
                   border: `1px solid ${on ? (meta?.color ?? "var(--color-red)") : "#E0E0E0"}`,
-                  background: on ? (meta?.bg ?? "#FDECEA") : "#fff",
+                  background: on ? (meta?.bg ?? "var(--color-red-light)") : "#fff",
                   color: on ? (meta?.color ?? "var(--color-red)") : "#616161",
                 }}>
                   {meta?.label ?? "Mọi mức"}
@@ -363,7 +363,7 @@ function StepRow({
       style={{
         position: "relative", width: "100%", display: "flex", alignItems: "center", gap: 10,
         padding: "8px 16px 8px 13px", border: "none", cursor: "pointer", textAlign: "left",
-        background: active ? "#FDECEA" : "transparent",
+        background: active ? "var(--color-red-light)" : "transparent",
         borderLeft: `3px solid ${active ? "var(--color-red)" : "transparent"}`,
       }}
     >
