@@ -7,7 +7,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * Cuoc thi lap trinh (Module 21): mot khoang thoi gian + danh sach bai.
+ * Cuoc thi lap trinh (Module 21): mot khoang thoi gian + danh sach bai, to chuc cho MOT lop.
+ * Chi thanh vien cua lop do (va quan tri vien) thay ky thi; chi hoc sinh cua lop vao thi duoc.
  * Moi cuoc thi co mot nguoi tao; chi nguoi do (hoac quan tri vien) duoc them / bot bai va xoa cuoc thi.
  */
 public class Contest extends Entity {
@@ -19,6 +20,7 @@ public class Contest extends Entity {
     private final List<String> problemIds;
     private final String ownerUsername;     // ten dang nhap cua nguoi tao
     private final String ownerName;         // ho ten nguoi tao, de hien thi
+    private final String classroomId;       // lop duoc thi
     /** Nguoi tao ky thi bat / tat duoc: co ghi lai viec roi tab, sao chep, dan... cua thi sinh hay khong. */
     private volatile boolean proctored = true;
     /**
@@ -30,7 +32,8 @@ public class Contest extends Entity {
     private final Map<String, LocalDateTime> finishedAt = new ConcurrentHashMap<>();
 
     public Contest(String id, String title, String description, LocalDateTime startAt,
-                   int durationMin, List<String> problemIds, String ownerUsername, String ownerName) {
+                   int durationMin, List<String> problemIds, String ownerUsername, String ownerName,
+                   String classroomId) {
         super(id);
         this.title = title;
         this.description = description;
@@ -40,6 +43,7 @@ public class Contest extends Entity {
         this.problemIds = new CopyOnWriteArrayList<>(problemIds);
         this.ownerUsername = ownerUsername;
         this.ownerName = ownerName;
+        this.classroomId = classroomId;
     }
 
     public String getTitle() { return title; }
@@ -49,6 +53,7 @@ public class Contest extends Entity {
     public List<String> getProblemIds() { return problemIds; }
     public String getOwnerUsername() { return ownerUsername; }
     public String getOwnerName() { return ownerName; }
+    public String getClassroomId() { return classroomId; }
 
     public boolean isProctored() { return proctored; }
     public void setProctored(boolean proctored) { this.proctored = proctored; }

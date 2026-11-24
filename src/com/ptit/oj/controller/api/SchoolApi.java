@@ -105,6 +105,7 @@ public class SchoolApi extends ApiModule {
             // nua (moi thao tac deu can tim thay lop) va bai kho rieng trong do van bi coi la da cong bo.
             platform.getAssignments().deleteByClassroom(c.getId());
             platform.getMeetings().deleteByClassroom(c.getId());
+            platform.getContests().deleteByClassroom(c.getId());
             req.sendOk();
             return true;
         }

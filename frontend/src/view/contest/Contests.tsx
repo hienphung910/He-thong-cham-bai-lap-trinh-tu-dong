@@ -18,10 +18,13 @@ export default function Contests() {
   const { user } = useAuth();
   const isStaff = user?.role !== "STUDENT";
   const list = useLoad(() => papi.contests());
+  // Ky thi to chuc cho mot lop: giang vien chon trong cac lop minh quan ly (quan tri vien thay moi lop).
+  const classes = useLoad(() => (isStaff ? papi.classrooms() : Promise.resolve([])), [isStaff]);
+  const managed = (classes.data ?? []).filter((c) => c.canManage);
   // Ky thi dang mo nam trong lich su trinh duyet: nut Back quay ve danh sach ky thi.
   const [openId, setOpenId] = useBackState<string | null>("contest", null);
   const [error, setError] = useState("");
-  const [form, setForm] = useState({ title: "", description: "", startAt: localDateTime(), durationMin: 120, problems: "", proctored: true });
+  const [form, setForm] = useState({ title: "", description: "", startAt: localDateTime(), durationMin: 120, problems: "", proctored: true, classroomId: "" });
 
   async function act(work: () => Promise<unknown>) {
     setError("");
@@ -31,17 +34,23 @@ export default function Contests() {
   if (openId) return <ContestDetail id={openId} onBack={() => setOpenId(null)} />;
 
   return (
-    <Page title="Kỳ thi" subtitle="Luật ICPC: xếp theo số bài giải được, bằng nhau thì ít phút phạt hơn đứng trước (mỗi lần nộp sai +20 phút).">
+    <Page title="Kỳ thi">
       <ErrorBox text={error || list.error} />
       {isStaff && (
         <Card title="Tạo kỳ thi">
           <Row>
+            <Field label="Lớp tham gia">
+              <select style={INPUT} value={form.classroomId} onChange={(e) => setForm({ ...form, classroomId: e.target.value })}>
+                <option value="">(chọn lớp)</option>
+                {managed.map((c) => <option key={c.id} value={c.id}>{c.name} · {c.studentCount} học sinh</option>)}
+              </select>
+            </Field>
             <Field label="Tên kỳ thi"><input style={INPUT} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></Field>
             <Field label="Bắt đầu"><input type="datetime-local" style={INPUT} value={form.startAt} onChange={(e) => setForm({ ...form, startAt: e.target.value })} /></Field>
             <Field label="Thời lượng (phút)"><input type="number" style={INPUT} value={form.durationMin} onChange={(e) => setForm({ ...form, durationMin: Number(e.target.value) })} /></Field>
             <Field label="Các bài (mã bài kho chung hoặc kho của bạn, cách nhau dấu phẩy)"><input style={INPUT} value={form.problems} onChange={(e) => setForm({ ...form, problems: e.target.value })} placeholder="K001, K002" /></Field>
-            <Btn onClick={() => void act(async () => {
-              await papi.createContest({ title: form.title, description: form.description, startAt: form.startAt, durationMin: form.durationMin, problemIds: parseIds(form.problems), proctored: form.proctored });
+            <Btn disabled={!form.classroomId} title={form.classroomId ? undefined : "Hãy chọn lớp tham gia kỳ thi"} onClick={() => void act(async () => {
+              await papi.createContest({ title: form.title, description: form.description, startAt: form.startAt, durationMin: form.durationMin, problemIds: parseIds(form.problems), proctored: form.proctored, classroomId: form.classroomId });
               setForm({ ...form, title: "", problems: "" });
             })}>Tạo</Btn>
             <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 13, height: 34, whiteSpace: "nowrap" }}
@@ -52,10 +61,11 @@ export default function Contests() {
           </Row>
         </Card>
       )}
-      <Table head={["Kỳ thi", "Người tạo", "Bắt đầu", "Thời lượng", "Số bài", "Trạng thái", ""]} empty="Chưa có kỳ thi nào."
+      <Table head={["Kỳ thi", "Lớp", "Người tạo", "Bắt đầu", "Thời lượng", "Số bài", "Trạng thái", ""]}
+        empty={isStaff ? "Chưa có kỳ thi nào." : "Các lớp của bạn chưa có kỳ thi nào."}
         rows={(list.data ?? []).map((c) => [
           <span><b>{c.title}</b><div style={{ fontSize: 12, color: "#9E9E9E" }}>{c.description}</div></span>,
-          c.ownerName, fmtTime(c.startAt), `${c.durationMin} phút`, c.problemCount,
+          c.classroomName, c.ownerName, fmtTime(c.startAt), `${c.durationMin} phút`, c.problemCount,
           <Tag color={STATUS[c.status].color}>{STATUS[c.status].label}</Tag>,
           <div style={{ display: "flex", gap: 6 }}>
             <Btn small onClick={() => setOpenId(c.id)}>Xem</Btn>
@@ -102,7 +112,7 @@ function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
   const pastEvents = events.data ?? [];
 
   return (
-    <Page title={c ? c.title : "Kỳ thi"} subtitle={c ? `${fmtTime(c.startAt)} → ${fmtTime(c.endAt)} · ${c.description}` : ""}
+    <Page title={c ? c.title : "Kỳ thi"} subtitle={c ? `Lớp ${c.classroomName} · ${fmtTime(c.startAt)} → ${fmtTime(c.endAt)}${c.description ? ` · ${c.description}` : ""}` : ""}
       actions={<Btn kind="ghost" onClick={onBack}>← Danh sách kỳ thi</Btn>}>
       <ErrorBox text={editError || contest.error || events.error} />
       {c && (
@@ -170,14 +180,14 @@ function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
           )}
 
           <Card title="Bảng xếp hạng">
-            <Table head={["#", "Thí sinh", "Số bài", "Phút phạt", ...c.problems.map((p) => p.id)]}
+            <Table head={["#", "Thí sinh", "Số bài", ...c.problems.map((p) => p.id)]}
               empty="Chưa có ai nộp bài trong khoảng thời gian này."
               rows={(c.standings ?? []).map((r) => [
                 r.rank, <span><b>{r.fullName}</b> <span style={{ color: "#9E9E9E" }}>@{r.username}</span></span>,
-                <b>{r.solved}</b>, r.penalty,
+                <b>{r.solved}</b>,
                 ...r.cells.map((cell) => cell.solvedAt !== null
-                  ? <Tag color="green">+{cell.wrong > 0 ? cell.wrong : ""} ({cell.solvedAt}')</Tag>
-                  : cell.wrong > 0 ? <Tag color="red">-{cell.wrong}</Tag> : "·"),
+                  ? <Tag color="green">✓ Đã giải</Tag>
+                  : cell.wrong > 0 ? <Tag color="red">Chưa đúng</Tag> : "·"),
               ])} />
           </Card>
 

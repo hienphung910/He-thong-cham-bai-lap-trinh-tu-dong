@@ -106,7 +106,9 @@ export interface Recording {
 
 // ---- cuoc thi ----
 export interface ContestRow {
-  rank: number; username: string; fullName: string; solved: number; penalty: number;
+  rank: number; username: string; fullName: string; solved: number;
+  /** Phut giai xong bai gan nhat; chi de phan dinh thu hang khi cung so bai. */
+  lastSolvedMinute: number;
   cells: { problemId: string; wrong: number; solvedAt: number | null }[];
 }
 export interface Contest {
@@ -117,6 +119,8 @@ export interface Contest {
   /** Ho ten nguoi tao; canManage = nguoi dang xem duoc them / bot bai va xoa ky thi nay. */
   ownerName: string; canManage: boolean;
   minute?: number; standings?: ContestRow[];
+  /** Lop duoc thi: chi thanh vien cua lop nay thay ky thi, chi hoc sinh cua lop vao thi duoc. */
+  classroomId: string; classroomName: string;
   /** Nguoi tao ky thi bat / tat: co ghi lai viec roi tab, sao chep, dan cua thi sinh hay khong. */
   proctored: boolean;
   /** Nguoi dang xem da bam "Vao thi" / da nop bai som chua (finishedAt = luc nop, "" neu chua). */

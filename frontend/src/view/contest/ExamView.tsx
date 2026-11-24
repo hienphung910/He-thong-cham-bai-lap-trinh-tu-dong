@@ -112,7 +112,7 @@ export default function ExamView({ contest, user, problems, languages, onChanged
           <div style={{ padding: "14px 16px 10px", borderBottom: "1px solid #F0F0F0" }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: "#212121" }}>Đề thi ({examProblems.length} bài)</div>
             <div style={{ fontSize: 12, color: "#757575", marginTop: 2 }}>
-              Đã giải <b style={{ color: "var(--color-green)" }}>{myRow?.solved ?? 0}</b>/{examProblems.length} · phút phạt {myRow?.penalty ?? 0}
+              Đã giải <b style={{ color: "var(--color-green)" }}>{myRow?.solved ?? 0}</b>/{examProblems.length} bài
             </div>
           </div>
           <nav style={{ flex: 1, overflowY: "auto", padding: "6px 0" }}>
@@ -136,7 +136,7 @@ export default function ExamView({ contest, user, problems, languages, onChanged
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ display: "block", fontSize: 13, fontWeight: active ? 700 : 500, color: "#212121", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.title}</span>
                     <span style={{ fontSize: 11, color: "#9E9E9E", fontFamily: "var(--font-mono)" }}>
-                      {p.id}{solved ? ` · AC phút ${cell.solvedAt}` : cell && cell.wrong > 0 ? ` · ${cell.wrong} lần sai` : ""}
+                      {p.id}{solved ? " · đã giải" : cell && cell.wrong > 0 ? " · chưa đúng" : ""}
                     </span>
                   </span>
                 </button>
@@ -156,15 +156,15 @@ export default function ExamView({ contest, user, problems, languages, onChanged
           <div style={{ flex: 1, overflow: "auto", padding: "20px 24px" }}>
             <div style={{ background: "#fff", border: "1px solid #E0E0E0", borderRadius: 8, padding: "18px 20px" }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: "#212121", marginBottom: 12 }}>Bảng xếp hạng</div>
-              <Table head={["#", "Thí sinh", "Số bài", "Phút phạt", ...contest.problems.map((p) => p.id)]}
+              <Table head={["#", "Thí sinh", "Số bài", ...contest.problems.map((p) => p.id)]}
                 empty="Chưa có ai nộp bài."
                 rows={(detail.data?.standings ?? []).map((r) => [
                   r.rank,
                   <span><b>{r.fullName}</b> <span style={{ color: "#9E9E9E" }}>@{r.username}</span>{r.username === user.username && <Tag color="blue">Bạn</Tag>}</span>,
-                  <b>{r.solved}</b>, r.penalty,
+                  <b>{r.solved}</b>,
                   ...r.cells.map((cell) => cell.solvedAt !== null
-                    ? <Tag color="green">+{cell.wrong > 0 ? cell.wrong : ""} ({cell.solvedAt}')</Tag>
-                    : cell.wrong > 0 ? <Tag color="red">-{cell.wrong}</Tag> : "·"),
+                    ? <Tag color="green">✓ Đã giải</Tag>
+                    : cell.wrong > 0 ? <Tag color="red">Chưa đúng</Tag> : "·"),
                 ])} />
             </div>
           </div>

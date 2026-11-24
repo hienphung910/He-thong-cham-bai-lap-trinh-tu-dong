@@ -25,12 +25,10 @@ import java.util.Map;
  * trong khung gio thi. Nho vay "xem lai" (replay) chi la tinh bang xep hang
  * tai mot phut bat ky trong qua khu.
  *
- * Luat tinh diem kieu ICPC: xep theo so bai giai duoc, bang nhau thi ai it phut
- * phat hon dung truoc. Phut phat cua mot bai = phut AC + 20 phut cho moi lan nop sai truoc do.
+ * Xep hang theo so bai giai duoc. Bang nhau thi ai giai xong bai cuoi cung cua minh som hon
+ * dung truoc. Nop sai khong bi tru diem hay cong phut phat.
  */
 public class ContestService {
-
-    private static final int WRONG_PENALTY_MIN = 20;
 
     private final Repository<Contest> contests = new InMemoryRepository<>();
     private final JudgeService judge;
@@ -43,7 +41,8 @@ public class ContestService {
     public static class Row {
         private final User user;
         private int solved;
-        private long penalty;
+        /** Phut AC cua bai giai duoc gan nhat - chi dung de phan dinh khi hai nguoi cung so bai. */
+        private long lastSolvedMinute;
         /** Ma bai -> phut AC (tinh tu luc bat dau thi). */
         private final Map<String, Long> solvedAt = new LinkedHashMap<>();
         /** Ma bai -> so lan nop sai. */
@@ -53,11 +52,11 @@ public class ContestService {
 
         void record(String problemId, Verdict verdict, long minute) {
             if (solvedAt.containsKey(problemId)) return;          // da AC roi thi cac lan nop sau khong tinh
-            if (verdict == Verdict.CE || verdict == Verdict.IE) return;   // loi bien dich khong bi phat
+            if (verdict == Verdict.CE || verdict == Verdict.IE) return;   // loi bien dich khong tinh la mot lan nop sai
             if (verdict.isAccepted()) {
                 solvedAt.put(problemId, minute);
                 solved++;
-                penalty += minute + (long) WRONG_PENALTY_MIN * wrong.getOrDefault(problemId, 0);
+                lastSolvedMinute = Math.max(lastSolvedMinute, minute);
             } else {
                 wrong.merge(problemId, 1, Integer::sum);
             }
@@ -65,13 +64,14 @@ public class ContestService {
 
         public User getUser() { return user; }
         public int getSolved() { return solved; }
-        public long getPenalty() { return penalty; }
+        public long getLastSolvedMinute() { return lastSolvedMinute; }
         public Map<String, Long> getSolvedAt() { return solvedAt; }
         public Map<String, Integer> getWrong() { return wrong; }
     }
 
     public synchronized Contest create(User owner, String title, String description, LocalDateTime startAt,
-                                       int durationMin, List<String> problemIds, boolean proctored) {
+                                       int durationMin, List<String> problemIds, boolean proctored,
+                                       String classroomId) {
         if (startAt == null) throw ApiException.badRequest("Thiếu thời gian bắt đầu");
         if (durationMin < 5 || durationMin > 7 * 24 * 60) {
             throw ApiException.badRequest("Thời lượng phải từ 5 phút đến 7 ngày");
@@ -79,7 +79,7 @@ public class ContestService {
         if (problemIds.isEmpty()) throw ApiException.badRequest("Cuộc thi phải có ít nhất một bài");
         Contest contest = new Contest(IdGenerator.next("CON"), Check.text(title, "Tên cuộc thi", 150),
                 Check.optional(description, "Mô tả", 2000), startAt, durationMin, problemIds,
-                owner.getUsername(), owner.getFullName());
+                owner.getUsername(), owner.getFullName(), classroomId);
         contest.setProctored(proctored);
         contests.save(contest);
         return contest;
@@ -218,6 +218,16 @@ public class ContestService {
         return contests.findById(id).orElseThrow(() -> ApiException.notFound("Không có cuộc thi " + id));
     }
 
+    /** Xoa moi ky thi cua mot lop (goi khi lop bi xoa). */
+    public synchronized void deleteByClassroom(String classroomId) {
+        for (Contest c : contests.findAll()) {
+            if (classroomId.equals(c.getClassroomId())) {
+                contests.deleteById(c.getId());
+                proctorEvents.remove(c.getId());
+            }
+        }
+    }
+
     public synchronized void delete(User actor, String id) {
         requireManage(actor, find(id));
         contests.deleteById(id);
@@ -230,6 +240,10 @@ public class ContestService {
         for (Submission s : judge.getSubmissionsNewestFirst()) {
             LocalDateTime at = s.getSubmittedAt();
             boolean inTime = !at.isBefore(contest.getStartAt()) && at.isBefore(contest.getEndAt());
+            // Chi tinh bai cua thi sinh da bam "Vao thi", nop sau luc vao: hoc sinh lop khac (hoac
+            // chua vao thi) nop dung bai do o lo trinh chung thi khong len bang xep hang cua ky thi.
+            LocalDateTime joined = contest.getJoinedAt().get(s.getAuthor().getId());
+            if (joined == null || at.isBefore(joined)) inTime = false;
             // Thi sinh da nop bai som thi cac bai nop sau thoi diem do khong tinh vao ky thi.
             LocalDateTime finished = contest.getFinishedAt().get(s.getAuthor().getId());
             if (finished != null && at.isAfter(finished)) inTime = false;
@@ -266,7 +280,7 @@ public class ContestService {
         List<Row> sorted = new ArrayList<>(rows.values());
         sorted.sort((a, b) -> {
             if (a.solved != b.solved) return Integer.compare(b.solved, a.solved);
-            return Long.compare(a.penalty, b.penalty);
+            return Long.compare(a.lastSolvedMinute, b.lastSolvedMinute);
         });
         return sorted;
     }

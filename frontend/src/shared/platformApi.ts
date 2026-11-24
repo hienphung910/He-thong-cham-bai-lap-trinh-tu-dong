@@ -98,7 +98,7 @@ export const papi = {
   proctor: (id: string, body: { type: ProctorEventType; detail: string; problemId: string }) =>
     request<Ok>(`/api/contests/${enc(id)}/proctor`, { method: "POST", body: JSON.stringify(body), keepalive: true }),
   proctorLog: (id: string) => request<ProctorLog>(`/api/contests/${enc(id)}/proctor`),
-  createContest: (body: { title: string; description: string; startAt: string; durationMin: number; problemIds: string[]; proctored: boolean }) =>
+  createContest: (body: { title: string; description: string; startAt: string; durationMin: number; problemIds: string[]; proctored: boolean; classroomId: string }) =>
     postJson<Contest>("/api/contests", body),
   /** Hoc sinh vao thi / nop bai som; nguoi tao ky thi bat, tat giam sat. */
   joinContest: (id: string) => postJson<Contest>(`/api/contests/${enc(id)}/join`, {}),

@@ -4,6 +4,7 @@ import com.ptit.oj.controller.ApiException;
 import com.ptit.oj.controller.ContestService;
 import com.ptit.oj.controller.Json;
 import com.ptit.oj.controller.Platform;
+import com.ptit.oj.model.Classroom;
 import com.ptit.oj.model.Contest;
 import com.ptit.oj.model.Problem;
 import com.ptit.oj.model.ProctorEvent;
@@ -41,16 +42,27 @@ public class ContestApi extends ApiModule {
         if (req.is("GET", "contests")) {
             User user = req.user();
             List<String> items = new ArrayList<>();
-            for (Contest c : contests.getContests()) items.add(contestJson(c, user).build());
+            for (Contest c : contests.getContests()) {
+                if (canSee(c, user)) items.add(contestJson(c, user).build());
+            }
             req.send(Json.array(items));
             return true;
         }
         if (req.is("POST", "contests")) {
             User user = req.staff();
             Json.Value body = req.body();
+            // Ky thi to chuc cho mot lop: nguoi tao phai la giang vien / tro giang cua lop do (hoac quan tri vien).
+            String classroomId = body.getString("classroomId", "");
+            if (classroomId.trim().isEmpty()) throw ApiException.badRequest("Hãy chọn lớp tham gia kỳ thi");
+            Classroom classroom = platform.getSchool().findClassroom(classroomId);
+            platform.getSchool().requireManager(user, classroom);
             Contest created = contests.create(user, body.getString("title"), body.getString("description"),
                     parseTime(body.getString("startAt")), (int) body.getLong("durationMin", 120),
-                    problemIds(body, "problemIds", user), body.getBoolean("proctored", true));
+                    problemIds(body, "problemIds", user), body.getBoolean("proctored", true), classroom.getId());
+            platform.getCommunity().notifyMany(classroom.getStudentIds(), "Kỳ thi mới: " + created.getTitle(),
+                    classroom.getName() + " có kỳ thi lúc " + time(created.getStartAt()).replace('T', ' ')
+                            + ", thời lượng " + created.getDurationMin() + " phút.",
+                    "Contests");
             req.send(contestJson(created, user).build());
             return true;
         }
@@ -78,7 +90,7 @@ public class ContestApi extends ApiModule {
         }
         if (req.is("GET", "contests", "*")) {
             User user = req.user();
-            Contest c = contests.find(req.arg(0));
+            Contest c = visibleContest(req.arg(0), user);
             int minute = req.queryInt("minute", c.getDurationMin());
             req.send(contestJson(c, user)
                     .put("minute", minute)
@@ -97,7 +109,10 @@ public class ContestApi extends ApiModule {
         // Hoc sinh vao thi / nop bai som.
         if (req.is("POST", "contests", "*", "join")) {
             User user = req.user();
-            Contest c = contests.find(req.arg(0));
+            Contest c = visibleContest(req.arg(0), user);
+            if (!classroomOf(c).getStudentIds().contains(user.getId())) {
+                throw ApiException.forbidden("Chỉ học sinh của lớp " + classroomOf(c).getName() + " mới vào thi được");
+            }
             contests.join(c, user);
             req.send(contestJson(c, user).build());
             return true;
@@ -131,8 +146,7 @@ public class ContestApi extends ApiModule {
             return true;
         }
         if (req.is("GET", "contests", "*", "events")) {
-            req.user();
-            Contest c = contests.find(req.arg(0));
+            Contest c = visibleContest(req.arg(0), req.user());
             List<String> events = new ArrayList<>();
             for (Submission s : contests.submissionsOf(c)) {
                 events.add(Json.obj()
@@ -234,6 +248,37 @@ public class ContestApi extends ApiModule {
                 .build();
     }
 
+    /** Lop cua ky thi; null neu lop da bi xoa (ky thi cua lop bi xoa cung bi xoa theo, day chi de phong). */
+    private Classroom classroomOf(Contest c) {
+        for (Classroom room : platform.getSchool().getClassrooms()) {
+            if (room.getId().equals(c.getClassroomId())) return room;
+        }
+        throw ApiException.notFound("Lớp của kỳ thi này không còn tồn tại");
+    }
+
+    /** Ai thay duoc ky thi: quan tri vien, nguoi tao, va thanh vien (giang vien, tro giang, hoc sinh) cua lop duoc thi. */
+    private boolean canSee(Contest c, User user) {
+        if (contests.canManage(user, c)) return true;
+        for (Classroom room : platform.getSchool().getClassrooms()) {
+            if (room.getId().equals(c.getClassroomId())) return room.hasMember(user.getId());
+        }
+        return false;
+    }
+
+    /** Ky thi trong duong dan; nguoi khong thuoc lop duoc thi nhan 404 nhu the ky thi khong ton tai. */
+    private Contest visibleContest(String id, User user) {
+        Contest c = contests.find(id);
+        if (!canSee(c, user)) throw ApiException.notFound("Không có kỳ thi " + id);
+        return c;
+    }
+
+    private String classroomName(Contest c) {
+        for (Classroom room : platform.getSchool().getClassrooms()) {
+            if (room.getId().equals(c.getClassroomId())) return room.getName();
+        }
+        return "(lớp đã xoá)";
+    }
+
     private Json.Obj contestJson(Contest c, User viewer) {
         boolean manager = contests.canManage(viewer, c);
         boolean student = isStudent(viewer);
@@ -242,6 +287,8 @@ public class ContestApi extends ApiModule {
         boolean hidden = !manager && ("UPCOMING".equals(c.getStatus())
                 || ("RUNNING".equals(c.getStatus()) && student && !c.hasJoined(viewer.getId())));
         Json.Obj json = Json.obj()
+                .put("classroomId", c.getClassroomId())
+                .put("classroomName", classroomName(c))
                 .put("proctored", c.isProctored())
                 .put("joined", c.hasJoined(viewer.getId()))
                 .put("finished", c.hasFinished(viewer.getId()))
@@ -282,7 +329,7 @@ public class ContestApi extends ApiModule {
                     .put("username", row.getUser().getUsername())
                     .put("fullName", row.getUser().getFullName())
                     .put("solved", row.getSolved())
-                    .put("penalty", row.getPenalty())
+                    .put("lastSolvedMinute", row.getLastSolvedMinute())
                     .putRaw("cells", Json.array(cells))
                     .build());
         }
