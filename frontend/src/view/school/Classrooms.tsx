@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { papi } from "../../shared/platformApi";
-import { parseIds } from "../../shared/nav";
+import { parseIds, useBackState } from "../../shared/nav";
 import { Btn, Card, ErrorBox, Field, Grid, INPUT, Muted, Page, Row, Table, Tag, errorText, useLoad } from "../../shared/kit";
 import ProblemChip from "../../shared/ProblemChip";
 import { useAuth } from "../account/auth";
@@ -42,7 +42,8 @@ export default function Classrooms() {
   const isStaff = user?.role !== "STUDENT";
   const list = useLoad(() => papi.classrooms());
   const orgs = useLoad(() => papi.organizations());
-  const [openId, setOpenId] = useState<string | null>(null);
+  // Lop dang mo nam trong lich su trinh duyet: nut Back quay ve danh sach lop.
+  const [openId, setOpenId] = useBackState<string | null>("classroom", null);
   const [error, setError] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [form, setForm] = useState({ name: "", organizationId: "" });
@@ -120,7 +121,7 @@ function ClassroomDetail({ id, onBack }: { id: string; onBack: () => void }) {
   const [assistant, setAssistant] = useState("");
   const [problemIds, setProblemIds] = useState("");
   /** Hoc sinh dang duoc xem phan tich hoc tap (ten dang nhap); null = dang o trang lop. */
-  const [viewing, setViewing] = useState<string | null>(null);
+  const [viewing, setViewing] = useBackState<string | null>("classStudent", null);
   const c: Classroom | null = detail.data;
 
   async function act(work: () => Promise<unknown>) {

@@ -56,7 +56,8 @@ public class AssignmentApi extends ApiModule {
                     parseTime(body.getString("dueAt")), user);
             platform.getCommunity().notifyMany(classroom.getStudentIds(),
                     "Bài tập mới: " + created.getTitle(),
-                    classroom.getName() + " có bài tập mới, hạn nộp " + time(created.getDueAt()).replace('T', ' '));
+                    classroom.getName() + " có bài tập mới, hạn nộp " + time(created.getDueAt()).replace('T', ' '),
+                    "Assignments");
             req.sendOk();
             return true;
         }

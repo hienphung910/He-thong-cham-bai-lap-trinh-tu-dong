@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api } from "./shared/api";
 import { papi } from "./shared/platformApi";
-import { NavContext, type PageKey } from "./shared/nav";
+import { NAV_EVENT, NavContext, type PageKey } from "./shared/nav";
 import type { LanguageInfo, Problem, Topic } from "./shared/types";
 import Logo from "./shared/Logo";
 import { AuthProvider, useAuth } from "./view/account/auth";
@@ -61,7 +61,7 @@ const NAV_GROUPS: { title: string; icon: ReactNode; items: NavItem[] }[] = [
     title: "Học tập",
     icon: <NavIcon><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" /><path d="M10 2v8l3-3 3 3V2" /></NavIcon>,
     items: [
-      { key: "Problems", label: "Lớp học (lộ trình)" },
+      { key: "Problems", label: "Lớp học" },
       { key: "Classrooms", label: "Lớp của tôi", notAdmin: true },
       { key: "Assignments", label: "Bài tập được giao", notAdmin: true },
       { key: "Contests", label: "Kỳ thi" },
@@ -129,13 +129,53 @@ const NAV_GROUPS: { title: string; icon: ReactNode; items: NavItem[] }[] = [
   },
 ];
 
+/** Trang dang mo va (o trang bai tap) ma bai dang lam. Day la thu duoc ghi vao lich su trinh duyet. */
+interface Route { page: PageKey; problemId: string | null }
+
+const PAGE_KEYS = new Set<string>(NAV_GROUPS.flatMap((group) => group.items.map((item) => item.key)));
+
+/** Doc trang tu phan sau dau # cua URL: "#Problems/K001", "#Classrooms"... Sai thi ve trang bai tap. */
+function routeFromHash(): Route {
+  const [page = "", problemId = ""] = window.location.hash.replace(/^#\/?/, "").split("/");
+  if (!PAGE_KEYS.has(page)) return { page: "Problems", problemId: null };
+  return { page: page as PageKey, problemId: page === "Problems" && problemId ? decodeURIComponent(problemId) : null };
+}
+
+function hashOf(route: Route): string {
+  return "#" + route.page + (route.problemId ? "/" + encodeURIComponent(route.problemId) : "");
+}
+
 function AppShell() {
   const { user, checking, logout } = useAuth();
-  const [page, setPage] = useState<PageKey>("Problems");
-  /** Ma bai can mo san khi chuyen sang trang Lop hoc (bam tu mot duong link toi bai). */
-  const [openProblemId, setOpenProblemId] = useState<string | null>(null);
-  /** Tang moi lan nguoi dung chon ve trang bai tap, de trang do dong bai dang mo va hien lai danh sach. */
-  const [homeKey, setHomeKey] = useState(0);
+  const [route, setRoute] = useState<Route>(routeFromHash);
+  const routeRef = useRef(route);
+  const page = route.page;
+
+  // Ghi trang dau tien vao lich su, va nghe nut Back / Forward cua trinh duyet.
+  useEffect(() => {
+    const state = (window.history.state ?? {}) as { route?: Route };
+    if (!state.route) window.history.replaceState({ ...state, route: routeRef.current }, "", hashOf(routeRef.current));
+    const onPop = () => {
+      const next = (window.history.state as { route?: Route } | null)?.route ?? routeFromHash();
+      routeRef.current = next;
+      setRoute(next);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  /** Chuyen trang: ghi mot muc lich su moi de nut Back cua trinh duyet quay lai duoc trang truoc. */
+  const navigate = useCallback((next: Route) => {
+    const current = routeRef.current;
+    const sub = (window.history.state as { sub?: Record<string, unknown> } | null)?.sub;
+    const inSubView = sub !== undefined && Object.keys(sub).length > 0;
+    // Bam lai dung trang dang mo thi khong ghi them, tru khi dang o trang con (chi tiet lop...) can dong lai.
+    if (current.page === next.page && current.problemId === next.problemId && !inSubView) return;
+    window.history.pushState({ route: next }, "", hashOf(next));
+    routeRef.current = next;
+    setRoute(next);
+    window.dispatchEvent(new Event(NAV_EVENT));
+  }, []);
   const [avatarOpen, setAvatarOpen] = useState(false);
   /** Ten nhom menu dang xo xuong (dang re chuot vao); null = khong nhom nao mo. */
   const [openGroup, setOpenGroup] = useState<string | null>(null);
@@ -204,17 +244,18 @@ function AppShell() {
   const onProblemsChanged = useCallback(async () => { await loadProblems().catch(() => undefined); setReloadKey((k) => k + 1); }, [loadProblems]);
 
   const go = useCallback((next: PageKey) => {
-    setOpenProblemId(null); setOpenGroup(null); setPage(next);
-    if (next === "Problems") setHomeKey((k) => k + 1);
-  }, []);
+    setOpenGroup(null);
+    navigate({ page: next, problemId: null });
+  }, [navigate]);
   const openProblem = useCallback((id: string) => {
     // Bai kho rieng vua duoc dua vao ky thi / bai tap co the chua nam trong danh sach da tai: tai lai.
     if (!problems.some((p) => p.id === id)) void loadProblems().catch(() => undefined);
-    setOpenProblemId(id);
-    setPage("Problems");
-  }, [problems, loadProblems]);
+    navigate({ page: "Problems", problemId: id });
+  }, [problems, loadProblems, navigate]);
+  /** Trang bai tap mo mot bai (id) hoac quay ve danh sach (null). */
+  const selectProblem = useCallback((id: string | null) => navigate({ page: "Problems", problemId: id }), [navigate]);
 
-  function handleLogout() { logout(); setPage("Problems"); setAvatarOpen(false); }
+  function handleLogout() { logout(); navigate({ page: "Problems", problemId: null }); setAvatarOpen(false); }
 
   if (checking) {
     return (
@@ -352,7 +393,7 @@ function AppShell() {
               </div>
             ) : !allowed(page) ? null : (
               <>
-                {page === "Problems" && <Problems problems={sharedProblems} allProblems={problems} topics={topics} languages={languages} onSubmitted={onSubmitted} reloadKey={reloadKey} openId={openProblemId} homeKey={homeKey} />}
+                {page === "Problems" && <Problems problems={sharedProblems} allProblems={problems} topics={topics} languages={languages} onSubmitted={onSubmitted} reloadKey={reloadKey} selectedId={route.problemId} onSelect={selectProblem} />}
                 {page === "Classrooms" && <Classrooms />}
                 {page === "Assignments" && <Assignments />}
                 {page === "Contests" && <Contests />}

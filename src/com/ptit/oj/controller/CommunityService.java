@@ -35,11 +35,20 @@ public class CommunityService {
     // ----------------------------------------------------------- thong bao
 
     public synchronized void notifyUser(String userId, String title, String body) {
-        notifications.add(new Notification(IdGenerator.next("NTF"), userId, title, body));
+        notifyUser(userId, title, body, "");
+    }
+
+    /** link: trang mo ra khi bam vao thong bao (xem Notification.link); "" neu khong co. */
+    public synchronized void notifyUser(String userId, String title, String body, String link) {
+        notifications.add(new Notification(IdGenerator.next("NTF"), userId, title, body, link));
     }
 
     public synchronized void notifyMany(Collection<String> userIds, String title, String body) {
-        for (String userId : userIds) notifyUser(userId, title, body);
+        notifyMany(userIds, title, body, "");
+    }
+
+    public synchronized void notifyMany(Collection<String> userIds, String title, String body, String link) {
+        for (String userId : userIds) notifyUser(userId, title, body, link);
     }
 
     /** Thong bao cua mot nguoi, moi nhat truoc, toi da 50 dong. */

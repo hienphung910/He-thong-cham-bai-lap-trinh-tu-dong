@@ -141,7 +141,8 @@ public class SchoolApi extends ApiModule {
             if (ids.isEmpty()) throw ApiException.badRequest("Hãy nhập ít nhất một mã bài");
             school.addPracticeProblems(c, ids);
             platform.getCommunity().notifyMany(c.getStudentIds(), "Bài luyện tập mới của " + c.getName(),
-                    "Giảng viên vừa thêm " + ids.size() + " bài luyện tập. Vào Lớp của tôi để làm.");
+                    "Giảng viên vừa thêm " + ids.size() + " bài luyện tập. Vào Lớp của tôi để làm.",
+                    "Classrooms");
             req.sendOk();
             return true;
         }

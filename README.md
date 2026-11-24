@@ -116,7 +116,7 @@ Cột "Ở đâu" ghi đường đi trên menu của giao diện.
 | 2 | Organization Management | Quản trị → Tổ chức | Chạy thật |
 | 3 | Classroom Management | Học tập → Lớp của tôi | Chạy thật |
 | 4 | Course Management | Học tập → Khóa học, tài liệu | Chạy thật |
-| 5 | Curriculum & Learning Path | Học tập → Lớp học (lộ trình) | Chạy thật |
+| 5 | Curriculum & Learning Path | Học tập → Lớp học | Chạy thật |
 | 6 | Problem Management | Quản trị → Kho bài chung và bộ test; Giảng dạy → Kho bài của tôi | Chạy thật |
 | 7 | Testcase Management | Nút Test ở hai trang của module 6 | Chạy thật |
 | 8 | Judge Engine | Trang làm bài | Chạy thật |

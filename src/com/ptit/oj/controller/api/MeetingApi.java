@@ -70,7 +70,8 @@ public class MeetingApi extends ApiModule {
             meetings.setLink(created, body.getString("link", ""));
             platform.getCommunity().notifyMany(classroom.getStudentIds(),
                     "Buổi học mới: " + created.getTitle(),
-                    classroom.getName() + " học lúc " + time(created.getStartAt()).replace('T', ' '));
+                    classroom.getName() + " học lúc " + time(created.getStartAt()).replace('T', ' '),
+                    "Meetings");
             req.sendOk();
             return true;
         }
@@ -84,7 +85,8 @@ public class MeetingApi extends ApiModule {
                 platform.getCommunity().notifyMany(classroom.getStudentIds(),
                         "Đã có link phòng học: " + m.getTitle(),
                         classroom.getName() + " học lúc " + time(m.getStartAt()).replace('T', ' ')
-                                + ". Vào Lịch học để tham gia khi tới giờ.");
+                                + ". Vào Lịch học để tham gia khi tới giờ.",
+                        "Meetings");
             }
             req.sendOk();
             return true;

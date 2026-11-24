@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { papi } from "../../shared/platformApi";
 import { Btn, Card, ErrorBox, Field, INPUT, Muted, Page, Row, Table, Tag, errorText, fmtTime, localDateTime, useLoad } from "../../shared/kit";
-import { parseIds } from "../../shared/nav";
+import { parseIds, useBackState } from "../../shared/nav";
 import ProblemChip from "../../shared/ProblemChip";
 import { useAuth } from "../account/auth";
 import type { Contest } from "../../shared/platformTypes";
@@ -17,7 +17,8 @@ export default function Contests() {
   const { user } = useAuth();
   const isStaff = user?.role !== "STUDENT";
   const list = useLoad(() => papi.contests());
-  const [openId, setOpenId] = useState<string | null>(null);
+  // Ky thi dang mo nam trong lich su trinh duyet: nut Back quay ve danh sach ky thi.
+  const [openId, setOpenId] = useBackState<string | null>("contest", null);
   const [error, setError] = useState("");
   const [form, setForm] = useState({ title: "", description: "", startAt: localDateTime(), durationMin: 120, problems: "" });
 

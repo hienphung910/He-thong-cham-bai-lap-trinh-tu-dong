@@ -46,7 +46,8 @@ public class CommunityApi extends ApiModule {
             List<String> items = new ArrayList<>();
             for (Notification n : community.notificationsOf(user.getId())) {
                 items.add(Json.obj().put("id", n.getId()).put("title", n.getTitle()).put("body", n.getBody())
-                        .put("createdAt", time(n.getCreatedAt())).put("read", n.isRead()).build());
+                        .put("createdAt", time(n.getCreatedAt())).put("read", n.isRead())
+                        .put("link", n.getLink()).build());
             }
             req.send(Json.obj().put("unread", community.unreadCount(user.getId()))
                     .putRaw("items", Json.array(items)).build());
@@ -156,7 +157,8 @@ public class CommunityApi extends ApiModule {
             // Quan tri vien tu choi mot binh luan dang cho duyet: bao cho tac gia biet.
             if (!own && !comment.isApproved()) {
                 community.notifyUser(comment.getAuthorId(), "Bình luận không được duyệt",
-                        "Bình luận của bạn ở bài " + comment.getProblemId() + " không được quản trị viên duyệt.");
+                        "Bình luận của bạn ở bài " + comment.getProblemId() + " không được quản trị viên duyệt.",
+                        "Problems/" + comment.getProblemId());
             }
             req.sendOk();
             return true;
@@ -179,7 +181,8 @@ public class CommunityApi extends ApiModule {
             if (!comment.isApproved()) {
                 community.approveComment(comment);
                 community.notifyUser(comment.getAuthorId(), "Bình luận đã được duyệt",
-                        "Bình luận của bạn ở bài " + comment.getProblemId() + " đã hiện cho mọi người.");
+                        "Bình luận của bạn ở bài " + comment.getProblemId() + " đã hiện cho mọi người.",
+                        "Problems/" + comment.getProblemId());
             }
             req.sendOk();
             return true;

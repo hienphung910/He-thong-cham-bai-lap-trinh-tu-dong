@@ -143,7 +143,8 @@ export interface PointRow { rank: number; username: string; fullName: string; po
 // ---- cong dong ----
 export interface NotificationList {
   unread: number;
-  items: { id: string; title: string; body: string; createdAt: string; read: boolean }[];
+  /** link: trang mo ra khi bam vao thong bao - ten trang hoac "Problems/<ma bai>"; "" = khong co. */
+  items: { id: string; title: string; body: string; createdAt: string; read: boolean; link: string }[];
 }
 export interface ChatMessage { id: string; senderName: string; senderRole: string; text: string; sentAt: string }
 export interface ForumPost {
