@@ -21,7 +21,11 @@ Backend chỉ dùng API chuẩn của JDK. Máy chủ HTTP, bộ đọc/ghi JSON
 >
 > - **Lịch học** thay cho Phòng học trực tuyến: giảng viên lên lịch buổi học cho lớp và dán link phòng học (Google Meet, Zoom...) vào buổi đó, lúc lên lịch hoặc về sau. Học sinh thấy giờ học, lớp, giảng viên; từ 10 phút trước giờ học tới hết buổi, nút *Tham gia phòng học* mở link đó. Phòng học tự viết (bảng trắng, mã nguồn dùng chung, điểm danh, bản ghi) không còn trên giao diện.
 > - **Lớp của tôi** có thêm mục *Bài tập luyện tập*: các bài giảng viên chọn riêng cho lớp. Giảng viên bấm vào một học sinh trong danh sách lớp để xem phân tích học tập của em đó.
-> - **Đã bỏ khỏi giao diện**: Khóa học và tài liệu, Thành tích, Gói dịch vụ, và phần điểm yếu trong Phân tích học tập.
+> - **Bình luận dưới bài tập**: mỗi bài có phần bình luận ở cuối trang làm bài. Bình luận mới ở trạng thái chờ duyệt và chỉ tác giả thấy; quản trị viên duyệt ở Quản trị → Duyệt bình luận thì mọi người mới thấy. Bình luận lưu trong RAM như các module mở rộng khác.
+> - **Tải file**: trang làm bài có nút *Tải file mã nguồn* (đọc file trên máy vào ô soạn, đuôi file quyết định ngôn ngữ). Form tạo bài có *Tải thư mục test* và *Tải nhiều file test*: mỗi test là một cặp `01.in` + `01.out` (nhận cả `.inp`, `.ans`), hoặc mỗi test một thư mục con kiểu `Test01/BAI.INP` + `Test01/BAI.OUT`; tên bắt đầu bằng `sample` là test ví dụ.
+> - **Sinh test** (Công cụ CP): mảng số chọn được số nguyên hoặc số thực; đồ thị chọn được có hướng / vô hướng, có trọng số / không có và số cạnh.
+> - **Tài khoản quản trị** không có các mục Lớp của tôi, Bài tập được giao, Lịch học, nhóm Cá nhân và nhóm Giảng dạy; đổi mật khẩu vẫn mở được từ menu ở ảnh đại diện.
+> - **Đã bỏ khỏi giao diện**: Khóa học và tài liệu, Thành tích, Gói dịch vụ, Stress test, Trợ lý AI (cả pop-up ở trang làm bài), Diễn đàn, Trợ lý giảng dạy, Phụ huynh, và phần điểm yếu trong Phân tích học tập.
 > - **Ô soạn mã** (trang làm bài, IDE trực tuyến, xem lại bài nộp) dùng CodeMirror, tô màu cú pháp theo bảng màu Dark+ của Visual Studio Code.
 >
 > API của các phần đã bỏ khỏi giao diện vẫn còn ở backend và trong bảng REST API bên dưới.
@@ -35,7 +39,7 @@ Backend chỉ dùng API chuẩn của JDK. Máy chủ HTTP, bộ đọc/ghi JSON
 
 ### Học tập
 - Hai lớp học, mỗi lớp có lộ trình riêng: lớp Nhập môn gồm 10 chủ đề từ nhập/xuất đến mảng, xâu và sắp xếp; lớp Lộ trình nâng cao gồm 26 chặng từ đệ quy, đồ thị đến luồng và quy hoạch động nâng cao. Có theo dõi tiến độ từng chặng, nút *Học tiếp* và *Bài tiếp theo*.
-- Lớp Nhập môn có 300 bài mã `K001` đến `K300`; lớp VNOI có 300 bài mã `V001` đến `V300`, mỗi chặng từ 6 đến 16 bài, xếp từ dễ đến khó. Mỗi bài có test ví dụ, test ẩn và lời giải mẫu C++ trong `data/submissions/`.
+- Lớp Nhập môn có 300 bài mã `K001` đến `K300`; lớp Lộ trình nâng cao có 300 bài mã `V001` đến `V300`, mỗi chặng từ 6 đến 16 bài, xếp từ dễ đến khó. Mỗi bài có test ví dụ, test ẩn và lời giải mẫu C++ trong `data/submissions/`.
 - Lọc bài theo độ khó, tìm bài theo mã hoặc tên, bảng xếp hạng.
 - Sau mỗi lần nộp, ngay dưới kết quả chấm có thẻ "Phân tích sau khi nộp": các lần đã nộp bài đó, nhận xét cho lần nộp vừa rồi, tiến độ chủ đề của bài, các chủ đề đang yếu và ba bài nên làm tiếp.
 - Trang làm bài có trợ lý dạng pop-up ở góc dưới bên phải. Trợ lý biết đang ở bài nào, đọc mã nguồn trong ô soạn và tự nhận xét sau mỗi lần nộp.
@@ -481,6 +485,10 @@ Trừ 4 endpoint công khai, mọi request phải gửi header `Authorization: B
 | GET, POST | `/api/notifications`, `/api/notifications/read` | đăng nhập | Thông báo của mình; đánh dấu đã đọc |
 | POST | `/api/announcements` | quản lý lớp; admin khi gửi toàn hệ thống | Gửi thông báo |
 | GET, POST | `/api/chat/{kênh}?after=N` | đăng nhập; kênh lớp và kênh phòng học cần là thành viên lớp | Đọc tin nhắn mới, gửi tin nhắn |
+| GET, POST | `/api/problems/{mã bài}/comments` | đăng nhập, mở được bài | Bình luận dưới một bài: đã duyệt, cộng với bình luận chờ duyệt của chính mình; gửi bình luận mới (`text`, tối đa 1000 ký tự). Bình luận của quản trị viên hiện ngay |
+| DELETE | `/api/comments/{id}` | tác giả / admin | Xoá bình luận; admin xoá bình luận đang chờ duyệt tức là từ chối |
+| GET | `/api/admin/comments` | admin | Toàn bộ bình luận, chờ duyệt đứng trước |
+| POST | `/api/admin/comments/{id}/approve` | admin | Duyệt một bình luận |
 | GET | `/api/forum`, `/api/forum/{id}` | đăng nhập | Danh sách chủ đề; một chủ đề kèm các câu trả lời |
 | POST | `/api/forum`, `/api/forum/{id}/replies` | đăng nhập | Đăng chủ đề; trả lời |
 | DELETE | `/api/forum/{id}` | tác giả / GV / admin | Xoá chủ đề |
@@ -552,7 +560,7 @@ Các module mở rộng mới được thử ở chế độ `--no-db`, bằng c
 - Dữ liệu của các module mở rộng nằm trong RAM, khởi động lại là mất. Hướng phát triển: thêm bảng MySQL và lớp DAO cho từng thực thể.
 - Các module mở rộng chưa được chạy thử ở chế độ MySQL. Các trang phân tích, tổng quan, chi tiết lớp và xem lại kỳ thi đọc lại toàn bộ lịch sử nộp bài ở mỗi request, nên sẽ chậm dần khi CSDL lớn.
 - Phòng học đồng bộ bằng polling, và máy chủ chỉ mở trên localhost nên mới thử được trên một máy với nhiều tab. Bản thật cần WebSocket cho dữ liệu và WebRTC cho video.
-- Bộ test lớp VNOI được giữ nhỏ cho repo gọn (khoảng 1 MB mỗi bài với V001 đến V026, dưới 100 KB mỗi bài với V027 đến V300), nên ở nhiều bài cách làm trâu viết bằng C++ vẫn kịp giới hạn thời gian; Java và Python thì thường không.
+- Bộ test lớp Lộ trình nâng cao được giữ nhỏ cho repo gọn (khoảng 1 MB mỗi bài với V001 đến V026, dưới 100 KB mỗi bài với V027 đến V300), nên ở nhiều bài cách làm trâu viết bằng C++ vẫn kịp giới hạn thời gian; Java và Python thì thường không.
 
 ## Nhóm phát triển
 

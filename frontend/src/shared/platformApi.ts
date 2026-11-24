@@ -2,7 +2,7 @@ import { postJson, putJson, request } from "./api";
 import type {
   AssistantReply, Assignment, AssignmentProgress, AttendanceSheet, AuditRow, BasicUser, Billing,
   ChatMessage, Classroom, Contest, ContestEvent, Course, Dashboard, DocumentItem, ForumPost, Meeting,
-  NotificationList, Organization, ParentContact, ParentReport, Payment, PointRow, Profile, Recording,
+  NotificationList, Organization, ParentContact, ParentReport, Payment, PointRow, ProblemComment, Profile, Recording,
   RoomState, RunResult, Settings, StressResult, TestcaseItem,
 } from "./platformTypes";
 
@@ -122,6 +122,14 @@ export const papi = {
     postJson<{ sent: number }>("/api/announcements", body),
   chat: (channel: string, after: number) => request<ChatMessage[]>(`/api/chat/${enc(channel)}?after=${after}`),
   sendChat: (channel: string, text: string) => postJson<Ok>(`/api/chat/${enc(channel)}`, { text }),
+  // --- binh luan duoi bai tap (quan tri vien duyet) ---
+  comments: (problemId: string) => request<ProblemComment[]>(`/api/problems/${enc(problemId)}/comments`),
+  addComment: (problemId: string, text: string) =>
+    postJson<ProblemComment>(`/api/problems/${enc(problemId)}/comments`, { text }),
+  deleteComment: (id: string) => del(`/api/comments/${enc(id)}`),
+  allComments: () => request<ProblemComment[]>("/api/admin/comments"),
+  approveComment: (id: string) => postJson<Ok>(`/api/admin/comments/${enc(id)}/approve`, {}),
+
   forum: () => request<ForumPost[]>("/api/forum"),
   forumPost: (id: string) => request<ForumPost>(`/api/forum/${enc(id)}`),
   createPost: (body: { title: string; body: string; problemId: string }) => postJson<ForumPost>("/api/forum", body),

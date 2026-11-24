@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "../../../shared/api";
 import { Select } from "../../../shared/ui";
 import { DIFFICULTY_META } from "../learningPath";
@@ -12,6 +12,78 @@ interface TestRow extends NewTestInput {
 }
 function newTestRow(sample: boolean, name: string): TestRow {
   return { key: nextKey++, name, input: "", output: "", sample };
+}
+
+/** Gioi han khi nap test tu thu muc: khop voi may chu (200 test, moi file 1 trieu ky tu, body 8 MB). */
+const MAX_TESTS = 200;
+const MAX_TEST_CHARS = 1_000_000;
+const MAX_TOTAL_CHARS = 6_000_000;
+const INPUT_EXTENSIONS = ["in", "inp"];
+const OUTPUT_EXTENSIONS = ["out", "ans", "ok"];
+
+/**
+ * Ghep cac file trong mot thu muc test thanh tung cap input / output.
+ *
+ * Nhan hai cach dat ten pho bien:
+ *   - cung thu muc, ten giong nhau:   01.in + 01.out, sample01.inp + sample01.ans ...
+ *   - moi test mot thu muc con (kieu Themis):   Test01/BAI.INP + Test01/BAI.OUT
+ * Ten test bat dau bang "sample" la test vi du. File khong ghep duoc cap thi bo qua va bao lai.
+ */
+async function readTestFolder(files: File[]): Promise<{ rows: TestRow[]; skipped: number; error: string }> {
+  interface Pair { dir: string; base: string; input?: File; output?: File }
+  const pairs = new Map<string, Pair>();
+  let skipped = 0;
+  for (const file of files) {
+    const path = (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name;
+    const slash = path.lastIndexOf("/");
+    const dir = slash < 0 ? "" : path.slice(0, slash);
+    const fileName = path.slice(slash + 1);
+    const dot = fileName.lastIndexOf(".");
+    const extension = dot < 0 ? "" : fileName.slice(dot + 1).toLowerCase();
+    const isInput = INPUT_EXTENSIONS.includes(extension);
+    const isOutput = OUTPUT_EXTENSIONS.includes(extension);
+    if (!isInput && !isOutput) { skipped++; continue; }
+    const base = fileName.slice(0, dot);
+    const key = `${dir}/${base}`.toLowerCase();
+    const pair = pairs.get(key) ?? { dir, base };
+    if (isInput) pair.input = file; else pair.output = file;
+    pairs.set(key, pair);
+  }
+
+  const complete = [...pairs.values()].filter((p) => p.input && p.output);
+  skipped += [...pairs.values()].filter((p) => !p.input || !p.output).length;
+  if (complete.length === 0) {
+    return { rows: [], skipped, error: "Không tìm thấy cặp file test nào. Mỗi test cần một file .in (hoặc .inp) và một file .out (hoặc .ans) cùng tên." };
+  }
+  if (complete.length > MAX_TESTS) {
+    return { rows: [], skipped, error: `Thư mục có ${complete.length} test, vượt giới hạn ${MAX_TESTS} test mỗi bài.` };
+  }
+
+  // Kieu Themis: moi thu muc con mot test, ten file giong het nhau -> lay ten thu muc lam ten test.
+  const sameBase = new Set(complete.map((p) => p.base.toLowerCase())).size === 1;
+  const manyDirs = new Set(complete.map((p) => p.dir)).size > 1;
+  const used = new Set<string>();
+  const rows: TestRow[] = [];
+  let total = 0;
+  for (const p of complete) {
+    const rawName = sameBase && manyDirs ? p.dir.slice(p.dir.lastIndexOf("/") + 1) : p.base;
+    let name = rawName.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 60) || "test";
+    while (used.has(name.toLowerCase())) name += "_";
+    used.add(name.toLowerCase());
+    const input = (await p.input!.text()).replace(/\r\n/g, "\n");
+    const output = (await p.output!.text()).replace(/\r\n/g, "\n");
+    if (input.length > MAX_TEST_CHARS || output.length > MAX_TEST_CHARS) {
+      return { rows: [], skipped, error: `Test "${name}" quá lớn (mỗi file tối đa 1 triệu ký tự).` };
+    }
+    total += input.length + output.length;
+    if (total > MAX_TOTAL_CHARS) {
+      return { rows: [], skipped, error: "Tổng dung lượng bộ test vượt 6 MB. Hãy tạo bài với ít test hơn rồi thêm dần ở mục Test." };
+    }
+    rows.push({ key: nextKey++, name, input, output, sample: name.toLowerCase().startsWith("sample") });
+  }
+  // Test vi du dung truoc, moi nhom xep theo ten (01, 02, ..., 10).
+  rows.sort((a, b) => Number(b.sample) - Number(a.sample) || a.name.localeCompare(b.name, undefined, { numeric: true }));
+  return { rows, skipped, error: "" };
 }
 
 const LABEL: React.CSSProperties = {
@@ -43,6 +115,30 @@ export default function ProblemEditor({ topics, onClose, onCreated }: { topics: 
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  const folderInput = useRef<HTMLInputElement>(null);
+  const filesInput = useRef<HTMLInputElement>(null);
+  const [folderNote, setFolderNote] = useState("");
+
+  /** Nap bo test tu thu muc (hoac nhieu file) nguoi dung chon; thay cho cac dong test con trong. */
+  async function loadTestFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0) return;
+    setError("");
+    setFolderNote("");
+    const loaded = await readTestFolder(files);
+    if (loaded.error) { setError(loaded.error); return; }
+    setTests((rows) => {
+      // Giu lai cac test da nhap tay co noi dung; dong con trong thi bo. Trung ten thi ban tu thu muc thay the.
+      const names = new Set(loaded.rows.map((t) => t.name.toLowerCase()));
+      const kept = rows.filter((t) => (t.input.trim() || t.output.trim()) && !names.has(t.name.trim().toLowerCase()));
+      return [...kept, ...loaded.rows].slice(0, MAX_TESTS);
+    });
+    const samples = loaded.rows.filter((t) => t.sample).length;
+    setFolderNote(`Đã nạp ${loaded.rows.length} test (${samples} test ví dụ, ${loaded.rows.length - samples} test ẩn)`
+      + (loaded.skipped > 0 ? `, bỏ qua ${loaded.skipped} file không ghép được cặp input / output.` : "."));
+  }
 
   function patchTest(key: number, patch: Partial<TestRow>) {
     setTests((rows) => rows.map((t) => (t.key === key ? { ...t, ...patch } : t)));
@@ -179,7 +275,14 @@ export default function ProblemEditor({ topics, onClose, onCreated }: { topics: 
           <div style={{ borderTop: "1px solid var(--color-border)", paddingTop: 14, display: "flex", flexDirection: "column", gap: 12 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span style={LABEL as React.CSSProperties}>Bộ test ({tests.length})</span>
-              <div style={{ display: "flex", gap: 8 }}>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                {/* webkitdirectory chua co trong kieu cua React nen truyen qua spread. */}
+                <input ref={folderInput} type="file" multiple style={{ display: "none" }}
+                  {...({ webkitdirectory: "", directory: "" } as object)} onChange={(e) => void loadTestFiles(e)} />
+                <input ref={filesInput} type="file" multiple accept=".in,.inp,.out,.ans,.ok" style={{ display: "none" }}
+                  onChange={(e) => void loadTestFiles(e)} />
+                <button onClick={() => folderInput.current?.click()} style={ADD_BTN} title="Chọn cả một thư mục chứa các file test">↑ Tải thư mục test</button>
+                <button onClick={() => filesInput.current?.click()} style={ADD_BTN} title="Chọn nhiều file .in / .out cùng lúc">↑ Tải nhiều file test</button>
                 <button onClick={() => setTests((r) => [...r, newTestRow(true, `sample${r.length + 1}`)])} style={ADD_BTN}>+ Test ví dụ</button>
                 <button onClick={() => setTests((r) => [...r, newTestRow(false, String(r.length + 1).padStart(2, "0"))])} style={ADD_BTN}>+ Test ẩn</button>
               </div>
@@ -187,7 +290,11 @@ export default function ProblemEditor({ topics, onClose, onCreated }: { topics: 
 
             <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--color-text-muted)", lineHeight: 1.7 }}>
               Test ví dụ hiển thị cho thí sinh (tên phải bắt đầu bằng <b>sample</b>). Test ẩn chỉ dùng để chấm.
+              <br />
+              Tải thư mục: mỗi test là một cặp file cùng tên, ví dụ <b>01.in</b> + <b>01.out</b> (nhận cả .inp, .ans),
+              hoặc mỗi test một thư mục con như <b>Test01/BAI.INP</b> + <b>Test01/BAI.OUT</b>.
             </div>
+            {folderNote && <div style={{ fontSize: 12.5, color: "var(--color-green)" }}>{folderNote}</div>}
 
             {tests.map((t, index) => (
               <div key={t.key} style={{ border: "1px solid var(--color-border)", borderRadius: 8, background: "var(--color-bg-raised)", padding: 12, display: "flex", flexDirection: "column", gap: 10 }}>

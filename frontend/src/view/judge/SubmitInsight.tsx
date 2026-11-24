@@ -45,6 +45,8 @@ export default function SubmitInsight({ problem, result, onOpen }: {
   onOpen: (problemId: string) => void;
 }) {
   const { user } = useAuth();
+  // Quan tri vien khong co trang Phan tich hoc tap nen khong hien nut dan toi do.
+  const isAdmin = user?.role === "ADMIN";
   const { go } = useNav();
   const history = useLoad(() => api.submissions(), [result.id]);
   const profile = useLoad(() => papi.myProfile(), [result.id]);
@@ -59,7 +61,7 @@ export default function SubmitInsight({ problem, result, onOpen }: {
   const nextProblems = (profile.data?.recommendations ?? []).filter((r) => r.problemId !== problem.id).slice(0, 3);
 
   return (
-    <Card title="Phân tích sau khi nộp" right={<Btn small kind="ghost" onClick={() => go("Analytics")}>Xem phân tích đầy đủ</Btn>}>
+    <Card title="Phân tích sau khi nộp" right={isAdmin ? undefined : <Btn small kind="ghost" onClick={() => go("Analytics")}>Xem phân tích đầy đủ</Btn>}>
       <ErrorBox text={history.error || profile.error} />
       <div style={{ display: "flex", flexDirection: "column", gap: 14, fontSize: 13.5, color: "#424242" }}>
         <div>

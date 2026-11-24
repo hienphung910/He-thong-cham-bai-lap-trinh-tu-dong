@@ -3,12 +3,12 @@ import { createContext, useContext } from "react";
 /** Ten cac trang cua ung dung - cung la khoa cua cac muc trong menu tren cung (xem App.tsx). */
 export type PageKey =
   | "Problems" | "Classrooms" | "Assignments" | "Contests" | "Meetings"
-  | "Playground" | "CpTools" | "StressTest" | "Assistant"
+  | "Playground" | "CpTools"
   | "Analytics" | "Account"
-  | "Forum" | "Chat" | "Notifications"
+  | "Chat" | "Notifications"
   | "Submissions" | "MySubmissions" | "Leaderboard"
-  | "Dashboard" | "TeachingAssistant" | "Parents" | "MyProblems"
-  | "Admin" | "Accounts" | "Organizations" | "System" | "Audit";
+  | "Dashboard" | "MyProblems"
+  | "Admin" | "Accounts" | "Comments" | "Organizations" | "System" | "Audit";
 
 interface Nav {
   /** Chuyen sang trang khac. */

@@ -15,7 +15,7 @@ xau | Xâu ký tự | Làm việc với chữ cái, từ và câu. | Nhập môn
 sap-xep | Sắp xếp và tìm kiếm | Xếp thứ tự, tìm phần tử, đếm và thống kê. | Nhập môn
 thu-thach | Thử thách tổng hợp | Bảng hai chiều, mô phỏng và các câu đố lập trình. | Nhập môn
 
-# ===== Lop Lo trinh nang cao: theo thu tu chang cua https://wiki.vnoi.info/roadmap/general-roadmap =====
+# ===== Lop Lo trinh nang cao: 26 chang lap trinh thi dau, tu de quy den quy hoach dong nang cao =====
 vnoi-khai-niem | Khái niệm cơ bản | Xét từng trường hợp và cài đặt đúng từng chi tiết của đề. | Lộ trình nâng cao
 vnoi-thuat-toan-1 | Thuật toán cơ bản (Phần 1) | Độ phức tạp, duyệt trâu, đệ quy, quay lui và nhánh cận. | Lộ trình nâng cao
 vnoi-so-hoc | Lý thuyết số cơ bản | Modulo, ước chung lớn nhất, sàng nguyên tố, lũy thừa nhanh và tổ hợp. | Lộ trình nâng cao

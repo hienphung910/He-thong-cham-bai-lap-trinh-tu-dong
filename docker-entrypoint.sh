@@ -13,6 +13,10 @@ set -e
 
 mkdir -p /app/data
 cp -rn /app/data-seed/. /app/data/
+# topics.txt (ten va thu tu cac chang cua lo trinh) chi sua trong repo, khong sua duoc tren web,
+# nen luon lay ban moi nhat cua image. Neu khong, volume giu mai ban cu va viec doi ten lo trinh
+# trong repo khong bao gio hien len.
+cp -f /app/data-seed/topics.txt /app/data/topics.txt
 chown -R codehub:codehub /app/data
 
 export HOME=/home/codehub

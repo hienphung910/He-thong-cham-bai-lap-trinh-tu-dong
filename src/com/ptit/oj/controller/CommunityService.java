@@ -6,6 +6,7 @@ import com.ptit.oj.dao.Repository;
 import com.ptit.oj.model.ChatMessage;
 import com.ptit.oj.model.ForumPost;
 import com.ptit.oj.model.Notification;
+import com.ptit.oj.model.ProblemComment;
 import com.ptit.oj.model.User;
 
 import java.util.ArrayList;
@@ -27,6 +28,9 @@ public class CommunityService {
     /** Ten kenh -> danh sach tin nhan theo thu tu gui. */
     private final Map<String, List<ChatMessage>> channels = new HashMap<>();
     private final Repository<ForumPost> posts = new InMemoryRepository<>();
+    private final Repository<ProblemComment> comments = new InMemoryRepository<>();
+    /** Moi nguoi chi duoc co toi da chung nay binh luan dang cho duyet, de khong lam ngap hang cho cua quan tri vien. */
+    private static final int MAX_PENDING_PER_USER = 10;
 
     // ----------------------------------------------------------- thong bao
 
@@ -78,6 +82,59 @@ public class CommunityService {
         List<ChatMessage> all = channels.getOrDefault(channel, Collections.<ChatMessage>emptyList());
         int from = Math.max(0, Math.min(after, all.size()));
         return new ArrayList<>(all.subList(from, all.size()));
+    }
+
+    // ------------------------------------------------- binh luan duoi bai tap
+
+    /**
+     * Gui binh luan duoi mot bai. Binh luan cua quan tri vien hien ngay; cua nguoi khac
+     * o trang thai cho duyet cho toi khi quan tri vien duyet.
+     */
+    public synchronized ProblemComment addComment(String problemId, User author, String text) {
+        boolean admin = User.ROLE_ADMIN.equals(author.getRoleCode());
+        if (!admin) {
+            int pending = 0;
+            for (ProblemComment c : comments.findAll()) {
+                if (!c.isApproved() && c.getAuthorId().equals(author.getId())) pending++;
+            }
+            if (pending >= MAX_PENDING_PER_USER) {
+                throw ApiException.badRequest("Bạn đang có " + pending
+                        + " bình luận chờ duyệt. Hãy chờ quản trị viên duyệt rồi gửi tiếp");
+            }
+        }
+        ProblemComment comment = new ProblemComment(IdGenerator.next("CMT"), problemId, author,
+                Check.text(text, "Bình luận", 1000), admin ? ProblemComment.APPROVED : ProblemComment.PENDING);
+        comments.save(comment);
+        return comment;
+    }
+
+    /** Binh luan nguoi xem duoc thay duoi mot bai: da duyet, cong voi binh luan cho duyet cua chinh ho. Cu truoc, moi sau. */
+    public List<ProblemComment> commentsOf(String problemId, User viewer) {
+        List<ProblemComment> result = new ArrayList<>();
+        for (ProblemComment c : comments.findAll()) {
+            if (!c.getProblemId().equals(problemId)) continue;
+            if (c.isApproved() || c.getAuthorId().equals(viewer.getId())) result.add(c);
+        }
+        return result;
+    }
+
+    /** Toan bo binh luan cho trang duyet cua quan tri vien, moi nhat truoc. */
+    public List<ProblemComment> getComments() {
+        List<ProblemComment> all = comments.findAll();
+        Collections.reverse(all);
+        return all;
+    }
+
+    public ProblemComment findComment(String id) {
+        return comments.findById(id).orElseThrow(() -> ApiException.notFound("Không có bình luận " + id));
+    }
+
+    public synchronized void approveComment(ProblemComment comment) {
+        comment.approve();
+    }
+
+    public void deleteComment(String id) {
+        comments.deleteById(id);
     }
 
     // ------------------------------------------------------------ dien dan

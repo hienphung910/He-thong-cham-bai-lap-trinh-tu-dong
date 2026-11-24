@@ -20,19 +20,15 @@ import Contests from "./view/contest/Contests";
 import Schedule from "./view/schedule/Schedule";
 import Playground from "./view/tools/Playground";
 import CpTools from "./view/tools/CpTools";
-import StressTest from "./view/tools/StressTest";
-import Assistant from "./view/tools/Assistant";
 import Analytics from "./view/profile/Analytics";
-import Forum from "./view/community/Forum";
 import ChatPage from "./view/community/ChatPage";
 import Notifications from "./view/community/Notifications";
 import Dashboard from "./view/manage/Dashboard";
-import TeachingAssistant from "./view/manage/TeachingAssistant";
-import Parents from "./view/manage/Parents";
 import Accounts from "./view/admin/Accounts";
 import Organizations from "./view/admin/Organizations";
 import SystemAdmin from "./view/admin/SystemAdmin";
 import AuditLogs from "./view/admin/AuditLogs";
+import CommentModeration from "./view/admin/CommentModeration";
 
 /**
  * Menu tren thanh do tren cung, chia theo nhom: thanh chi hien ten nhom, re chuot vao
@@ -40,7 +36,14 @@ import AuditLogs from "./view/admin/AuditLogs";
  * "staff" = giang vien va quan tri, "teacher" = chi giang vien, "admin" = chi quan tri.
  * Day chi la an / hien tren giao dien - may chu van kiem tra lai quyen o tung request.
  */
-interface NavItem { key: PageKey; label: string; role?: "staff" | "teacher" | "admin" }
+interface NavItem {
+  key: PageKey; label: string; role?: "staff" | "teacher" | "admin";
+  /**
+   * An voi quan tri vien: tai khoan quan tri khong tham gia lop hoc va khong co phan ca nhan
+   * (lop cua toi, bai tap duoc giao, lich hoc, phan tich hoc tap).
+   */
+  notAdmin?: boolean;
+}
 
 /** Icon net cho ten nhom tren thanh menu: khung 24x24, net 2px, bo tron dau net. */
 function NavIcon({ children }: { children: ReactNode }) {
@@ -59,10 +62,10 @@ const NAV_GROUPS: { title: string; icon: ReactNode; items: NavItem[] }[] = [
     icon: <NavIcon><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" /><path d="M10 2v8l3-3 3 3V2" /></NavIcon>,
     items: [
       { key: "Problems", label: "Lớp học (lộ trình)" },
-      { key: "Classrooms", label: "Lớp của tôi" },
-      { key: "Assignments", label: "Bài tập được giao" },
+      { key: "Classrooms", label: "Lớp của tôi", notAdmin: true },
+      { key: "Assignments", label: "Bài tập được giao", notAdmin: true },
       { key: "Contests", label: "Kỳ thi" },
-      { key: "Meetings", label: "Lịch học" },
+      { key: "Meetings", label: "Lịch học", notAdmin: true },
     ],
   },
   {
@@ -72,8 +75,6 @@ const NAV_GROUPS: { title: string; icon: ReactNode; items: NavItem[] }[] = [
     items: [
       { key: "Playground", label: "IDE trực tuyến" },
       { key: "CpTools", label: "Công cụ CP" },
-      { key: "StressTest", label: "Stress test" },
-      { key: "Assistant", label: "Trợ lý AI" },
     ],
   },
   {
@@ -81,8 +82,8 @@ const NAV_GROUPS: { title: string; icon: ReactNode; items: NavItem[] }[] = [
     title: "Cá nhân",
     icon: <NavIcon><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></NavIcon>,
     items: [
-      { key: "Analytics", label: "Phân tích học tập" },
-      { key: "Account", label: "Tài khoản của tôi" },
+      { key: "Analytics", label: "Phân tích học tập", notAdmin: true },
+      { key: "Account", label: "Tài khoản của tôi", notAdmin: true },
     ],
   },
   {
@@ -90,7 +91,6 @@ const NAV_GROUPS: { title: string; icon: ReactNode; items: NavItem[] }[] = [
     title: "Cộng đồng",
     icon: <NavIcon><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></NavIcon>,
     items: [
-      { key: "Forum", label: "Diễn đàn" },
       { key: "Chat", label: "Chat" },
       { key: "Notifications", label: "Thông báo" },
     ],
@@ -110,9 +110,7 @@ const NAV_GROUPS: { title: string; icon: ReactNode; items: NavItem[] }[] = [
     title: "Giảng dạy",
     icon: <NavIcon><path d="M22 10 12 5 2 10l10 5 10-5Z" /><path d="M6 12v5c0 1.1 2.7 3 6 3s6-1.9 6-3v-5" /></NavIcon>,
     items: [
-      { key: "Dashboard", label: "Tổng quan", role: "staff" },
-      { key: "TeachingAssistant", label: "Trợ lý giảng dạy", role: "staff" },
-      { key: "Parents", label: "Phụ huynh", role: "staff" },
+      { key: "Dashboard", label: "Tổng quan", role: "teacher" },
       { key: "MyProblems", label: "Kho bài của tôi", role: "teacher" },
     ],
   },
@@ -123,6 +121,7 @@ const NAV_GROUPS: { title: string; icon: ReactNode; items: NavItem[] }[] = [
     items: [
       { key: "Admin", label: "Kho bài chung và bộ test", role: "admin" },
       { key: "Accounts", label: "Tài khoản, giảng viên", role: "admin" },
+      { key: "Comments", label: "Duyệt bình luận", role: "admin" },
       { key: "Organizations", label: "Tổ chức", role: "admin" },
       { key: "System", label: "Hệ thống", role: "admin" },
       { key: "Audit", label: "Nhật ký hoạt động", role: "admin" },
@@ -161,6 +160,8 @@ function AppShell() {
     for (const group of NAV_GROUPS) {
       for (const item of group.items) {
         if (item.key !== key) continue;
+        // Trang tai khoan (doi mat khau) quan tri vien van mo duoc tu menu o anh dai dien.
+        if (item.notAdmin && isAdmin && item.key !== "Account") return false;
         if (item.role === "admin") return isAdmin;
         if (item.role === "staff") return isStaff;
         if (item.role === "teacher") return isTeacher;
@@ -237,7 +238,7 @@ function AppShell() {
           {/* ═══ MENU: chi hien ten nhom, re chuot vao thi xo xuong cac trang con ═══ */}
           <nav style={{ display: "flex", height: "100%", marginLeft: 24 }}>
             {NAV_GROUPS.map((group) => {
-              const items = group.items.filter((item) => allowed(item.key));
+              const items = group.items.filter((item) => allowed(item.key) && !(isAdmin && item.notAdmin));
               if (items.length === 0) return null;
               const active = items.some((item) => item.key === page);     // dang o mot trang cua nhom nay
               const open = openGroup === group.title;
@@ -289,7 +290,7 @@ function AppShell() {
 
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             {/* Chuoi ngay luyen tap: bam vao ngon lua de xem chi tiet */}
-            <StreakBadge info={streak.info} />
+            {!isAdmin && <StreakBadge info={streak.info} />}
 
             {/* Chuong thong bao (Module 29) */}
             <button onClick={() => go("Notifications")} title="Thông báo"
@@ -330,7 +331,7 @@ function AppShell() {
         </header>
 
         {/* Loi chuc mung bat len khi chuoi ngay luyen tap vua tang sau mot lan nop bai */}
-        <StreakToast value={streak.increasedTo} onClose={streak.dismissIncrease} />
+        {!isAdmin && <StreakToast value={streak.increasedTo} onClose={streak.dismissIncrease} />}
 
         {/* Thong bao chung do quan tri vien dat (Module 39) */}
         {announcement && (
@@ -358,24 +359,20 @@ function AppShell() {
                 {page === "Meetings" && <Schedule />}
                 {page === "Playground" && <Playground languages={languages} />}
                 {page === "CpTools" && <CpTools />}
-                {page === "StressTest" && <StressTest languages={languages} />}
-                {page === "Assistant" && <Assistant problems={problems} />}
                 {page === "Analytics" && <Analytics />}
                 {page === "Account" && <MyAccount />}
-                {page === "Forum" && <Forum />}
                 {page === "Chat" && <ChatPage />}
                 {page === "Notifications" && <Notifications onRead={loadHeader} />}
                 {page === "Submissions" && <Submissions reloadKey={reloadKey} />}
                 {page === "MySubmissions" && <MySubmissions />}
                 {page === "Leaderboard" && <Leaderboard reloadKey={reloadKey} problems={sharedProblems} />}
                 {page === "Dashboard" && <Dashboard />}
-                {page === "TeachingAssistant" && <TeachingAssistant />}
-                {page === "Parents" && <Parents />}
                 {page === "MyProblems" && <AdminPanel mine onProblemsChanged={onProblemsChanged} problems={myProblems} topics={topics} />}
                 {page === "Admin" && <AdminPanel onProblemsChanged={onProblemsChanged} problems={sharedProblems} topics={topics} />}
                 {page === "Accounts" && <Accounts />}
                 {page === "Organizations" && <Organizations />}
                 {page === "System" && <SystemAdmin onSettingsChanged={loadHeader} />}
+                {page === "Comments" && <CommentModeration />}
                 {page === "Audit" && <AuditLogs />}
               </>
             )}

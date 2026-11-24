@@ -61,6 +61,16 @@ export interface AssignmentProgress {
   rows: { username: string; fullName: string; solvedCount: number; solved: boolean[] }[];
 }
 
+// ---- binh luan duoi bai tap ----
+export interface ProblemComment {
+  id: string; problemId: string; authorName: string; authorRole: string; text: string; createdAt: string;
+  /** PENDING: dang cho quan tri vien duyet, chi tac gia thay. */
+  status: "PENDING" | "APPROVED";
+  mine: boolean; canDelete: boolean;
+  /** Chi co o trang duyet cua quan tri vien. */
+  problemTitle?: string;
+}
+
 // ---- buoi hoc, phong hoc, diem danh, ban ghi ----
 export interface Meeting {
   id: string; classroomId: string; classroomName: string; title: string; startAt: string;

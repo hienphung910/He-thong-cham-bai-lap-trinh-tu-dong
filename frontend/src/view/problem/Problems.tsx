@@ -1,13 +1,27 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../../shared/api";
+import { papi } from "../../shared/platformApi";
+import { errorText } from "../../shared/kit";
 import { useAuth } from "../account/auth";
 import { DIFFICULTY_META, OTHER_TOPIC, orderByPath, topicKey } from "./learningPath";
 import type { LanguageInfo, Problem, Submission, Topic } from "../../shared/types";
+import type { Classroom } from "../../shared/platformTypes";
 import ProblemDetail from "../judge/ProblemDetail";
 
 type Status = "solved" | "attempted" | "unsolved";
 interface Progress { total: number; solved: number }
 
+/** Nguon bai dang xem duoc nho lai trong tab, de roi trang roi quay lai van o dung lop do. */
+const SOURCE_KEY = "oj-problem-source";
+const TRACK = "track:";
+const CLASS = "class:";
+
+/**
+ * Trang danh sach bai. O chon o goc tren ben phai quyet dinh dang xem bai cua dau:
+ *   - mot LO TRINH chung (cot thu 4 trong topics.txt: Nhap mon, Lo trinh nang cao...), hoac
+ *   - mot LOP RIENG ma nguoi dung thuoc ve: hien cac bai luyen tap giang vien them cho lop do.
+ * Ben duoi la o tim kiem, o loc theo chu de va do kho, roi bang bai.
+ */
 export default function Problems({
   problems,
   allProblems,
@@ -20,7 +34,7 @@ export default function Problems({
 }: {
   /** Bai cua kho chung - chi nhung bai nay hien trong lo trinh. */
   problems: Problem[];
-  /** Moi bai nguoi dung mo duoc, gom ca bai kho rieng nam trong ky thi / bai tap giao. */
+  /** Moi bai nguoi dung mo duoc, gom ca bai kho rieng nam trong ky thi / bai tap giao / bai luyen tap cua lop. */
   allProblems: Problem[];
   topics: Topic[];
   languages: LanguageInfo[];
@@ -32,11 +46,14 @@ export default function Problems({
   homeKey?: number;
 }) {
   const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
   const [search, setSearch] = useState("");
   /** "" = tat ca, ma chu de, hoac OTHER_TOPIC. */
   const [topicFilter, setTopicFilter] = useState("");
-  /** Lop dang xem; "" = lop dau tien. */
-  const [groupPick, setGroupPick] = useState("");
+  /** "track:<ten lo trinh>" hoac "class:<ma lop>"; "" = lo trinh dau tien. */
+  const [source, setSource] = useState(() => {
+    try { return sessionStorage.getItem(SOURCE_KEY) ?? ""; } catch { return ""; }
+  });
   /** 0 = moi do kho. */
   const [diffFilter, setDiffFilter] = useState(0);
   const [hov, setHov] = useState<string | null>(null);
@@ -46,6 +63,12 @@ export default function Problems({
   useEffect(() => { if (openId) setSelectedId(openId); }, [openId]);
   const [mySubs, setMySubs] = useState<Submission[]>([]);
 
+  function pickSource(next: string) {
+    setSource(next);
+    setTopicFilter("");
+    try { sessionStorage.setItem(SOURCE_KEY, next); } catch { /* khong luu duoc thi chi mat viec nho lai */ }
+  }
+
   useEffect(() => {
     let alive = true;
     if (!user) return;
@@ -54,6 +77,15 @@ export default function Problems({
       .catch(() => undefined);
     return () => { alive = false; };
   }, [user, reloadKey]);
+
+  // Cac lop rieng cua nguoi dung. Quan tri vien khong tham gia lop nen khong tai.
+  const [classes, setClasses] = useState<Classroom[]>([]);
+  useEffect(() => {
+    if (!user || isAdmin) return;
+    let alive = true;
+    papi.classrooms().then((list) => { if (alive) setClasses(list); }).catch(() => undefined);
+    return () => { alive = false; };
+  }, [user, isAdmin]);
 
   const statusByProblem = useMemo(() => {
     const map = new Map<string, Status>();
@@ -67,17 +99,41 @@ export default function Problems({
 
   const known = useMemo(() => new Set(topics.map((t) => t.id)), [topics]);
   const topicName = useMemo(() => new Map(topics.map((t) => [t.id, t.name])), [topics]);
-  // Moi lop (cot thu 4 trong topics.txt) co lo trinh rieng, lop xuat hien truoc dung truoc.
+  // Moi lo trinh (cot thu 4 trong topics.txt) co danh sach chang rieng, lo trinh xuat hien truoc dung truoc.
   const groups = useMemo(() => [...new Set(topics.map((t) => t.group))], [topics]);
   const firstGroup = groups[0] ?? "";
-  const group = groups.includes(groupPick) ? groupPick : firstGroup;
+
+  const activeClass = source.startsWith(CLASS) ? classes.find((c) => c.id === source.slice(CLASS.length)) ?? null : null;
+  const trackPick = source.startsWith(TRACK) ? source.slice(TRACK.length) : "";
+  const group = groups.includes(trackPick) ? trackPick : firstGroup;
   const groupTopics = useMemo(() => topics.filter((t) => t.group === group), [topics, group]);
-  // Chi lay bai cua lop dang xem; bai chua phan loai ("Bai khac") xep vao lop dau tien.
+
+  // Bai luyen tap cua lop dang chon (theo thu tu giang vien them). null = dang tai.
+  const activeClassId = activeClass?.id ?? "";
+  const [practiceIds, setPracticeIds] = useState<string[] | null>(null);
+  const [classError, setClassError] = useState("");
+  useEffect(() => {
+    setClassError("");
+    if (!activeClassId) { setPracticeIds(null); return; }
+    let alive = true;
+    setPracticeIds(null);
+    papi.classroom(activeClassId)
+      .then((detail) => { if (alive) setPracticeIds((detail.practice ?? []).map((p) => p.id)); })
+      .catch((e) => { if (alive) { setPracticeIds([]); setClassError(errorText(e)); } });
+    return () => { alive = false; };
+  }, [activeClassId, reloadKey]);
+
   const ordered = useMemo(() => {
+    if (activeClassId) {
+      // Lop rieng: dung thu tu giang vien da them; tim trong allProblems de co ca bai kho rieng.
+      const byId = new Map(allProblems.map((p) => [p.id, p]));
+      return (practiceIds ?? []).map((id) => byId.get(id)).filter((p): p is Problem => p !== undefined);
+    }
+    // Lo trinh: chi lay bai cua lo trinh dang xem; bai chua phan loai ("Bai khac") xep vao lo trinh dau tien.
     const inGroup = new Set(groupTopics.map((t) => t.id));
     const mine = problems.filter((p) => (known.has(p.topic) ? inGroup.has(p.topic) : group === firstGroup));
     return orderByPath(mine, groupTopics);
-  }, [problems, known, groupTopics, group, firstGroup]);
+  }, [activeClassId, practiceIds, allProblems, problems, known, groupTopics, group, firstGroup]);
 
   const progress = useMemo(() => {
     const map = new Map<string, Progress>();
@@ -91,29 +147,41 @@ export default function Problems({
     return map;
   }, [ordered, known, statusByProblem]);
 
+  /** Cac chu de co bai trong danh sach dang xem, de dua vao o loc: lo trinh thi theo thu tu chang. */
+  const topicOptions = useMemo(() => {
+    const keys = activeClassId
+      ? [...new Set(ordered.map((p) => topicKey(p, known)))]
+      : [...groupTopics.map((t) => t.id), OTHER_TOPIC];
+    return keys.filter((key) => progress.has(key)).map((key) => ({
+      key,
+      name: key === OTHER_TOPIC ? "Bài khác" : topicName.get(key) ?? key,
+      ...progress.get(key)!,
+    }));
+  }, [activeClassId, ordered, known, groupTopics, progress, topicName]);
+  // Doi nguon bai thi chu de dang loc co the khong con: coi nhu khong loc.
+  const activeTopic = topicOptions.some((t) => t.key === topicFilter) ? topicFilter : "";
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return ordered.filter((p) =>
-      (!topicFilter || topicKey(p, known) === topicFilter)
+      (!activeTopic || topicKey(p, known) === activeTopic)
       && (!diffFilter || p.difficulty === diffFilter)
       && (!q || p.title.toLowerCase().includes(q) || p.id.toLowerCase().includes(q)),
     );
-  }, [ordered, known, topicFilter, diffFilter, search]);
+  }, [ordered, known, activeTopic, diffFilter, search]);
 
   const solvedAll = ordered.filter((p) => statusByProblem.get(p.id) === "solved").length;
   const solvedInView = filtered.filter((p) => statusByProblem.get(p.id) === "solved").length;
-  // Bai dau tien chua giai theo dung thu tu lo trinh -> goi y "hoc tiep".
+  // Bai dau tien chua giai theo dung thu tu -> goi y "hoc tiep".
   const nextToLearn = ordered.find((p) => statusByProblem.get(p.id) !== "solved") ?? null;
-  const hasOther = progress.has(OTHER_TOPIC);
-  const currentTopic = groupTopics.find((t) => t.id === topicFilter);
   const nameOf = (p: Problem) => topicName.get(p.topic) ?? "Bài khác";
 
   // Tim trong allProblems de mo duoc ca bai kho rieng (bam tu ky thi, bai tap giao).
   const selected = selectedId ? allProblems.find((p) => p.id === selectedId) ?? null : null;
   if (selected) {
-    // "Bai tiep theo": trong danh sach dang loc neu bai nam trong do, khong thi theo lo trinh chung.
+    // "Bai tiep theo": trong danh sach dang loc neu bai nam trong do, khong thi theo danh sach chung.
     const list = filtered.some((p) => p.id === selected.id) ? filtered : ordered;
-    // Bai kho rieng (mo tu ky thi) khong nam trong lo trinh nen khong co "bai tiep theo".
+    // Bai mo tu noi khac (ky thi...) khong nam trong danh sach nen khong co "bai tiep theo".
     const index = list.findIndex((p) => p.id === selected.id);
     const next = index >= 0 ? list[index + 1] ?? null : null;
     return (
@@ -131,102 +199,49 @@ export default function Problems({
     );
   }
 
+  const loadingClass = activeClassId !== "" && practiceIds === null;
+  const emptyText = loadingClass ? "Đang tải bài của lớp..."
+    : activeClass && ordered.length === 0 ? "Giảng viên chưa thêm bài luyện tập nào cho lớp này."
+    : ordered.length === 0 ? "Chưa có bài tập nào."
+    : "Không tìm thấy bài phù hợp.";
+
   return (
-    <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-      {/* ═══ LO TRINH HOC ═══ */}
-      <aside style={{
-        width: 280, flexShrink: 0, background: "#fff", borderRight: "1px solid #E0E0E0",
-        display: "flex", flexDirection: "column", overflow: "hidden",
-      }}>
-        <div style={{ padding: "16px 16px 12px", borderBottom: "1px solid #F0F0F0" }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "#212121" }}>Lộ trình học</div>
-          {groups.length > 1 && (
-            <div style={{ display: "flex", gap: 4, marginTop: 10, padding: 3, background: "#F5F5F5", borderRadius: 8 }}>
-              {groups.map((g) => (
-                <button key={g} onClick={() => { setGroupPick(g); setTopicFilter(""); }} style={{
-                  flex: 1, height: 28, border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12,
-                  fontWeight: g === group ? 700 : 500,
-                  background: g === group ? "#fff" : "transparent",
-                  color: g === group ? "var(--color-red)" : "#616161",
-                  boxShadow: g === group ? "0 1px 2px rgba(0,0,0,0.1)" : "none",
-                }}>{g}</button>
-              ))}
-            </div>
-          )}
-          <div style={{ fontSize: 12, color: "#757575", marginTop: 2 }}>
-            Đã giải <b style={{ color: "var(--color-green)" }}>{solvedAll}</b>/{ordered.length} bài
-          </div>
-          <Bar value={solvedAll} total={ordered.length} />
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", padding: "16px 24px 12px" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "#fff", border: "1px solid #E0E0E0", borderRadius: 8 }}>
 
-          {nextToLearn && (
-            <button
-              onClick={() => setSelectedId(nextToLearn.id)}
-              style={{
-                width: "100%", marginTop: 12, padding: "10px 12px", textAlign: "left", cursor: "pointer",
-                background: "var(--color-red-light)", border: "1px solid #F3D9A4", borderRadius: 8,
-              }}
-            >
-              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: "var(--color-red)" }}>
-                {solvedAll === 0 ? "BẮT ĐẦU HỌC" : "HỌC TIẾP"} →
-              </div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#212121", marginTop: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                <span style={{ fontFamily: "var(--font-mono)", color: "var(--color-red)" }}>{nextToLearn.id}</span> {nextToLearn.title}
-              </div>
-              <div style={{ fontSize: 11, color: "#9E9E9E", marginTop: 2 }}>{nameOf(nextToLearn)}</div>
-            </button>
-          )}
-        </div>
-
-        <nav style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
-          <StepRow
-            label="Tất cả bài tập"
-            progress={{ total: ordered.length, solved: solvedAll }}
-            active={topicFilter === ""}
-            onClick={() => setTopicFilter("")}
-          />
-          {groupTopics.map((t, i) => (
-            <StepRow
-              key={t.id}
-              step={i + 1}
-              label={t.name}
-              progress={progress.get(t.id) ?? { total: 0, solved: 0 }}
-              active={topicFilter === t.id}
-              first={i === 0}
-              last={i === groupTopics.length - 1}
-              onClick={() => setTopicFilter(t.id)}
-            />
-          ))}
-          {hasOther && (
-            <StepRow
-              label="Bài khác"
-              progress={progress.get(OTHER_TOPIC)!}
-              active={topicFilter === OTHER_TOPIC}
-              onClick={() => setTopicFilter(OTHER_TOPIC)}
-            />
-          )}
-        </nav>
-      </aside>
-
-      {/* ═══ DANH SACH BAI ═══ */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <div style={{ padding: "12px 24px 8px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexShrink: 0 }}>
+        {/* ═══ TIEU DE + O CHON LO TRINH / LOP ═══ */}
+        <div style={{ padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap", borderBottom: "1px solid #EEEEEE", flexShrink: 0 }}>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: "#212121" }}>
-              {currentTopic ? `Chặng ${groupTopics.indexOf(currentTopic) + 1}: ${currentTopic.name}`
-                : topicFilter === OTHER_TOPIC ? "Bài khác" : group ? `Lớp ${group}` : "Lớp học của tôi"}
+            <div style={{ fontSize: 17, fontWeight: 700, color: "#212121" }}>Lớp học của tôi</div>
+            <div style={{ fontSize: 12, color: "#757575", marginTop: 2 }}>
+              {activeClass ? `Bài luyện tập của ${activeClass.name} · Giảng viên ${activeClass.teacherName}` : `Lộ trình ${group}`}
             </div>
-            {currentTopic?.description && (
-              <div style={{ fontSize: 12, color: "#757575", marginTop: 2 }}>{currentTopic.description}</div>
+          </div>
+          <select
+            value={activeClass ? CLASS + activeClass.id : TRACK + group}
+            onChange={(e) => pickSource(e.target.value)}
+            title="Chọn lộ trình hoặc lớp để xem bài"
+            style={{
+              height: 38, minWidth: 320, maxWidth: "100%", padding: "0 12px", border: "1px solid #D0D0D0", borderRadius: 6,
+              fontSize: 13.5, color: "#212121", background: "#fff", cursor: "pointer", outline: "none",
+            }}
+          >
+            <optgroup label="Lộ trình chung">
+              {groups.map((g) => <option key={g} value={TRACK + g}>{g}</option>)}
+            </optgroup>
+            {classes.length > 0 && (
+              <optgroup label="Lớp của tôi">
+                {classes.map((c) => (
+                  <option key={c.id} value={CLASS + c.id}>{c.id} · {c.name} — GV {c.teacherName}</option>
+                ))}
+              </optgroup>
             )}
-          </div>
-          <div style={{ fontSize: 12, color: "#757575", background: "#fff", border: "1px solid #E0E0E0", borderRadius: 6, padding: "6px 14px", flexShrink: 0 }}>
-            CodeHub — Luyện tập lập trình
-          </div>
+          </select>
         </div>
 
-        {/* ═══ SEARCH + DO KHO ═══ */}
-        <div style={{ padding: "8px 24px", flexShrink: 0, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <div style={{ position: "relative", width: 280 }}>
+        {/* ═══ TIM KIEM + CHU DE + DO KHO + TIEN DO ═══ */}
+        <div style={{ padding: "12px 20px", flexShrink: 0, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ position: "relative", width: 260 }}>
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#BDBDBD" strokeWidth="1.5" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }}>
               <circle cx="6.5" cy="6.5" r="4.5" /><line x1="10" y1="10" x2="14" y2="14" />
             </svg>
@@ -241,6 +256,20 @@ export default function Problems({
               onBlur={(e) => { e.target.style.borderColor = "#E0E0E0"; }}
             />
           </div>
+          <select
+            value={activeTopic} onChange={(e) => setTopicFilter(e.target.value)} title="Lọc theo chủ đề"
+            style={{
+              height: 34, maxWidth: 320, padding: "0 10px", border: "1px solid #E0E0E0", borderRadius: 6,
+              fontSize: 13, color: "#212121", background: "#fff", cursor: "pointer", outline: "none",
+            }}
+          >
+            <option value="">Mọi chủ đề ({solvedAll}/{ordered.length})</option>
+            {topicOptions.map((t, i) => (
+              <option key={t.key} value={t.key}>
+                {activeClass || t.key === OTHER_TOPIC ? "" : `${i + 1}. `}{t.name} ({t.solved}/{t.total})
+              </option>
+            ))}
+          </select>
           <div style={{ display: "flex", gap: 6 }}>
             {[0, 1, 2, 3].map((d) => {
               const on = diffFilter === d;
@@ -257,14 +286,35 @@ export default function Problems({
               );
             })}
           </div>
+          <div style={{ flex: 1 }} />
+          {nextToLearn && (
+            <button
+              onClick={() => setSelectedId(nextToLearn.id)}
+              title={`${nextToLearn.id} — ${nextToLearn.title}`}
+              style={{
+                height: 34, padding: "0 14px", cursor: "pointer", borderRadius: 6, fontSize: 12.5, fontWeight: 700,
+                background: "var(--color-accent)", color: "var(--color-on-accent)", border: "1px solid var(--color-accent-dark)",
+                whiteSpace: "nowrap", maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis",
+              }}
+            >
+              {solvedAll === 0 ? "Bắt đầu học" : "Học tiếp"}: {nextToLearn.id} →
+            </button>
+          )}
         </div>
 
-        {/* ═══ PROBLEMS TABLE ═══ */}
-        <div style={{ flex: 1, overflow: "auto", margin: "0 24px 12px", background: "#fff", border: "1px solid #E0E0E0", borderRadius: 8 }}>
+        {classError && (
+          <div style={{ margin: "0 20px 10px", padding: "10px 14px", background: "#FFEBEE", border: "1px solid #FFCDD2", borderRadius: 6, fontSize: 13, color: "#C62828" }}>
+            {classError}
+          </div>
+        )}
+
+        {/* ═══ BANG BAI ═══ */}
+        <div style={{ flex: 1, overflow: "auto", borderTop: "1px solid #EEEEEE" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: "var(--color-table-header-bg)" }}>
-                <th style={TH_S}>TT</th>
+                <th style={{ ...TH_S, width: 52 }}>TT</th>
+                <th style={{ ...TH_S, width: 36 }} />
                 <th style={{ ...TH_S, textAlign: "left" }}>Mã</th>
                 <th style={{ ...TH_S, textAlign: "left", width: "auto" }}>Tên đề</th>
                 <th style={{ ...TH_S, textAlign: "left" }}>Chủ đề</th>
@@ -273,42 +323,34 @@ export default function Problems({
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={5} style={{ padding: 40, textAlign: "center", color: "#9E9E9E", fontSize: 13 }}>
-                  {problems.length === 0 ? "Chưa có bài tập nào." : "Không tìm thấy bài phù hợp."}
-                </td></tr>
+                <tr><td colSpan={6} style={{ padding: 40, textAlign: "center", color: "#9E9E9E", fontSize: 13 }}>{emptyText}</td></tr>
               ) : filtered.map((p, idx) => {
                 const isHov = hov === p.id;
                 const status = statusByProblem.get(p.id) ?? "unsolved";
-                const rowBg = isHov ? "var(--color-table-hover)" : idx % 2 === 1 ? "var(--color-table-row-alt)" : "#fff";
+                const solved = status === "solved";
+                const rowBg = isHov ? "var(--color-table-hover)" : solved ? "#F1F8E9" : "#fff";
                 const diff = DIFFICULTY_META[p.difficulty];
                 return (
                   <tr
                     key={p.id}
                     onMouseEnter={() => setHov(p.id)} onMouseLeave={() => setHov(null)}
                     onClick={() => setSelectedId(p.id)}
-                    style={{ background: rowBg, cursor: "pointer", borderBottom: "1px solid #F5F5F5", transition: "background 0.1s" }}
+                    style={{ background: rowBg, cursor: "pointer", borderBottom: "1px solid #EEEEEE", transition: "background 0.1s" }}
                   >
-                    <td style={{ ...TD_S, textAlign: "center", width: 44, color: "#9E9E9E" }}>{idx + 1}</td>
-                    <td style={{ ...TD_S, width: 90 }}>
-                      <span style={{
-                        fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 600,
-                        color: status === "solved" ? "var(--color-green)" : "var(--color-red)",
-                      }}>
-                        {p.id}
-                      </span>
+                    <td style={{ ...TD_S, textAlign: "center", color: "#757575" }}>{idx + 1}</td>
+                    <td style={{ ...TD_S, textAlign: "center", padding: "10px 0" }} title={solved ? "Đã giải" : status === "attempted" ? "Đang làm" : ""}>
+                      {solved && <span style={{ color: "var(--color-green)", fontWeight: 800 }}>✓</span>}
+                      {status === "attempted" && <span style={{ color: "#E65100", fontWeight: 800 }}>•</span>}
+                    </td>
+                    <td style={{ ...TD_S, width: 110 }}>
+                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 12.5, fontWeight: 600, color: "var(--color-red)" }}>{p.id}</span>
                     </td>
                     <td style={TD_S}>
-                      <span style={{
-                        fontSize: 13, fontWeight: 500,
-                        color: status === "solved" ? "var(--color-green)" : isHov ? "var(--color-red)" : "#212121",
-                      }}>
-                        {status === "solved" && <span style={{ marginRight: 4 }}>✓</span>}
-                        {p.title}
-                      </span>
+                      <span style={{ fontSize: 13.5, fontWeight: 500, color: isHov ? "var(--color-red)" : "#212121" }}>{p.title}</span>
                       {status === "attempted" && <span style={{ marginLeft: 8, fontSize: 11, color: "#E65100" }}>đang làm</span>}
                     </td>
                     <td style={{ ...TD_S, color: "#616161", fontSize: 12.5, whiteSpace: "nowrap" }}>{nameOf(p)}</td>
-                    <td style={{ ...TD_S, textAlign: "center", width: 80 }}>
+                    <td style={{ ...TD_S, textAlign: "center", width: 90 }}>
                       {diff ? (
                         <span style={{ fontSize: 11.5, fontWeight: 700, padding: "2px 10px", borderRadius: 10, color: diff.color, background: diff.bg }}>
                           {diff.label}
@@ -322,9 +364,9 @@ export default function Problems({
           </table>
         </div>
 
-        {/* ═══ PROGRESS BAR ═══ */}
-        <div style={{ padding: "0 24px 12px", flexShrink: 0, display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ flex: 1 }}><Bar value={solvedInView} total={filtered.length} height={6} /></div>
+        {/* ═══ TIEN DO CUA DANH SACH DANG XEM ═══ */}
+        <div style={{ padding: "10px 20px", flexShrink: 0, display: "flex", alignItems: "center", gap: 12, borderTop: "1px solid #EEEEEE" }}>
+          <div style={{ flex: 1 }}><Bar value={solvedInView} total={filtered.length} /></div>
           <span style={{ fontSize: 12, color: "#757575", fontFamily: "var(--font-mono)", whiteSpace: "nowrap" }}>
             {solvedInView}/{filtered.length} bài đã giải
           </span>
@@ -334,71 +376,16 @@ export default function Problems({
   );
 }
 
-function Bar({ value, total, height = 4 }: { value: number; total: number; height?: number }) {
+function Bar({ value, total }: { value: number; total: number }) {
   return (
-    <div style={{ height, background: "#EEEEEE", borderRadius: height / 2, overflow: "hidden", marginTop: height === 4 ? 8 : 0 }}>
+    <div style={{ height: 6, background: "#EEEEEE", borderRadius: 3, overflow: "hidden" }}>
       <div style={{
-        height: "100%", borderRadius: height / 2,
+        height: "100%", borderRadius: 3,
         width: total > 0 ? `${(value / total) * 100}%` : "0%",
         background: "linear-gradient(90deg, #66BB6A, #43A047)",
         transition: "width 0.5s ease",
       }} />
     </div>
-  );
-}
-
-/** Mot chang tren lo trinh: vong tron so thu tu noi voi nhau bang mot duong doc. */
-function StepRow({
-  step, label, progress, active, first, last, onClick,
-}: {
-  step?: number; label: string; progress: Progress; active: boolean;
-  first?: boolean; last?: boolean; onClick: () => void;
-}) {
-  const done = progress.total > 0 && progress.solved === progress.total;
-  const started = progress.solved > 0;
-  const ringColor = done ? "var(--color-green)" : started ? "var(--color-red)" : "#E0E0E0";
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        position: "relative", width: "100%", display: "flex", alignItems: "center", gap: 10,
-        padding: "8px 16px 8px 13px", border: "none", cursor: "pointer", textAlign: "left",
-        background: active ? "var(--color-red-light)" : "transparent",
-        borderLeft: `3px solid ${active ? "var(--color-red)" : "transparent"}`,
-      }}
-    >
-      {step !== undefined && (
-        <span style={{
-          position: "absolute", left: 26, width: 2, background: "#EEEEEE",
-          top: first ? "50%" : 0, bottom: last ? "50%" : 0,
-        }} />
-      )}
-      <span style={{
-        position: "relative", zIndex: 1, width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: 12, fontWeight: 700, boxSizing: "border-box",
-        background: done ? "var(--color-green)" : "#fff",
-        border: `2px solid ${ringColor}`,
-        color: done ? "#fff" : started ? "var(--color-red)" : "#9E9E9E",
-      }}>
-        {step === undefined ? "≡" : done ? "✓" : step}
-      </span>
-      <span style={{ flex: 1, minWidth: 0 }}>
-        <span style={{
-          display: "block", fontSize: 13, fontWeight: active ? 700 : 500, color: "#212121",
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-        }}>{label}</span>
-        <span style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
-          <span style={{ flex: 1, height: 3, background: "#EEEEEE", borderRadius: 2, overflow: "hidden" }}>
-            <span style={{
-              display: "block", height: "100%", background: done ? "var(--color-green)" : "#EF9A9A",
-              width: progress.total > 0 ? `${(progress.solved / progress.total) * 100}%` : "0%",
-            }} />
-          </span>
-          <span style={{ fontSize: 10.5, color: "#9E9E9E", fontFamily: "var(--font-mono)" }}>{progress.solved}/{progress.total}</span>
-        </span>
-      </span>
-    </button>
   );
 }
 

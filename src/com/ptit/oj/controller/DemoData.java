@@ -55,7 +55,7 @@ public class DemoData {
         courses.addLesson(course, "Bài 3 - Vòng lặp",
                 "Lặp lại một khối lệnh nhiều lần bằng for và while.", ids(path, 4, 6));
         courses.createCourse("Lộ trình nâng cao",
-                "26 chặng theo lộ trình tổng quát của VNOI Wiki, từ đệ quy đến quy hoạch động.", "Nâng cao");
+                "26 chặng lập trình thi đấu, từ đệ quy đến quy hoạch động.", "Nâng cao");
         courses.addDocument(course.getId(), "Mẹo đọc đề và tự kiểm tra", Document.KIND_TEXT,
                 "1. Đọc kỹ giới hạn của đề.\n2. Tự tính tay ví dụ.\n3. Thử các trường hợp biên trước khi nộp.",
                 teacher.getFullName());

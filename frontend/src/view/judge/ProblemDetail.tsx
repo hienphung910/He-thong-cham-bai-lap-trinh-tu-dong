@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../shared/api";
 import { useAuth } from "../account/auth";
 import CodeEditor from "./CodeEditor";
 import TestTable from "./TestTable";
 import SubmitInsight from "./SubmitInsight";
-import AssistantPopup from "./AssistantPopup";
+import ProblemComments from "./ProblemComments";
 import { DIFFICULTY_META } from "../problem/learningPath";
 import type { LanguageInfo, Problem, Submission } from "../../shared/types";
 
@@ -13,6 +13,12 @@ const TEMPLATES: Record<string, string> = {
   "C++": `#include <iostream>\n\nint main() {\n    long long a, b;\n    std::cin >> a >> b;\n    std::cout << a + b << std::endl;\n    return 0;\n}\n`,
   Python: `import sys\n\ndata = sys.stdin.read().split()\nprint(int(data[0]) + int(data[1]))\n`,
   JavaScript: `const data = require("fs").readFileSync(0, "utf8").trim().split(/\\s+/);\nconsole.log((BigInt(data[0]) + BigInt(data[1])).toString());\n`,
+};
+
+/** File ma nguon tai len tu may: gioi han 256 KB (may chu nhan body toi da 512 KB). */
+const MAX_SOURCE_BYTES = 256 * 1024;
+const LANGUAGE_BY_EXTENSION: Record<string, string> = {
+  java: "Java", cpp: "C++", cc: "C++", cxx: "C++", c: "C++", h: "C++", py: "Python", js: "JavaScript", mjs: "JavaScript",
 };
 
 /** Nut sao chep o goc o vi du: khung vien nho, bieu tuong hai o vuong chong nhau; bam xong hien dau tich. */
@@ -94,8 +100,31 @@ export default function ProblemDetail({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<Submission | null>(null);
-  /** So lan da nop trong trang nay - moi lan tang thi tro ly pop-up tu nhan xet mot lan. */
-  const [submitCount, setSubmitCount] = useState(0);
+  /** O chon file an; nut "Tai file ma nguon" bam ho vao day. */
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [uploadedName, setUploadedName] = useState("");
+
+  /** Doc file ma nguon nguoi dung chon tu may va dua vao o soan; duoi file quyet dinh ngon ngu. */
+  async function loadSourceFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";            // de chon lai dung file do van kich hoat onChange
+    if (!file) return;
+    setError("");
+    if (file.size > MAX_SOURCE_BYTES) {
+      setError(`File ${file.name} quá lớn (tối đa ${MAX_SOURCE_BYTES / 1024} KB).`);
+      return;
+    }
+    const text = await file.text();
+    if (text.includes("\u0000")) {
+      setError(`File ${file.name} không phải file mã nguồn dạng văn bản.`);
+      return;
+    }
+    const extension = file.name.slice(file.name.lastIndexOf(".") + 1).toLowerCase();
+    const detected = LANGUAGE_BY_EXTENSION[extension];
+    if (detected && languages.some((l) => l.name === detected && l.available)) setLanguage(detected);
+    setCode(text);
+    setUploadedName(file.name);
+  }
 
   const langNames = useMemo(() => languages.map((l) => l.name), [languages]);
   const unavailable = useMemo(() => languages.filter((l) => !l.available).map((l) => l.name), [languages]);
@@ -109,7 +138,6 @@ export default function ProblemDetail({
     setBusy(true);
     try {
       setResult(await api.submit({ problemId: problem.id, language, code }));
-      setSubmitCount((c) => c + 1);
       onSubmitted();
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     finally { setBusy(false); }
@@ -226,6 +254,17 @@ export default function ProblemDetail({
                 opacity: TEMPLATES[language] ? 1 : 0.4,
               }}
             >Chèn code mẫu</button>
+            <input ref={fileInput} type="file" accept=".java,.cpp,.cc,.cxx,.c,.h,.py,.js,.mjs,.txt"
+              style={{ display: "none" }} onChange={(e) => void loadSourceFile(e)} />
+            <button
+              onClick={() => fileInput.current?.click()}
+              title="Chọn một file mã nguồn trên máy để đưa vào ô soạn"
+              style={{
+                height: 34, padding: "0 14px", border: "1px solid #E0E0E0", borderRadius: 6,
+                fontSize: 12, color: "#616161", background: "#fff", cursor: "pointer",
+              }}
+            >Tải file mã nguồn</button>
+            {uploadedName && <span style={{ fontSize: 12, color: "#9E9E9E" }}>Đã nạp {uploadedName}</span>}
             <div style={{ flex: 1 }} />
             <button
               onClick={() => void doSubmit()} disabled={busy}
@@ -305,10 +344,10 @@ export default function ProblemDetail({
 
         {/* ═══ THONG KE DIEM YEU SAU KHI NOP ═══ */}
         {result && !error && <SubmitInsight problem={problem} result={result} onOpen={onOpen} />}
-      </div>
 
-      {/* ═══ TRO LY POP-UP ═══ */}
-      <AssistantPopup problem={problem} code={code} autoAskKey={submitCount} />
+        {/* ═══ BINH LUAN CUA NGUOI DUNG VE BAI NAY ═══ */}
+        <ProblemComments problemId={problem.id} />
+      </div>
     </div>
   );
 }

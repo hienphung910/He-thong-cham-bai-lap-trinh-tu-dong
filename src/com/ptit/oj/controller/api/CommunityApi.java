@@ -10,6 +10,8 @@ import com.ptit.oj.model.Classroom;
 import com.ptit.oj.model.ForumPost;
 import com.ptit.oj.model.Meeting;
 import com.ptit.oj.model.Notification;
+import com.ptit.oj.model.Problem;
+import com.ptit.oj.model.ProblemComment;
 import com.ptit.oj.model.User;
 
 import java.io.IOException;
@@ -33,7 +35,7 @@ public class CommunityApi extends ApiModule {
 
     @Override
     public boolean handle(Request req) throws IOException {
-        return handleNotifications(req) || handleChat(req) || handleForum(req);
+        return handleNotifications(req) || handleChat(req) || handleForum(req) || handleComments(req);
     }
 
     // ----------------------------------------------------------- thong bao
@@ -119,6 +121,97 @@ public class CommunityApi extends ApiModule {
             return channel;
         }
         throw ApiException.notFound("Không có kênh chat " + channel);
+    }
+
+    // ------------------------------------------------- binh luan duoi bai tap
+
+    /**
+     *   GET / POST /api/problems/{maBai}/comments   xem, gui binh luan duoi mot bai
+     *   DELETE     /api/comments/{id}               tac gia hoac quan tri vien xoa
+     *   GET        /api/admin/comments              quan tri vien: toan bo binh luan, cho duyet truoc
+     *   POST       /api/admin/comments/{id}/approve quan tri vien duyet
+     */
+    private boolean handleComments(Request req) throws IOException {
+        if (req.is("GET", "problems", "*", "comments")) {
+            User user = req.user();
+            Problem problem = visibleProblem(req.arg(0), user);
+            List<String> items = new ArrayList<>();
+            for (ProblemComment c : community.commentsOf(problem.getId(), user)) items.add(commentJson(c, user, null));
+            req.send(Json.array(items));
+            return true;
+        }
+        if (req.is("POST", "problems", "*", "comments")) {
+            User user = req.user();
+            Problem problem = visibleProblem(req.arg(0), user);
+            ProblemComment created = community.addComment(problem.getId(), user, req.body().getString("text"));
+            req.send(commentJson(created, user, null));
+            return true;
+        }
+        if (req.is("DELETE", "comments", "*")) {
+            User user = req.user();
+            ProblemComment comment = community.findComment(req.arg(0));
+            boolean own = comment.getAuthorId().equals(user.getId());
+            if (!isAdmin(user) && !own) throw ApiException.forbidden("Bạn chỉ xoá được bình luận của chính mình");
+            community.deleteComment(comment.getId());
+            // Quan tri vien tu choi mot binh luan dang cho duyet: bao cho tac gia biet.
+            if (!own && !comment.isApproved()) {
+                community.notifyUser(comment.getAuthorId(), "Bình luận không được duyệt",
+                        "Bình luận của bạn ở bài " + comment.getProblemId() + " không được quản trị viên duyệt.");
+            }
+            req.sendOk();
+            return true;
+        }
+        if (req.is("GET", "admin", "comments")) {
+            User admin = req.admin();
+            List<String> pending = new ArrayList<>();
+            List<String> approved = new ArrayList<>();
+            for (ProblemComment c : community.getComments()) {
+                String title = judge.findProblem(c.getProblemId()).map(Problem::getTitle).orElse(c.getProblemId());
+                (c.isApproved() ? approved : pending).add(commentJson(c, admin, title));
+            }
+            pending.addAll(approved);
+            req.send(Json.array(pending));
+            return true;
+        }
+        if (req.is("POST", "admin", "comments", "*", "approve")) {
+            req.admin();
+            ProblemComment comment = community.findComment(req.arg(0));
+            if (!comment.isApproved()) {
+                community.approveComment(comment);
+                community.notifyUser(comment.getAuthorId(), "Bình luận đã được duyệt",
+                        "Bình luận của bạn ở bài " + comment.getProblemId() + " đã hiện cho mọi người.");
+            }
+            req.sendOk();
+            return true;
+        }
+        return false;
+    }
+
+    /** Bai trong duong dan, kem kiem tra nguoi goi mo duoc bai do (cung quy tac voi danh sach bai va nop bai). */
+    private Problem visibleProblem(String problemId, User user) {
+        Problem problem = judge.findProblem(problemId)
+                .orElseThrow(() -> ApiException.notFound("Không có bài " + problemId));
+        if (!problem.isShared() && !user.canEditProblem(problem)
+                && !platform.publishedProblemIds().contains(problem.getId())) {
+            throw ApiException.notFound("Không có bài " + problemId);
+        }
+        return problem;
+    }
+
+    /** problemTitle != null: kem ten bai, dung cho trang duyet cua quan tri vien. */
+    private String commentJson(ProblemComment c, User viewer, String problemTitle) {
+        Json.Obj json = Json.obj()
+                .put("id", c.getId())
+                .put("problemId", c.getProblemId())
+                .put("authorName", c.getAuthorName())
+                .put("authorRole", c.getAuthorRole())
+                .put("text", c.getText())
+                .put("createdAt", time(c.getCreatedAt()))
+                .put("status", c.getStatus())
+                .put("mine", c.getAuthorId().equals(viewer.getId()))
+                .put("canDelete", isAdmin(viewer) || c.getAuthorId().equals(viewer.getId()));
+        if (problemTitle != null) json.put("problemTitle", problemTitle);
+        return json.build();
     }
 
     // ------------------------------------------------------------ dien dan
