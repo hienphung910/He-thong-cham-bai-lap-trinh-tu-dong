@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { papi } from "../../shared/platformApi";
-import { Btn, Card, ErrorBox, Field, INPUT, Muted, Page, Row, Table, Tag, errorText, fmtTime, localDateTime, useLoad } from "../../shared/kit";
+import { Btn, Card, ErrorBox, Field, INPUT, Muted, Page, Row, Switch, Table, Tag, errorText, fmtTime, localDateTime, useLoad } from "../../shared/kit";
 import { parseIds, useBackState } from "../../shared/nav";
 import ProblemChip from "../../shared/ProblemChip";
 import { useAuth } from "../account/auth";
@@ -49,15 +49,12 @@ export default function Contests() {
             <Field label="Bắt đầu"><input type="datetime-local" style={INPUT} value={form.startAt} onChange={(e) => setForm({ ...form, startAt: e.target.value })} /></Field>
             <Field label="Thời lượng (phút)"><input type="number" style={INPUT} value={form.durationMin} onChange={(e) => setForm({ ...form, durationMin: Number(e.target.value) })} /></Field>
             <Field label="Các bài (mã bài kho chung hoặc kho của bạn, cách nhau dấu phẩy)"><input style={INPUT} value={form.problems} onChange={(e) => setForm({ ...form, problems: e.target.value })} placeholder="K001, K002" /></Field>
+            <Switch label="Giám sát thí sinh" checked={form.proctored} onChange={(proctored) => setForm({ ...form, proctored })}
+              title="Ghi lại việc rời tab, chuyển cửa sổ, sao chép, dán của thí sinh trong lúc thi. Bật / tắt lại được ở trang kỳ thi." />
             <Btn disabled={!form.classroomId} title={form.classroomId ? undefined : "Hãy chọn lớp tham gia kỳ thi"} onClick={() => void act(async () => {
               await papi.createContest({ title: form.title, description: form.description, startAt: form.startAt, durationMin: form.durationMin, problemIds: parseIds(form.problems), proctored: form.proctored, classroomId: form.classroomId });
               setForm({ ...form, title: "", problems: "" });
             })}>Tạo</Btn>
-            <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 13, height: 34, whiteSpace: "nowrap" }}
-              title="Ghi lại việc rời tab, chuyển cửa sổ, sao chép, dán của thí sinh trong lúc thi. Bật / tắt lại được ở trang kỳ thi.">
-              <input type="checkbox" checked={form.proctored} onChange={(e) => setForm({ ...form, proctored: e.target.checked })} />
-              Giám sát thí sinh
-            </label>
           </Row>
         </Card>
       )}
@@ -174,9 +171,9 @@ function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
 
           {c.canManage && (
             <ProctorPanel contestId={c.id} running={c.status === "RUNNING"} enabled={c.proctored}
-              toggle={<Btn small kind="ghost" onClick={() => void edit(() => papi.setProctoring(c.id, !c.proctored))}>
-                {c.proctored ? "Tắt giám sát" : "Bật giám sát"}
-              </Btn>} />
+              toggle={<Switch label="Giám sát" checked={c.proctored}
+                onChange={(on) => void edit(() => papi.setProctoring(c.id, on))}
+                title={c.proctored ? "Đang ghi nhận. Bấm để tắt giám sát." : "Đang không ghi nhận. Bấm để bật giám sát."} />} />
           )}
 
           <Card title="Bảng xếp hạng">

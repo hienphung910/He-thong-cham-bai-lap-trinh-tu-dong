@@ -153,9 +153,7 @@ export function ProctorPanel({ contestId, running, enabled, toggle }: {
 
   return (
     <Card title="Giám sát thí sinh" right={<>
-      {enabled
-        ? <Tag color="green">Đang bật{running ? " · tự cập nhật mỗi 5 giây" : ""}</Tag>
-        : <Tag color="gray">Đang tắt</Tag>}
+      {enabled && running && <Tag color="green">Tự cập nhật mỗi 5 giây</Tag>}
       {toggle}
     </>}>
       <ErrorBox text={log.error} />

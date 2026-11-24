@@ -156,6 +156,40 @@ export function Btn({ children, onClick, kind = "primary", small, disabled, titl
   );
 }
 
+/**
+ * Cong tac bat / tat: mot vien thuoc co nut tron truot qua lai, kem nhan va chu "Bat" / "Tat".
+ * Dung thay cho o tick khi lua chon la bat hay tat mot tinh nang.
+ */
+export function Switch({ checked, onChange, label, title, disabled }: {
+  checked: boolean; onChange: (next: boolean) => void; label: string; title?: string; disabled?: boolean;
+}) {
+  return (
+    <button type="button" role="switch" aria-checked={checked} title={title} disabled={disabled}
+      onClick={() => onChange(!checked)}
+      style={{
+        display: "inline-flex", alignItems: "center", gap: 10, height: 34, padding: "0 14px 0 7px", borderRadius: 17,
+        border: `1px solid ${checked ? "var(--color-accent-dark)" : "#D0D0D0"}`,
+        background: checked ? "var(--color-red-light)" : "#fff",
+        cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1,
+        fontSize: 13, fontWeight: 600, color: "#424242", whiteSpace: "nowrap", transition: "background 0.15s, border-color 0.15s",
+      }}>
+      <span style={{
+        position: "relative", width: 36, height: 20, borderRadius: 10, flexShrink: 0,
+        background: checked ? "var(--color-accent)" : "#BDBDBD", transition: "background 0.15s",
+      }}>
+        <span style={{
+          position: "absolute", top: 2, left: checked ? 18 : 2, width: 16, height: 16, borderRadius: "50%",
+          background: "#fff", boxShadow: "0 1px 2px rgba(0,0,0,0.3)", transition: "left 0.15s",
+        }} />
+      </span>
+      {label}
+      <span style={{ minWidth: 22, fontSize: 11.5, fontWeight: 700, color: checked ? "var(--color-red)" : "#9E9E9E" }}>
+        {checked ? "Bật" : "Tắt"}
+      </span>
+    </button>
+  );
+}
+
 export const INPUT: CSSProperties = {
   height: 34, padding: "0 10px", border: "1px solid #E0E0E0", borderRadius: 6,
   fontSize: 13, color: "#212121", background: "#fff", outline: "none", width: "100%", boxSizing: "border-box",
