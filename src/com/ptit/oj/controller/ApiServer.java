@@ -182,7 +182,8 @@ public class ApiServer {
      * request cua phong hoc (trinh duyet gui lien tuc khi go ma / ve bang).
      */
     private void audit(HttpExchange ex, String method, String path, int status) {
-        if ("GET".equals(method) || path.equals("/api/auth/login") || path.contains("/room/")) return;
+        if ("GET".equals(method) || path.equals("/api/auth/login") || path.contains("/room/")
+                || path.endsWith("/proctor")) return;      // su kien giam sat da co nhat ky rieng o trang ky thi
         String token = SessionService.extractBearerToken(ex.getRequestHeaders().getFirst("Authorization"));
         String username = service.getAuth().authenticate(token).map(User::getUsername).orElse("(khách)");
         platform.getSystem().log(username, method + " " + path, "HTTP " + status, status == 200);

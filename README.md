@@ -24,6 +24,7 @@ Backend chỉ dùng API chuẩn của JDK. Máy chủ HTTP, bộ đọc/ghi JSON
 > - **Bình luận dưới bài tập**: mỗi bài có phần bình luận ở cuối trang làm bài. Bình luận mới ở trạng thái chờ duyệt và chỉ tác giả thấy; quản trị viên duyệt ở Quản trị → Duyệt bình luận thì mọi người mới thấy. Bình luận lưu trong RAM như các module mở rộng khác.
 > - **Tải file**: trang làm bài có nút icon tải file mã nguồn cạnh nút *Chèn code mẫu* (nội dung file được đưa vào ô soạn, đuôi file quyết định ngôn ngữ). Chỉ nhận một file mã nguồn, không nhận file nén. Form tạo bài có *Tải thư mục test* và *Tải nhiều file test*: mỗi test là một cặp `01.in` + `01.out` (nhận cả `.inp`, `.ans`), hoặc mỗi test một thư mục con kiểu `Test01/BAI.INP` + `Test01/BAI.OUT`; tên bắt đầu bằng `sample` là test ví dụ.
 > - **Sinh test** (Công cụ CP): mảng số chọn được số nguyên hoặc số thực; đồ thị chọn được có hướng / vô hướng, có trọng số / không có và số cạnh.
+> - **Giám sát kỳ thi**: khi học sinh mở một bài thuộc kỳ thi đang diễn ra, trình duyệt bắt đầu ghi lại việc rời tab, chuyển sang cửa sổ khác, sao chép / cắt / dán và đóng hoặc tải lại trang, cho tới khi kỳ thi kết thúc. Một thanh ở đầu trang báo cho thí sinh biết đang bị giám sát. Người tạo kỳ thi xem bảng tổng hợp theo thí sinh và nhật ký sự kiện ngay trên trang kỳ thi (tự cập nhật mỗi 5 giây) và nhận thông báo khi một thí sinh có vi phạm đầu tiên, rồi cứ mỗi 10 lần. Chỉ ghi độ dài nội dung sao chép / dán, không ghi nội dung. Việc ghi nhận do trình duyệt của thí sinh thực hiện nên chỉ là dấu hiệu tham khảo: tắt JavaScript hoặc dùng thiết bị khác thì không ghi được gì. Nhật ký lưu trong RAM.
 > - **Tài khoản quản trị** không có các mục Lớp của tôi, Bài tập được giao, Lịch học, nhóm Cá nhân và nhóm Giảng dạy; đổi mật khẩu vẫn mở được từ menu ở ảnh đại diện.
 > - **Đã bỏ khỏi giao diện**: Khóa học và tài liệu, Thành tích, Gói dịch vụ, Stress test, Trợ lý AI (cả pop-up ở trang làm bài), Diễn đàn, Trợ lý giảng dạy, Phụ huynh, phần xem lại diễn biến của kỳ thi, và phần điểm yếu trong Phân tích học tập.
 > - **Ô soạn mã** (trang làm bài, IDE trực tuyến, xem lại bài nộp) dùng CodeMirror, tô màu cú pháp theo bảng màu Dark+ của Visual Studio Code.
@@ -471,6 +472,8 @@ Trừ 4 endpoint công khai, mọi request phải gửi header `Authorization: B
 | DELETE | `/api/meetings/{id}/room/strokes` | quản lý lớp | Xoá bảng |
 | GET, PUT | `/api/meetings/{id}/attendance` | quản lý lớp | Xem, sửa điểm danh |
 | GET | `/api/recordings`, `/api/recordings/{id}` | thành viên lớp | Bản ghi buổi học |
+| POST | `/api/contests/{id}/proctor` | đăng nhập | Trình duyệt thí sinh báo một sự kiện giám sát (`type`, `detail`, `problemId`). Chỉ lưu khi kỳ thi đang diễn ra và người gửi là học sinh |
+| GET | `/api/contests/{id}/proctor` | người tạo / admin | Nhật ký giám sát: tổng hợp theo thí sinh và 300 sự kiện mới nhất |
 | GET | `/api/contests`, `/api/contests/{id}?minute=N`, `/api/contests/{id}/events` | đăng nhập | Danh sách kỳ thi; bảng xếp hạng tại phút N; diễn biến nộp bài |
 | POST | `/api/contests` | GV / admin | Tạo kỳ thi; người tạo là chủ kỳ thi |
 | POST, DELETE | `/api/contests/{id}/problems`, `/api/contests/{id}/problems/{mã bài}` | người tạo / admin | Thêm, bớt một bài của kỳ thi |

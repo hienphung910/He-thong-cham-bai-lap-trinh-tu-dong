@@ -5,6 +5,7 @@ import CodeEditor from "./CodeEditor";
 import TestTable from "./TestTable";
 import SubmitInsight from "./SubmitInsight";
 import ProblemComments from "./ProblemComments";
+import { markFileDialog } from "../contest/Proctor";
 import { DIFFICULTY_META } from "../problem/learningPath";
 import type { LanguageInfo, Problem, Submission } from "../../shared/types";
 
@@ -269,7 +270,7 @@ export default function ProblemDetail({
             >Chèn code mẫu</button>
             {/* Nut icon nho: chon mot file ma nguon tren may de dua vao o soan */}
             <button
-              onClick={() => fileInput.current?.click()}
+              onClick={() => { markFileDialog(); fileInput.current?.click(); }}
               title="Tải file mã nguồn từ máy (.java, .cpp, .py, .js)"
               aria-label="Tải file mã nguồn từ máy"
               style={{

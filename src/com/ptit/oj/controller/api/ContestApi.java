@@ -6,12 +6,15 @@ import com.ptit.oj.controller.Json;
 import com.ptit.oj.controller.Platform;
 import com.ptit.oj.model.Contest;
 import com.ptit.oj.model.Problem;
+import com.ptit.oj.model.ProctorEvent;
 import com.ptit.oj.model.Submission;
 import com.ptit.oj.model.User;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Module 21 (cuoc thi) va 22 (xem lai cuoc thi):
@@ -83,6 +86,27 @@ public class ContestApi extends ApiModule {
                     .build());
             return true;
         }
+        // Trinh duyet cua thi sinh bao mot su kien giam sat (roi tab, sao chep, dan...).
+        if (req.is("POST", "contests", "*", "proctor")) {
+            User user = req.user();
+            Contest c = contests.find(req.arg(0));
+            Json.Value body = req.body();
+            ProctorEvent event = contests.recordProctorEvent(c, user, body.getString("type"),
+                    body.getString("detail", ""), body.getString("problemId", ""));
+            if (event != null && event.isViolation()) notifyOwner(c, user);
+            req.sendOk();
+            return true;
+        }
+        // Nguoi tao ky thi (va quan tri vien) xem nhat ky giam sat.
+        if (req.is("GET", "contests", "*", "proctor")) {
+            User user = req.user();
+            Contest c = contests.find(req.arg(0));
+            if (!contests.canManage(user, c)) {
+                throw ApiException.forbidden("Chỉ người tạo kỳ thi hoặc quản trị viên mới xem được nhật ký giám sát");
+            }
+            req.send(proctorJson(c));
+            return true;
+        }
         if (req.is("GET", "contests", "*", "events")) {
             req.user();
             Contest c = contests.find(req.arg(0));
@@ -100,6 +124,76 @@ public class ContestApi extends ApiModule {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Bao cho nguoi tao ky thi khi mot thi sinh co vi pham: lan dau tien, roi cu moi 10 lan mot lan,
+     * de khong lam ngap hop thong bao. Chi tiet tung su kien xem o trang ky thi.
+     */
+    private void notifyOwner(Contest c, User student) {
+        int count = contests.violationCount(c, student.getId());
+        if (count != 1 && count % 10 != 0) return;
+        User owner = judge.getUsers().stream()
+                .filter(u -> u.getUsername().equals(c.getOwnerUsername())).findFirst().orElse(null);
+        if (owner == null) return;
+        platform.getCommunity().notifyUser(owner.getId(), "Giám sát kỳ thi: " + student.getFullName(),
+                student.getFullName() + " (@" + student.getUsername() + ") có " + count
+                        + " lần rời tab / sao chép / dán trong kỳ thi " + c.getTitle()
+                        + ". Mở kỳ thi để xem nhật ký giám sát.",
+                "Contests");
+    }
+
+    /** Nhat ky giam sat: bang tong hop theo thi sinh (nhieu vi pham nhat truoc) va 300 su kien gan nhat. */
+    private String proctorJson(Contest c) {
+        Map<String, User> users = usersById();
+        List<ProctorEvent> all = contests.proctorEventsOf(c);
+
+        Map<String, Map<String, Integer>> countsByUser = new LinkedHashMap<>();
+        Map<String, ProctorEvent> lastByUser = new LinkedHashMap<>();
+        for (ProctorEvent e : all) {
+            countsByUser.computeIfAbsent(e.getUserId(), k -> new LinkedHashMap<>()).merge(e.getType(), 1, Integer::sum);
+            lastByUser.put(e.getUserId(), e);
+        }
+        List<String> userIds = new ArrayList<>(countsByUser.keySet());
+        userIds.sort((a, b) -> Integer.compare(contests.violationCount(c, b), contests.violationCount(c, a)));
+
+        List<String> students = new ArrayList<>();
+        for (String userId : userIds) {
+            User u = users.get(userId);
+            if (u == null) continue;
+            Map<String, Integer> counts = countsByUser.get(userId);
+            students.add(Json.obj()
+                    .put("username", u.getUsername())
+                    .put("fullName", u.getFullName())
+                    .put("violations", contests.violationCount(c, userId))
+                    .put("tabHidden", counts.getOrDefault(ProctorEvent.TAB_HIDDEN, 0).intValue())
+                    .put("windowBlur", counts.getOrDefault(ProctorEvent.WINDOW_BLUR, 0).intValue())
+                    .put("copy", counts.getOrDefault(ProctorEvent.COPY, 0) + counts.getOrDefault(ProctorEvent.CUT, 0))
+                    .put("paste", counts.getOrDefault(ProctorEvent.PASTE, 0).intValue())
+                    .put("pageClosed", counts.getOrDefault(ProctorEvent.PAGE_CLOSED, 0).intValue())
+                    .put("lastAt", time(lastByUser.get(userId).getAt()))
+                    .build());
+        }
+
+        List<String> events = new ArrayList<>();
+        for (int i = all.size() - 1; i >= 0 && events.size() < 300; i--) {
+            ProctorEvent e = all.get(i);
+            User u = users.get(e.getUserId());
+            events.add(Json.obj()
+                    .put("id", e.getId())
+                    .put("at", time(e.getAt()))
+                    .put("username", u == null ? "" : u.getUsername())
+                    .put("fullName", u == null ? "(đã xoá)" : u.getFullName())
+                    .put("type", e.getType())
+                    .put("detail", e.getDetail())
+                    .put("problemId", e.getProblemId())
+                    .build());
+        }
+        return Json.obj()
+                .put("total", all.size())
+                .putRaw("students", Json.array(students))
+                .putRaw("events", Json.array(events))
+                .build();
     }
 
     private Json.Obj contestJson(Contest c, User viewer) {

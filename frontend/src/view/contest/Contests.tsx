@@ -5,6 +5,7 @@ import { parseIds, useBackState } from "../../shared/nav";
 import ProblemChip from "../../shared/ProblemChip";
 import { useAuth } from "../account/auth";
 import type { Contest } from "../../shared/platformTypes";
+import { ProctorPanel } from "./Proctor";
 
 const STATUS: Record<Contest["status"], { label: string; color: string }> = {
   UPCOMING: { label: "Sắp diễn ra", color: "blue" },
@@ -108,7 +109,15 @@ function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
               </div>
             )}
             <div style={{ marginTop: 8 }}><Muted>Bấm vào mã bài để làm. Bài nộp trong khung giờ thi được tính vào bảng xếp hạng.</Muted></div>
+            {!c.canManage && (
+              <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 6, background: "var(--color-red-light)", border: "1px solid #F3D9A4", fontSize: 12.5, color: "#5D4037" }}>
+                <b>Kỳ thi có giám sát.</b> Khi bạn mở bài của kỳ thi đang diễn ra, việc rời tab, chuyển sang cửa sổ khác, sao chép và dán
+                sẽ được ghi lại và gửi cho giảng viên tạo kỳ thi.
+              </div>
+            )}
           </Card>
+
+          {c.canManage && <ProctorPanel contestId={c.id} running={c.status === "RUNNING"} />}
 
           <Card title="Bảng xếp hạng">
             <Table head={["#", "Thí sinh", "Số bài", "Phút phạt", ...c.problems.map((p) => p.id)]}

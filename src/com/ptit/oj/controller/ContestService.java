@@ -5,6 +5,7 @@ import com.ptit.oj.dao.InMemoryRepository;
 import com.ptit.oj.dao.Repository;
 import com.ptit.oj.model.Contest;
 import com.ptit.oj.model.Problem;
+import com.ptit.oj.model.ProctorEvent;
 import com.ptit.oj.model.Submission;
 import com.ptit.oj.model.User;
 import com.ptit.oj.model.Verdict;
@@ -121,6 +122,62 @@ public class ContestService {
     }
 
     /** Cuoc thi moi nhat dung truoc. */
+    // ------------------------------------------------------- giam sat ky thi
+
+    /** Moi ky thi giu toi da chung nay su kien, moi thi sinh toi da chung nay - de bo nho khong tang mai. */
+    private static final int MAX_PROCTOR_EVENTS_PER_CONTEST = 5000;
+    private static final int MAX_PROCTOR_EVENTS_PER_USER = 600;
+
+    /** contestId -> cac su kien giam sat, cu truoc moi sau. */
+    private final Map<String, List<ProctorEvent>> proctorEvents = new LinkedHashMap<>();
+
+    /**
+     * Ghi mot su kien giam sat do trinh duyet cua thi sinh gui len.
+     * Tra ve su kien vua ghi, hoac null neu khong ghi (ky thi khong dang dien ra, nguoi gui la
+     * nguoi quan ly ky thi, hoac thi sinh da cham gioi han) - nguoi goi khong can bao loi.
+     */
+    public synchronized ProctorEvent recordProctorEvent(Contest contest, User user, String type,
+                                                        String detail, String problemId) {
+        if (!ProctorEvent.isKnownType(type)) throw ApiException.badRequest("Loại sự kiện giám sát không hợp lệ");
+        if (!"RUNNING".equals(contest.getStatus()) || canManage(user, contest)) return null;
+        if (!User.ROLE_STUDENT.equals(user.getRoleCode())) return null;
+
+        List<ProctorEvent> events = proctorEvents.computeIfAbsent(contest.getId(), k -> new ArrayList<>());
+        int mine = 0;
+        for (ProctorEvent e : events) {
+            if (e.getUserId().equals(user.getId())) mine++;
+        }
+        if (mine >= MAX_PROCTOR_EVENTS_PER_USER) return null;
+
+        String cleanDetail = detail == null ? "" : detail.trim();
+        if (cleanDetail.length() > 200) cleanDetail = cleanDetail.substring(0, 200);
+        String cleanProblem = problemId == null ? "" : problemId.trim().toUpperCase();
+        if (!contest.getProblemIds().contains(cleanProblem)) cleanProblem = "";
+
+        ProctorEvent event = new ProctorEvent(IdGenerator.next("PRC"), contest.getId(), user.getId(),
+                type, cleanDetail, cleanProblem);
+        events.add(event);
+        if (events.size() > MAX_PROCTOR_EVENTS_PER_CONTEST) events.remove(0);
+        return event;
+    }
+
+    /** Toan bo su kien giam sat cua mot ky thi, cu truoc moi sau (ban sao, doc an toan). */
+    public synchronized List<ProctorEvent> proctorEventsOf(Contest contest) {
+        List<ProctorEvent> events = proctorEvents.get(contest.getId());
+        return events == null ? new ArrayList<>() : new ArrayList<>(events);
+    }
+
+    /** So lan vi pham (khong tinh su kien "quay lai") cua mot thi sinh trong ky thi. */
+    public synchronized int violationCount(Contest contest, String userId) {
+        int count = 0;
+        List<ProctorEvent> events = proctorEvents.get(contest.getId());
+        if (events == null) return 0;
+        for (ProctorEvent e : events) {
+            if (e.getUserId().equals(userId) && e.isViolation()) count++;
+        }
+        return count;
+    }
+
     public List<Contest> getContests() {
         List<Contest> all = contests.findAll();
         all.sort((a, b) -> b.getStartAt().compareTo(a.getStartAt()));
@@ -134,6 +191,7 @@ public class ContestService {
     public synchronized void delete(User actor, String id) {
         requireManage(actor, find(id));
         contests.deleteById(id);
+        proctorEvents.remove(id);
     }
 
     /** Cac bai nop thuoc cuoc thi (dung bai, dung khung gio), cu nhat dung truoc. */

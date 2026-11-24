@@ -2,7 +2,7 @@ import { postJson, putJson, request } from "./api";
 import type {
   AssistantReply, Assignment, AssignmentProgress, AttendanceSheet, AuditRow, BasicUser, Billing,
   ChatMessage, Classroom, Contest, ContestEvent, Course, Dashboard, DocumentItem, ForumPost, Meeting,
-  NotificationList, Organization, ParentContact, ParentReport, Payment, PointRow, ProblemComment, Profile, Recording,
+  NotificationList, Organization, ProctorEventType, ProctorLog, ParentContact, ParentReport, Payment, PointRow, ProblemComment, Profile, Recording,
   RoomState, RunResult, Settings, StressResult, TestcaseItem,
 } from "./platformTypes";
 
@@ -94,6 +94,10 @@ export const papi = {
   contest: (id: string, minute?: number) =>
     request<Contest>(`/api/contests/${enc(id)}${minute === undefined ? "" : `?minute=${minute}`}`),
   contestEvents: (id: string) => request<ContestEvent[]>(`/api/contests/${enc(id)}/events`),
+  /** Trinh duyet thi sinh bao mot su kien giam sat. keepalive de gui duoc ca luc trang dang dong. */
+  proctor: (id: string, body: { type: ProctorEventType; detail: string; problemId: string }) =>
+    request<Ok>(`/api/contests/${enc(id)}/proctor`, { method: "POST", body: JSON.stringify(body), keepalive: true }),
+  proctorLog: (id: string) => request<ProctorLog>(`/api/contests/${enc(id)}/proctor`),
   createContest: (body: { title: string; description: string; startAt: string; durationMin: number; problemIds: string[] }) =>
     postJson<Contest>("/api/contests", body),
   deleteContest: (id: string) => del(`/api/contests/${enc(id)}`),

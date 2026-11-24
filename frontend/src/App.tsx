@@ -17,6 +17,7 @@ import Leaderboard from "./view/history/Leaderboard";
 import Classrooms from "./view/school/Classrooms";
 import Assignments from "./view/school/Assignments";
 import Contests from "./view/contest/Contests";
+import ContestProctor from "./view/contest/Proctor";
 import Schedule from "./view/schedule/Schedule";
 import Playground from "./view/tools/Playground";
 import CpTools from "./view/tools/CpTools";
@@ -407,6 +408,9 @@ function AppShell() {
 
         {/* Loi chuc mung bat len khi chuoi ngay luyen tap vua tang sau mot lan nop bai */}
         {!isAdmin && <StreakToast value={streak.increasedTo} onClose={streak.dismissIncrease} />}
+
+        {/* Giam sat ky thi: chi voi hoc sinh, tu bat khi mo bai cua mot ky thi dang dien ra */}
+        {user.role === "STUDENT" && <ContestProctor problemId={route.problemId} />}
 
         {/* Khung bao nho o goc duoi khi vua co thong bao moi */}
         <NotificationToast item={toast} onClose={closeToast} />

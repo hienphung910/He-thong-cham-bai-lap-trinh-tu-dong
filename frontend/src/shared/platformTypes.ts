@@ -118,6 +118,19 @@ export interface Contest {
   ownerName: string; canManage: boolean;
   minute?: number; standings?: ContestRow[];
 }
+// ---- giam sat ky thi ----
+export type ProctorEventType =
+  | "TAB_HIDDEN" | "TAB_RETURN" | "WINDOW_BLUR" | "WINDOW_RETURN" | "COPY" | "CUT" | "PASTE" | "PAGE_CLOSED";
+export interface ProctorLog {
+  /** Tong so su kien da ghi; events chi chua 300 su kien moi nhat. */
+  total: number;
+  /** Mot dong cho moi thi sinh co ghi nhan, nhieu vi pham nhat dung truoc. */
+  students: {
+    username: string; fullName: string; violations: number;
+    tabHidden: number; windowBlur: number; copy: number; paste: number; pageClosed: number; lastAt: string;
+  }[];
+  events: { id: string; at: string; username: string; fullName: string; type: ProctorEventType; detail: string; problemId: string }[];
+}
 export interface ContestEvent { minute: number; username: string; fullName: string; problemId: string; verdict: string }
 
 // ---- phan tich, thanh tich, bao cao ----
