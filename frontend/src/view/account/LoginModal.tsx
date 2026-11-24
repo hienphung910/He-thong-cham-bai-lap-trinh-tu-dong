@@ -64,10 +64,7 @@ export default function LoginModal() {
       {/* Left panel */}
       <div style={{ flex: "0 0 42%", background: "#111111", display: "flex", flexDirection: "column", justifyContent: "center", padding: "0 60px" }}>
         <div style={{ marginBottom: 20 }}><Logo size={64} /></div>
-        <p style={{ fontSize: 15, color: "#BDBDBD", margin: 0, lineHeight: 1.6 }}>
-          Luyện tập và thi lập trình trực tuyến — chấm bài tự động, nhanh và chính xác.
-        </p>
-        <p style={{ fontSize: 13, color: "var(--color-accent)", marginTop: 24, fontFamily: "var(--font-mono)" }}>{">_"} ready to judge</p>
+        <p style={{ fontSize: 13, color: "var(--color-accent)", margin: 0, fontFamily: "var(--font-mono)" }}>{">_"} ready to judge</p>
       </div>
       {/* Right panel - inline form */}
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 40 }}>
@@ -75,9 +72,6 @@ export default function LoginModal() {
           <h2 style={{ fontSize: 24, fontWeight: 700, color: "#212121", margin: 0 }}>
             {mode === "login" ? "Đăng nhập" : "Đăng ký tài khoản"}
           </h2>
-          <p style={{ fontSize: 14, color: "#9E9E9E", margin: 0 }}>
-            {mode === "login" ? "Truy cập hệ thống chấm bài" : "Chọn vai trò rồi điền thông tin"}
-          </p>
 
           {notice && (
             <div style={{ padding: "10px 14px", background: "#E8F5E9", border: "1px solid #C8E6C9", borderRadius: 6, fontSize: 12.5, color: "#2E7D32" }}>{notice}</div>
