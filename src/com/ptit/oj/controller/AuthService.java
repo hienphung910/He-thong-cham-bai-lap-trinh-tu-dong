@@ -8,8 +8,10 @@ import com.ptit.oj.model.Teacher;
 import com.ptit.oj.model.User;
 
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Dang ky / dang nhap / phan quyen.
@@ -177,7 +179,34 @@ public class AuthService {
 
     /** Tra ve tai khoan gan voi token, hoac rong neu token sai / het han. */
     public Optional<User> authenticate(String token) {
-        return sessions.resolve(token).flatMap(users::findById);
+        Optional<String> userId = sessions.resolve(token);
+        if (!userId.isPresent()) return Optional.empty();
+        long now = System.currentTimeMillis();
+        CachedUser cached = userCache.get(userId.get());
+        if (cached != null && cached.until > now) return Optional.of(cached.user);
+        Optional<User> found = users.findById(userId.get());
+        if (found.isPresent()) userCache.put(userId.get(), new CachedUser(found.get(), now + USER_CACHE_MS));
+        else userCache.remove(userId.get());
+        return found;
+    }
+
+    /**
+     * Moi request deu phai doi token thanh tai khoan. Trinh duyet hoi thong bao vai giay mot lan,
+     * nen neu lan nao cung tra CSDL thi voi MySQL o xa (moi lan mot ket noi moi) se rat ton.
+     * Giu tai khoan vua tra trong 60 giay: thong tin tai khoan (ten, vai tro) gan nhu khong doi,
+     * con token het han hay dang xuat van co hieu luc ngay vi SessionService duoc hoi truoc.
+     */
+    private static final long USER_CACHE_MS = 60_000;
+    private final Map<String, CachedUser> userCache = new ConcurrentHashMap<>();
+
+    private static final class CachedUser {
+        private final User user;
+        private final long until;
+
+        CachedUser(User user, long until) {
+            this.user = user;
+            this.until = until;
+        }
     }
 
     public boolean logout(String token) {

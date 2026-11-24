@@ -22,7 +22,8 @@ import Playground from "./view/tools/Playground";
 import CpTools from "./view/tools/CpTools";
 import Analytics from "./view/profile/Analytics";
 import ChatPage from "./view/community/ChatPage";
-import Notifications from "./view/community/Notifications";
+import Notifications, { NotificationToast } from "./view/community/Notifications";
+import type { NotificationItem, NotificationList } from "./shared/platformTypes";
 import Dashboard from "./view/manage/Dashboard";
 import Accounts from "./view/admin/Accounts";
 import Organizations from "./view/admin/Organizations";
@@ -185,7 +186,14 @@ function AppShell() {
   const [languages, setLanguages] = useState<LanguageInfo[]>([]);
   const [online, setOnline] = useState<boolean | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [unread, setUnread] = useState(0);
+  /** Danh sach thong bao, tai lai vai giay mot lan de chuong va trang Thong bao tu cap nhat. */
+  const [notifications, setNotifications] = useState<NotificationList | null>(null);
+  const unread = notifications?.unread ?? 0;
+  /** Ma cac thong bao da thay o lan tai truoc; null = chua tai lan nao (lan dau khong bat khung bao). */
+  const knownNotificationIds = useRef<Set<string> | null>(null);
+  /** Thong bao vua toi, dang hien trong khung nho o goc man hinh. */
+  const [toast, setToast] = useState<NotificationItem | null>(null);
+  const closeToast = useCallback(() => setToast(null), []);
   const [announcement, setAnnouncement] = useState("");
 
   // Chuoi ngay luyen tap (ngon lua tren header), tinh lai moi khi vua nop bai xong.
@@ -222,22 +230,48 @@ function AppShell() {
     setTopics(t);
   }, []);
 
-  /** So thong bao chua doc (hien tren chuong) va thong bao chung cua quan tri vien. */
-  const loadHeader = useCallback(() => {
-    papi.notifications().then((n) => setUnread(n.unread)).catch(() => undefined);
-    papi.settings().then((s) => setAnnouncement(s.announcement)).catch(() => undefined);
+  /** Tai lai thong bao; co thong bao chua tung thay thi bat khung bao o goc man hinh. */
+  const loadNotifications = useCallback(() => {
+    papi.notifications().then((list) => {
+      setNotifications(list);
+      const known = knownNotificationIds.current;
+      if (known !== null && routeRef.current.page !== "Notifications") {
+        const fresh = list.items.find((item) => !item.read && !known.has(item.id));
+        if (fresh) setToast(fresh);
+      }
+      knownNotificationIds.current = new Set(list.items.map((item) => item.id));
+    }).catch(() => undefined);
   }, []);
 
+  /** Thong bao (hien tren chuong) va thong bao chung cua quan tri vien. */
+  const loadHeader = useCallback(() => {
+    loadNotifications();
+    papi.settings().then((s) => setAnnouncement(s.announcement)).catch(() => undefined);
+  }, [loadNotifications]);
+
   useEffect(() => {
-    if (!user) { setProblems([]); setOnline(null); return; }
+    if (!user) {
+      setProblems([]); setOnline(null);
+      setNotifications(null); setToast(null); knownNotificationIds.current = null;
+      return;
+    }
     let alive = true;
     loadProblems()
       .then(() => alive && setOnline(true))
       .catch(() => alive && setOnline(false));
     loadHeader();
-    const timer = setInterval(loadHeader, 15000);      // cap nhat chuong thong bao moi 15 giay
-    return () => { alive = false; clearInterval(timer); };
-  }, [user, loadProblems, loadHeader]);
+    // Thong bao hoi lai moi 4 giay de gan nhu tuc thi; thong bao chung cua quan tri vien 15 giay la du.
+    // Tab dang an thi khong hoi, luc mo lai tab thi hoi ngay.
+    const fast = setInterval(() => { if (!document.hidden) loadNotifications(); }, 4000);
+    const slow = setInterval(() => { if (!document.hidden) loadHeader(); }, 15000);
+    const onVisible = () => { if (!document.hidden) loadNotifications(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      alive = false;
+      clearInterval(fast); clearInterval(slow);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [user, loadProblems, loadHeader, loadNotifications]);
 
   const onSubmitted = useCallback(() => { setReloadKey((k) => k + 1); }, []);
   // Tra ve Promise de trang quan tri doi tai lai danh sach xong moi dong hop thoai.
@@ -374,6 +408,9 @@ function AppShell() {
         {/* Loi chuc mung bat len khi chuoi ngay luyen tap vua tang sau mot lan nop bai */}
         {!isAdmin && <StreakToast value={streak.increasedTo} onClose={streak.dismissIncrease} />}
 
+        {/* Khung bao nho o goc duoi khi vua co thong bao moi */}
+        <NotificationToast item={toast} onClose={closeToast} />
+
         {/* Thong bao chung do quan tri vien dat (Module 39) */}
         {announcement && (
           <div style={{ padding: "6px 20px", background: "#FFF8E1", borderBottom: "1px solid #FFE082", fontSize: 13, color: "#8D6E00", flexShrink: 0 }}>
@@ -403,7 +440,7 @@ function AppShell() {
                 {page === "Analytics" && <Analytics />}
                 {page === "Account" && <MyAccount />}
                 {page === "Chat" && <ChatPage />}
-                {page === "Notifications" && <Notifications onRead={loadHeader} />}
+                {page === "Notifications" && <Notifications data={notifications} onRead={loadNotifications} />}
                 {page === "Submissions" && <Submissions reloadKey={reloadKey} />}
                 {page === "MySubmissions" && <MySubmissions />}
                 {page === "Leaderboard" && <Leaderboard reloadKey={reloadKey} problems={sharedProblems} />}

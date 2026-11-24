@@ -146,6 +146,7 @@ export interface NotificationList {
   /** link: trang mo ra khi bam vao thong bao - ten trang hoac "Problems/<ma bai>"; "" = khong co. */
   items: { id: string; title: string; body: string; createdAt: string; read: boolean; link: string }[];
 }
+export type NotificationItem = NotificationList["items"][number];
 export interface ChatMessage { id: string; senderName: string; senderRole: string; text: string; sentAt: string }
 export interface ForumPost {
   id: string; title: string; authorId: string; authorName: string; problemId: string;
