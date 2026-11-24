@@ -11,7 +11,7 @@ Nền tảng dạy và luyện lập trình thi đấu: chấm bài tự động
 
 Phần lõi của CodeHub là một trình chấm bài theo kiểu Codeforces. Người dùng nộp mã nguồn; hệ thống biên dịch, chạy trên bộ test với giới hạn thời gian và bộ nhớ, so sánh output với đáp án rồi trả verdict AC / WA / TLE / MLE / RE / CE cho từng test. Hệ thống có sẵn hai lớp học: lớp Nhập môn (10 chủ đề, 300 bài cho người mới bắt đầu) và lớp Lộ trình nâng cao (26 chặng lập trình thi đấu theo [lộ trình tổng quát của VNOI Wiki](https://wiki.vnoi.info/roadmap/general-roadmap), tổng cộng 300 bài).
 
-Quanh phần lõi đó là 40 module chức năng liệt kê trong `cp_teaching_platform_modules.txt`: lớp học, khóa học, bài tập giao, kỳ thi, phòng học, phân tích kết quả, diễn đàn, quản trị. 31 module chạy thật. 9 module còn lại cần hạ tầng mà project không có (truyền video, cổng thanh toán, mô hình AI) nên được làm ở dạng mô phỏng và ghi nhãn "MÔ PHỎNG" ngay trên giao diện. Bảng đầy đủ nằm ở mục [Bốn mươi module](#bốn-mươi-module).
+Quanh phần lõi đó là 40 module chức năng: lớp học, khóa học, bài tập giao, kỳ thi, phòng học, phân tích kết quả, diễn đàn, quản trị. 31 module chạy thật. 9 module còn lại cần hạ tầng mà project không có (truyền video, cổng thanh toán, mô hình AI) nên được làm ở dạng mô phỏng và ghi nhãn "MÔ PHỎNG" ngay trên giao diện. Bảng đầy đủ nằm ở mục [Bốn mươi module](#bốn-mươi-module).
 
 Backend chỉ dùng API chuẩn của JDK. Máy chủ HTTP, bộ đọc/ghi JSON, băm mật khẩu và quản lý phiên đều do nhóm tự viết. Thư viện ngoài duy nhất là MySQL Connector/J; dữ liệu được truy cập bằng JDBC, không qua framework hay ORM.
 
