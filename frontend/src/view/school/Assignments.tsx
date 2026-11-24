@@ -23,7 +23,7 @@ export default function Assignments() {
   }
 
   return (
-    <Page title="Bài tập được giao" subtitle="Tiến độ tính từ lịch sử nộp bài: bài nào đã AC thì được đánh dấu xong.">
+    <Page title="Bài tập được giao">
       <ErrorBox text={error || list.error} />
 
       {managed.length > 0 && (

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { papi } from "../../shared/platformApi";
-import { Card, ErrorBox, INPUT, Muted, Table, Tag, useLoad } from "../../shared/kit";
+import { Card, ErrorBox, INPUT, Table, Tag, useLoad } from "../../shared/kit";
 import type { Contest, ProctorEventType } from "../../shared/platformTypes";
 
 /** Ten hien thi cua tung loai su kien. */
@@ -157,15 +157,8 @@ export function ProctorPanel({ contestId, running, enabled, toggle }: {
       {toggle}
     </>}>
       <ErrorBox text={log.error} />
-      <Muted>
-        {enabled
-          ? "Trình duyệt của thí sinh tự ghi lại khi các em rời tab, chuyển sang cửa sổ khác, sao chép, dán, hoặc đóng / tải lại trang trong lúc đang ở trong bài thi. Đây là dấu hiệu để tham khảo, không phải bằng chứng chắc chắn."
-          : "Giám sát đang tắt: không ghi nhận thêm sự kiện nào của thí sinh. Các sự kiện đã ghi trước đó (nếu có) vẫn hiện bên dưới."}
-      </Muted>
-
       {(enabled || students.length > 0) && (
         <>
-          <div style={{ height: 12 }} />
           <Table head={["Thí sinh", "Tổng", "Rời tab", "Chuyển cửa sổ", "Sao chép / cắt", "Dán", "Đóng / tải lại", "Gần nhất", ""]}
             empty="Chưa có thí sinh nào vào thi."
             rows={students.map((s) => [

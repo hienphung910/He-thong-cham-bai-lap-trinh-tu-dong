@@ -59,7 +59,6 @@ export default function TestcaseManager({ problem, onClose }: { problem: Problem
           return next;
         })}>Thêm test</Btn>
       </div>
-      <div style={{ fontSize: 12, color: "#9E9E9E" }}>Điểm của bài được chia đều lại cho các test sau mỗi lần thêm hoặc xoá.</div>
     </Modal>
   );
 }

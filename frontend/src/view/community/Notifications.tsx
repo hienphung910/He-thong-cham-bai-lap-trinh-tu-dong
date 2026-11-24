@@ -58,7 +58,7 @@ export default function Notifications({ data, onRead }: { data: NotificationList
   }, [data]);
 
   return (
-    <Page title="Thông báo" subtitle="50 thông báo gần nhất của bạn, tự cập nhật khi có thông báo mới. Bấm vào một thông báo để mở trang liên quan.">
+    <Page title="Thông báo">
       {data === null && <Muted>Đang tải thông báo...</Muted>}
       {data?.items.length === 0 && <Muted>Bạn chưa có thông báo nào.</Muted>}
       {(data?.items ?? []).map((n) => {

@@ -42,7 +42,7 @@ export default function CommentModeration() {
   const HEAD = ["Bài", "Người gửi", "Nội dung", "Thời điểm", ""];
 
   return (
-    <Page title="Duyệt bình luận" subtitle="Bình luận dưới bài tập chỉ hiện cho mọi người sau khi được duyệt.">
+    <Page title="Duyệt bình luận">
       <ErrorBox text={error || list.error} />
       <Card title="Chờ duyệt" right={<Tag color={pending.length > 0 ? "orange" : "gray"}>{pending.length} bình luận</Tag>}>
         <Table head={HEAD} empty="Không có bình luận nào đang chờ duyệt." rows={pending.map(row)} />

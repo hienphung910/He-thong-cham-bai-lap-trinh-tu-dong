@@ -281,19 +281,13 @@ export default function ProblemEditor({ topics, onClose, onCreated }: { topics: 
                   {...({ webkitdirectory: "", directory: "" } as object)} onChange={(e) => void loadTestFiles(e)} />
                 <input ref={filesInput} type="file" multiple accept=".in,.inp,.out,.ans,.ok" style={{ display: "none" }}
                   onChange={(e) => void loadTestFiles(e)} />
-                <button onClick={() => folderInput.current?.click()} style={ADD_BTN} title="Chọn cả một thư mục chứa các file test">↑ Tải thư mục test</button>
+                <button onClick={() => folderInput.current?.click()} style={ADD_BTN} title="Chọn thư mục chứa các cặp file test cùng tên, ví dụ 01.in + 01.out (nhận cả .inp, .ans), hoặc mỗi test một thư mục con">↑ Tải thư mục test</button>
                 <button onClick={() => filesInput.current?.click()} style={ADD_BTN} title="Chọn nhiều file .in / .out cùng lúc">↑ Tải nhiều file test</button>
                 <button onClick={() => setTests((r) => [...r, newTestRow(true, `sample${r.length + 1}`)])} style={ADD_BTN}>+ Test ví dụ</button>
                 <button onClick={() => setTests((r) => [...r, newTestRow(false, String(r.length + 1).padStart(2, "0"))])} style={ADD_BTN}>+ Test ẩn</button>
               </div>
             </div>
 
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--color-text-muted)", lineHeight: 1.7 }}>
-              Test ví dụ hiển thị cho thí sinh (tên phải bắt đầu bằng <b>sample</b>). Test ẩn chỉ dùng để chấm.
-              <br />
-              Tải thư mục: mỗi test là một cặp file cùng tên, ví dụ <b>01.in</b> + <b>01.out</b> (nhận cả .inp, .ans),
-              hoặc mỗi test một thư mục con như <b>Test01/BAI.INP</b> + <b>Test01/BAI.OUT</b>.
-            </div>
             {folderNote && <div style={{ fontSize: 12.5, color: "var(--color-green)" }}>{folderNote}</div>}
 
             {tests.map((t, index) => (

@@ -8,7 +8,7 @@ export default function Dashboard() {
   const d = dash.data;
 
   return (
-    <Page title="Tổng quan hệ thống" subtitle="Số liệu tính trực tiếp từ dữ liệu hiện có mỗi lần mở trang.">
+    <Page title="Tổng quan hệ thống">
       <ErrorBox text={dash.error} />
       {d && (
         <>

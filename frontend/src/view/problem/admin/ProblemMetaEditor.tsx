@@ -95,9 +95,6 @@ export default function ProblemMetaEditor({ problem, topics, onClose, onSaved }:
             </div>
           </div>
 
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, color: "var(--color-text-muted)", lineHeight: 1.7, borderTop: "1px solid var(--color-border-subtle)", paddingTop: 10 }}>
-            Lưu vào problem.properties của bài (topic, difficulty).
-          </div>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 10, padding: "16px 28px", borderTop: "1px solid var(--color-border)" }}>

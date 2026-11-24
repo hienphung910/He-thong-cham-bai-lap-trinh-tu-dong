@@ -59,9 +59,7 @@ export default function Classrooms() {
   if (openId) return <ClassroomDetail id={openId} onBack={() => { setOpenId(null); list.reload(); }} />;
 
   return (
-    <Page title="Lớp của tôi" subtitle={isStaff
-      ? "Tạo lớp mới rồi gửi mã tham gia cho học sinh để các em tự vào lớp."
-      : "Nhập mã tham gia do giảng viên cung cấp để vào lớp."}>
+    <Page title="Lớp của tôi">
       <ErrorBox text={error || list.error} />
       {isStaff ? (
         <Card title="Tạo lớp mới">
@@ -87,7 +85,7 @@ export default function Classrooms() {
       ) : (
         <Card title="Tham gia lớp">
           <Row>
-            <Field label="Mã tham gia (giảng viên cung cấp, gồm 8 ký tự)">
+            <Field label="Mã tham gia">
               <input style={{ ...INPUT, fontFamily: "var(--font-mono)", letterSpacing: "0.1em", textTransform: "uppercase" }}
                 value={joinCode} maxLength={8} onChange={(e) => setJoinCode(e.target.value)} placeholder="VD: 7W4DCU9G" />
             </Field>
@@ -153,7 +151,6 @@ function ClassroomDetail({ id, onBack }: { id: string; onBack: () => void }) {
             <Card title="Mã tham gia lớp">
               <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", fontSize: 13.5 }}>
                 <JoinCode code={c.joinCode} />
-                <Muted>Gửi mã này cho học sinh. Các em vào Lớp của tôi, nhập mã và bấm Tham gia.</Muted>
               </div>
             </Card>
           )}
@@ -163,7 +160,7 @@ function ClassroomDetail({ id, onBack }: { id: string; onBack: () => void }) {
             {c.canManage && (
               <div style={{ marginBottom: 12 }}>
                 <Row>
-                  <Field label="Thêm bài cho lớp (mã bài kho chung hoặc kho của bạn, cách nhau dấu phẩy)">
+                  <Field label="Thêm bài cho lớp (mã bài, cách nhau dấu phẩy)">
                     <input style={{ ...INPUT, width: 360 }} value={problemIds} onChange={(e) => setProblemIds(e.target.value)} placeholder="K001, K002, V010" />
                   </Field>
                   <Btn disabled={!problemIds.trim()} onClick={() => void act(async () => {
@@ -173,7 +170,7 @@ function ClassroomDetail({ id, onBack }: { id: string; onBack: () => void }) {
                 </Row>
               </div>
             )}
-            {practice.length === 0 && <Muted>{c.canManage ? "Lớp chưa có bài luyện tập. Thêm mã bài ở trên để học sinh thấy tại đây." : "Giảng viên chưa thêm bài luyện tập nào cho lớp."}</Muted>}
+            {practice.length === 0 && <Muted>Lớp chưa có bài luyện tập.</Muted>}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {practice.map((p) => {
                 const diff = DIFFICULTY_META[p.difficulty];
@@ -200,7 +197,6 @@ function ClassroomDetail({ id, onBack }: { id: string; onBack: () => void }) {
                   </Field>
                   <Btn onClick={() => void act(async () => { await papi.addStudent(id, student.trim()); setStudent(""); })}>Thêm</Btn>
                 </Row>
-                <div style={{ marginTop: 8 }}><Muted>Bấm vào một học sinh để xem phân tích học tập của em đó.</Muted></div>
               </div>
             )}
             <Table head={["Tên đăng nhập", "Họ tên", "Số bài đã giải", ""]} empty="Lớp chưa có học sinh."

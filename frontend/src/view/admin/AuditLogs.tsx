@@ -12,7 +12,7 @@ export default function AuditLogs() {
   const logs = useLoad(() => papi.audit(keyword), [keyword]);
 
   return (
-    <Page title="Nhật ký hoạt động" subtitle="300 dòng gần nhất. Lọc theo tên đăng nhập hoặc hành động."
+    <Page title="Nhật ký hoạt động"
       actions={<>
         <input style={{ ...INPUT, width: 220 }} value={typing} onChange={(e) => setTyping(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") setKeyword(typing); }} placeholder="vd: admin, classrooms, Đăng nhập" />

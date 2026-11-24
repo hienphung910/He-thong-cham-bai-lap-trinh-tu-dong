@@ -48,7 +48,7 @@ export default function Contests() {
             <Field label="Tên kỳ thi"><input style={INPUT} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></Field>
             <Field label="Bắt đầu"><input type="datetime-local" style={INPUT} value={form.startAt} onChange={(e) => setForm({ ...form, startAt: e.target.value })} /></Field>
             <Field label="Thời lượng (phút)"><input type="number" style={INPUT} value={form.durationMin} onChange={(e) => setForm({ ...form, durationMin: Number(e.target.value) })} /></Field>
-            <Field label="Các bài (mã bài kho chung hoặc kho của bạn, cách nhau dấu phẩy)"><input style={INPUT} value={form.problems} onChange={(e) => setForm({ ...form, problems: e.target.value })} placeholder="K001, K002" /></Field>
+            <Field label="Các bài (mã bài, cách nhau dấu phẩy)"><input style={INPUT} value={form.problems} onChange={(e) => setForm({ ...form, problems: e.target.value })} placeholder="K001, K002" /></Field>
             <Switch label="Giám sát thí sinh" checked={form.proctored} onChange={(proctored) => setForm({ ...form, proctored })}
               title="Ghi lại việc rời tab, chuyển cửa sổ, sao chép, dán của thí sinh trong lúc thi. Bật / tắt lại được ở trang kỳ thi." />
             <Btn disabled={!form.classroomId} title={form.classroomId ? undefined : "Hãy chọn lớp tham gia kỳ thi"} onClick={() => void act(async () => {
@@ -117,7 +117,7 @@ function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
           <Card title="Đề thi" right={<Tag color={STATUS[c.status].color}>{STATUS[c.status].label}</Tag>}>
             {c.problemsHidden && (
               <div style={{ fontSize: 13, color: "#757575" }}>
-                Kỳ thi có {c.problemCount} bài. {c.status === "RUNNING" ? "Bấm Vào thi để xem đề và làm bài." : "Đề sẽ hiện khi kỳ thi bắt đầu."}
+                Kỳ thi có {c.problemCount} bài.
               </div>
             )}
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -139,7 +139,6 @@ function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
                 <Btn disabled={!newProblem.trim()} onClick={() => void edit(() => papi.addContestProblem(c.id, newProblem.trim()))}>Thêm bài</Btn>
               </div>
             )}
-            <div style={{ marginTop: 8 }}><Muted>Bấm vào mã bài để làm. Bài nộp trong khung giờ thi được tính vào bảng xếp hạng.</Muted></div>
             {isStudent && c.status === "RUNNING" && !c.joined && !c.finished && (
               <div style={{ marginTop: 10, padding: "12px 14px", borderRadius: 8, background: "var(--color-red-light)", border: "1px solid #F3D9A4", display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
                 <div style={{ flex: 1, minWidth: 260, fontSize: 13, color: "#5D4037", lineHeight: 1.6 }}>

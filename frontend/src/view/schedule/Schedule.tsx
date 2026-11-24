@@ -59,7 +59,7 @@ export default function Schedule() {
   }
 
   return (
-    <Page title="Lịch học" subtitle="Buổi học của các lớp bạn tham gia. Tới giờ học, bấm Tham gia phòng học để mở link giảng viên đã đăng.">
+    <Page title="Lịch học">
       <ErrorBox text={error || list.error} />
 
       {managed.length > 0 && (
@@ -74,7 +74,7 @@ export default function Schedule() {
             <Field label="Tên buổi học"><input style={INPUT} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></Field>
             <Field label="Bắt đầu"><input type="datetime-local" style={INPUT} value={form.startAt} onChange={(e) => setForm({ ...form, startAt: e.target.value })} /></Field>
             <Field label="Thời lượng (phút)"><input type="number" style={{ ...INPUT, width: 110 }} value={form.durationMin} onChange={(e) => setForm({ ...form, durationMin: Number(e.target.value) })} /></Field>
-            <Field label="Link phòng học (có thể để trống, dán sau)">
+            <Field label="Link phòng học (không bắt buộc)">
               <input style={{ ...INPUT, width: 280 }} value={form.link} onChange={(e) => setForm({ ...form, link: e.target.value })} placeholder="https://meet.google.com/..." />
             </Field>
             <Btn disabled={!form.classroomId || !form.title.trim()} onClick={() => void act(async () => {
@@ -106,7 +106,6 @@ export default function Schedule() {
       {editing && (
         <Modal title={`Link phòng học — ${editing.meeting.title}`} onClose={() => setEditing(null)} width={560}>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <Muted>Dán link phòng học (Google Meet, Zoom, Microsoft Teams...). Học sinh bấm Tham gia phòng học sẽ được mở thẳng link này. Để trống rồi lưu để gỡ link.</Muted>
             <input autoFocus style={{ ...INPUT, width: "100%", boxSizing: "border-box" }} value={editing.link}
               onChange={(e) => setEditing({ ...editing, link: e.target.value })} placeholder="https://meet.google.com/..." />
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>

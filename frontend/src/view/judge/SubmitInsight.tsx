@@ -108,7 +108,7 @@ export default function SubmitInsight({ problem, result, onOpen }: {
               </div>
             )}
             <ul style={{ margin: "4px 0 0", paddingLeft: 18, lineHeight: 1.65 }}>
-              {weakTopics.length === 0 && <li>Chưa có chủ đề nào bị xếp là yếu (yếu = đã nộp từ 3 lần mà ít nhất một nửa là sai).</li>}
+              {weakTopics.length === 0 && <li>Chưa có chủ đề nào bị xếp là yếu.</li>}
               {profile.data.weaknessNotes.map((n, i) => <li key={i}>{n}</li>)}
             </ul>
           </div>

@@ -39,9 +39,6 @@ export default function AdminPanel({ problems, topics, onProblemsChanged, mine =
             </div>
             <h1 style={{ fontFamily: "var(--font-serif)", fontSize: 26, fontWeight: 700, color: "var(--color-maroon)", margin: 0, letterSpacing: "-0.02em" }}>{mine ? "Kho bài của tôi" : "Kho bài chung"}</h1>
           </div>
-          <p style={{ fontFamily: "var(--font-sans)", fontSize: 13, color: "var(--color-text-muted)", margin: 0 }}>{mine
-            ? "Bài bạn tự tạo, chỉ bạn sửa được. Học sinh chỉ thấy bài khi bạn đưa nó vào kỳ thi, bài tập giao hoặc bài học."
-            : "Quản lý kho bài chung và sắp xếp lộ trình học. Giảng viên không sửa được các bài ở đây."}</p>
         </div>
 
         <button
@@ -118,9 +115,6 @@ export default function AdminPanel({ problems, topics, onProblemsChanged, mine =
                 })}
             </tbody>
           </table>
-        </div>
-        <div style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, color: "var(--color-text-muted)" }}>
-          {mine ? "Bài trong kho riêng không hiện ở lộ trình chung." : "Bảng xếp theo đúng thứ tự lộ trình học sinh thấy."} "Test" để xem, thêm, xoá test; "Sửa" để đổi chủ đề hoặc độ khó.
         </div>
       </div>
 

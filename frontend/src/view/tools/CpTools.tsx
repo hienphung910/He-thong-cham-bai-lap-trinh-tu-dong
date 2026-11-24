@@ -7,7 +7,7 @@ import { Btn, Card, Field, INPUT, Page, Row, TEXTAREA, Table, Tag } from "../../
  */
 export default function CpTools() {
   return (
-    <Page title="Công cụ CP" subtitle="Ba công cụ nhỏ hay dùng khi luyện lập trình thi đấu.">
+    <Page title="Công cụ CP">
       <TestGenerator />
       <OutputDiff />
       <ComplexityEstimator />
@@ -163,11 +163,6 @@ function TestGenerator() {
           <Btn kind="ghost" disabled={!output} onClick={() => void navigator.clipboard.writeText(output)}>Chép</Btn>
         </div>
       </Row>
-      {isGraph && (
-        <div style={{ marginTop: 8, fontSize: 12, color: "#9E9E9E" }}>
-          Dòng đầu là n và m; mỗi dòng sau là một cạnh {directed ? "u v (cung đi từ u tới v)" : "u v"}{weighted ? " kèm trọng số w" : ""}. Không có khuyên và cạnh lặp.
-        </div>
-      )}
       {output && <textarea readOnly style={{ ...TEXTAREA, fontFamily: "var(--font-mono)", marginTop: 12, minHeight: 110 }} value={output} />}
     </Card>
   );

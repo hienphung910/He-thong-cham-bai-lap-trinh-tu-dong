@@ -36,7 +36,7 @@ export default function SystemAdmin({ onSettingsChanged }: { onSettingsChanged: 
       <ErrorBox text={error || info.error || settings.error} />
       <Card title="Cấu hình">
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <Field label="Thông báo chung (hiện ở đầu mọi trang; để trống thì ẩn)">
+          <Field label="Thông báo chung">
             <input style={INPUT} value={announcement} onChange={(e) => setAnnouncement(e.target.value)} />
           </Field>
           <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13.5 }}>

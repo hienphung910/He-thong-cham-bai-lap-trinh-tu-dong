@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { papi } from "../../shared/platformApi";
 import { Btn, ErrorBox, Muted, Tag, TEXTAREA, errorText, fmtTime, useLoad } from "../../shared/kit";
-import { useAuth } from "../account/auth";
 
 const MAX_LENGTH = 1000;
 
@@ -11,7 +10,6 @@ const MAX_LENGTH = 1000;
  * Binh luan cua quan tri vien hien ngay.
  */
 export default function ProblemComments({ problemId }: { problemId: string }) {
-  const { user } = useAuth();
   const list = useLoad(() => papi.comments(problemId), [problemId]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -74,9 +72,7 @@ export default function ProblemComments({ problemId }: { problemId: string }) {
         <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           <Btn disabled={busy || !text.trim()} onClick={() => void send()}>{busy ? "Đang gửi..." : "Gửi bình luận"}</Btn>
           <span style={{ fontSize: 12, color: "#9E9E9E" }}>{text.length}/{MAX_LENGTH}</span>
-          {notice
-            ? <span style={{ fontSize: 13, color: "#2E7D32" }}>{notice}</span>
-            : user?.role !== "ADMIN" && <span style={{ fontSize: 12, color: "#9E9E9E" }}>Bình luận cần được quản trị viên duyệt trước khi hiện cho mọi người.</span>}
+          {notice && <span style={{ fontSize: 13, color: "#2E7D32" }}>{notice}</span>}
         </div>
       </div>
     </div>

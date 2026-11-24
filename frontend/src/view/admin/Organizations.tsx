@@ -14,7 +14,7 @@ export default function Organizations() {
   }
 
   return (
-    <Page title="Tổ chức" subtitle="Trung tâm, trường hoặc câu lạc bộ. Lớp học được gắn vào tổ chức khi tạo lớp.">
+    <Page title="Tổ chức">
       <ErrorBox text={error || list.error} />
       <Card title="Thêm tổ chức">
         <Row>

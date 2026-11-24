@@ -17,7 +17,7 @@ export default function ChatPage() {
   const current = channels.find((c) => c.key === channel) ?? channels[0];
 
   return (
-    <Page title="Chat" subtitle="Tin nhắn được cập nhật mỗi 2 giây.">
+    <Page title="Chat">
       <ErrorBox text={classes.error} />
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         {channels.map((c) => (

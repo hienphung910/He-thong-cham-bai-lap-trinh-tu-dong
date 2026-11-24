@@ -18,7 +18,7 @@ export default function Analytics({ username, onBack }: { username?: string; onB
 
   return (
     <Page title={username ? `Phân tích học tập — ${p ? p.user.fullName : username}` : "Phân tích học tập"}
-      subtitle={p ? `Hồ sơ của ${p.user.fullName} (@${p.user.username}) - tính từ lịch sử nộp bài.` : ""}
+      subtitle={p ? `Hồ sơ của ${p.user.fullName} (@${p.user.username})` : ""}
       actions={onBack ? <Btn kind="ghost" onClick={onBack}>← Quay lại lớp</Btn> : undefined}>
       <ErrorBox text={profile.error} />
       {p && (
