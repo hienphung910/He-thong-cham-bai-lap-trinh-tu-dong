@@ -122,7 +122,16 @@ public class SchoolApi extends ApiModule {
     private boolean handleMembers(Request req) throws IOException {
         if (req.is("POST", "classrooms", "*", "students")) {
             Classroom c = managedClassroom(req);
-            school.addStudent(c, requireUsername(req.body().getString("username")));
+            User student = requireUsername(req.body().getString("username"));
+            boolean alreadyIn = c.getStudentIds().contains(student.getId());
+            school.addStudent(c, student);
+            // Bao cho hoc sinh biet minh vua duoc dua vao lop (them lai nguoi da o trong lop thi khong bao).
+            if (!alreadyIn) {
+                platform.getCommunity().notifyUser(student.getId(), "Bạn được thêm vào lớp " + c.getName(),
+                        req.user().getFullName() + " đã thêm bạn vào lớp " + c.getName()
+                                + ". Vào Lớp của tôi để xem bài luyện tập và lịch học của lớp.",
+                        "Classrooms");
+            }
             req.sendOk();
             return true;
         }
@@ -154,7 +163,15 @@ public class SchoolApi extends ApiModule {
         }
         if (req.is("POST", "classrooms", "*", "assistants")) {
             Classroom c = managedClassroom(req);
-            school.addAssistant(c, requireUsername(req.body().getString("username")));
+            User assistant = requireUsername(req.body().getString("username"));
+            boolean alreadyIn = c.getAssistantIds().contains(assistant.getId());
+            school.addAssistant(c, assistant);
+            if (!alreadyIn) {
+                platform.getCommunity().notifyUser(assistant.getId(), "Bạn được thêm làm trợ giảng lớp " + c.getName(),
+                        req.user().getFullName() + " đã thêm bạn làm trợ giảng của lớp " + c.getName()
+                                + ". Lớp đã có trong Lớp của tôi.",
+                        "Classrooms");
+            }
             req.sendOk();
             return true;
         }
