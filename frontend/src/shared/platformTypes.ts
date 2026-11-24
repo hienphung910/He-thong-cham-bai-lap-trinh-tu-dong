@@ -117,10 +117,19 @@ export interface Contest {
   /** Ho ten nguoi tao; canManage = nguoi dang xem duoc them / bot bai va xoa ky thi nay. */
   ownerName: string; canManage: boolean;
   minute?: number; standings?: ContestRow[];
+  /** Nguoi tao ky thi bat / tat: co ghi lai viec roi tab, sao chep, dan cua thi sinh hay khong. */
+  proctored: boolean;
+  /** Nguoi dang xem da bam "Vao thi" / da nop bai som chua (finishedAt = luc nop, "" neu chua). */
+  joined: boolean; finished: boolean; finishedAt: string;
+  /** Nguoi dang xem la hoc sinh dang trong bai thi: giao dien chi con man hinh ky thi. */
+  sitting: boolean;
+  /** Chi nguoi tao ky thi nhan duoc: thi sinh da vao thi. */
+  participants?: { username: string; fullName: string; joinedAt: string; finishedAt: string }[];
 }
 // ---- giam sat ky thi ----
 export type ProctorEventType =
-  | "TAB_HIDDEN" | "TAB_RETURN" | "WINDOW_BLUR" | "WINDOW_RETURN" | "COPY" | "CUT" | "PASTE" | "PAGE_CLOSED";
+  | "TAB_HIDDEN" | "TAB_RETURN" | "WINDOW_BLUR" | "WINDOW_RETURN" | "COPY" | "CUT" | "PASTE" | "PAGE_CLOSED"
+  | "MONITOR_START";
 export interface ProctorLog {
   /** Tong so su kien da ghi; events chi chua 300 su kien moi nhat. */
   total: number;

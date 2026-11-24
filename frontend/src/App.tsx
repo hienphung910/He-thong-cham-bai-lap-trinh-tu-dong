@@ -17,14 +17,14 @@ import Leaderboard from "./view/history/Leaderboard";
 import Classrooms from "./view/school/Classrooms";
 import Assignments from "./view/school/Assignments";
 import Contests from "./view/contest/Contests";
-import ContestProctor from "./view/contest/Proctor";
+import ExamView from "./view/contest/ExamView";
 import Schedule from "./view/schedule/Schedule";
 import Playground from "./view/tools/Playground";
 import CpTools from "./view/tools/CpTools";
 import Analytics from "./view/profile/Analytics";
 import ChatPage from "./view/community/ChatPage";
 import Notifications, { NotificationToast } from "./view/community/Notifications";
-import type { NotificationItem, NotificationList } from "./shared/platformTypes";
+import type { Contest, NotificationItem, NotificationList } from "./shared/platformTypes";
 import Dashboard from "./view/manage/Dashboard";
 import Accounts from "./view/admin/Accounts";
 import Organizations from "./view/admin/Organizations";
@@ -231,6 +231,30 @@ function AppShell() {
     setTopics(t);
   }, []);
 
+  /**
+   * Cac ky thi (chi tai cho hoc sinh) de biet hoc sinh co dang trong bai thi khong. Hoc sinh dang
+   * trong bai thi (da bam "Vao thi", chua nop bai som, chua het gio) chi thay man hinh thi.
+   */
+  const [contests, setContests] = useState<Contest[]>([]);
+  const loadContests = useCallback(() => {
+    papi.contests().then(setContests).catch(() => undefined);
+  }, []);
+  const isStudentUser = user?.role === "STUDENT";
+  useEffect(() => {
+    if (!isStudentUser) { setContests([]); return; }
+    loadContests();
+    const timer = setInterval(() => { if (!document.hidden) loadContests(); }, 15_000);
+    // Trang ky thi phat su kien nay ngay sau khi hoc sinh bam "Vao thi".
+    window.addEventListener("oj-contests-changed", loadContests);
+    return () => { clearInterval(timer); window.removeEventListener("oj-contests-changed", loadContests); };
+  }, [isStudentUser, loadContests]);
+  const exam = isStudentUser ? contests.find((c) => c.sitting && Date.parse(c.endAt) > Date.now()) ?? null : null;
+  // Vua vao thi: tai lai danh sach bai, vi de thi co the gom bai kho rieng luc dang nhap chua thay.
+  const examId = exam?.id ?? "";
+  useEffect(() => {
+    if (examId) void loadProblems().catch(() => undefined);
+  }, [examId, loadProblems]);
+
   /** Tai lai thong bao; co thong bao chua tung thay thi bat khung bao o goc man hinh. */
   const loadNotifications = useCallback(() => {
     papi.notifications().then((list) => {
@@ -301,6 +325,16 @@ function AppShell() {
   }
 
   if (!user) return <LoginModal />;
+
+  // Hoc sinh dang trong bai thi: chi co man hinh thi, khong co menu hay trang nao khac.
+  if (exam) {
+    return (
+      <NavContext.Provider value={{ go, openProblem }}>
+        <ExamView contest={exam} user={user} problems={problems} languages={languages}
+          onChanged={loadContests} onSubmitted={onSubmitted} onLogout={handleLogout} />
+      </NavContext.Provider>
+    );
+  }
 
   return (
     <NavContext.Provider value={{ go, openProblem }}>
@@ -408,9 +442,6 @@ function AppShell() {
 
         {/* Loi chuc mung bat len khi chuoi ngay luyen tap vua tang sau mot lan nop bai */}
         {!isAdmin && <StreakToast value={streak.increasedTo} onClose={streak.dismissIncrease} />}
-
-        {/* Giam sat ky thi: chi voi hoc sinh, tu bat khi mo bai cua mot ky thi dang dien ra */}
-        {user.role === "STUDENT" && <ContestProctor problemId={route.problemId} />}
 
         {/* Khung bao nho o goc duoi khi vua co thong bao moi */}
         <NotificationToast item={toast} onClose={closeToast} />

@@ -71,7 +71,7 @@ public class ContestService {
     }
 
     public synchronized Contest create(User owner, String title, String description, LocalDateTime startAt,
-                                       int durationMin, List<String> problemIds) {
+                                       int durationMin, List<String> problemIds, boolean proctored) {
         if (startAt == null) throw ApiException.badRequest("Thiếu thời gian bắt đầu");
         if (durationMin < 5 || durationMin > 7 * 24 * 60) {
             throw ApiException.badRequest("Thời lượng phải từ 5 phút đến 7 ngày");
@@ -80,8 +80,37 @@ public class ContestService {
         Contest contest = new Contest(IdGenerator.next("CON"), Check.text(title, "Tên cuộc thi", 150),
                 Check.optional(description, "Mô tả", 2000), startAt, durationMin, problemIds,
                 owner.getUsername(), owner.getFullName());
+        contest.setProctored(proctored);
         contests.save(contest);
         return contest;
+    }
+
+    /** Nguoi tao ky thi bat / tat giam sat, ke ca khi ky thi dang dien ra. */
+    public synchronized void setProctored(User actor, Contest contest, boolean on) {
+        requireManage(actor, contest);
+        contest.setProctored(on);
+    }
+
+    // --------------------------------------------------- thi sinh vao thi, nop bai som
+
+    /** Hoc sinh bam "Vao thi": tu day giao dien cua hoc sinh chi con man hinh ky thi. */
+    public synchronized void join(Contest contest, User student) {
+        if (!User.ROLE_STUDENT.equals(student.getRoleCode())) {
+            throw ApiException.badRequest("Chỉ tài khoản học sinh mới vào thi");
+        }
+        if (!"RUNNING".equals(contest.getStatus())) {
+            throw ApiException.badRequest("Kỳ thi chưa bắt đầu hoặc đã kết thúc");
+        }
+        if (contest.hasFinished(student.getId())) {
+            throw ApiException.badRequest("Bạn đã nộp bài và kết thúc kỳ thi này rồi");
+        }
+        contest.getJoinedAt().putIfAbsent(student.getId(), LocalDateTime.now());
+    }
+
+    /** Hoc sinh nop bai som: ket thuc bai thi cua minh truoc gio. Bai nop sau do khong con duoc tinh. */
+    public synchronized void finish(Contest contest, User student) {
+        if (!contest.hasJoined(student.getId())) throw ApiException.badRequest("Bạn chưa vào kỳ thi này");
+        contest.getFinishedAt().putIfAbsent(student.getId(), LocalDateTime.now());
     }
 
     // ------------------------------------------- sua cuoc thi cua chinh minh
@@ -139,7 +168,8 @@ public class ContestService {
     public synchronized ProctorEvent recordProctorEvent(Contest contest, User user, String type,
                                                         String detail, String problemId) {
         if (!ProctorEvent.isKnownType(type)) throw ApiException.badRequest("Loại sự kiện giám sát không hợp lệ");
-        if (!"RUNNING".equals(contest.getStatus()) || canManage(user, contest)) return null;
+        // Chi ghi khi ky thi bat giam sat va thi sinh dang trong bai thi (da vao, chua nop bai som).
+        if (!contest.isProctored() || !contest.isSitting(user.getId())) return null;
         if (!User.ROLE_STUDENT.equals(user.getRoleCode())) return null;
 
         List<ProctorEvent> events = proctorEvents.computeIfAbsent(contest.getId(), k -> new ArrayList<>());
@@ -200,6 +230,9 @@ public class ContestService {
         for (Submission s : judge.getSubmissionsNewestFirst()) {
             LocalDateTime at = s.getSubmittedAt();
             boolean inTime = !at.isBefore(contest.getStartAt()) && at.isBefore(contest.getEndAt());
+            // Thi sinh da nop bai som thi cac bai nop sau thoi diem do khong tinh vao ky thi.
+            LocalDateTime finished = contest.getFinishedAt().get(s.getAuthor().getId());
+            if (finished != null && at.isAfter(finished)) inTime = false;
             if (inTime && s.isJudged() && contest.getProblemIds().contains(s.getProblem().getId())) {
                 result.add(s);
             }

@@ -50,7 +50,7 @@ public class ContestApi extends ApiModule {
             Json.Value body = req.body();
             Contest created = contests.create(user, body.getString("title"), body.getString("description"),
                     parseTime(body.getString("startAt")), (int) body.getLong("durationMin", 120),
-                    problemIds(body, "problemIds", user));
+                    problemIds(body, "problemIds", user), body.getBoolean("proctored", true));
             req.send(contestJson(created, user).build());
             return true;
         }
@@ -84,6 +84,29 @@ public class ContestApi extends ApiModule {
                     .put("minute", minute)
                     .putRaw("standings", standingsJson(c, minute))
                     .build());
+            return true;
+        }
+        // Nguoi tao ky thi bat / tat giam sat.
+        if (req.is("PUT", "contests", "*", "proctoring")) {
+            User user = req.staff();
+            Contest c = contests.find(req.arg(0));
+            contests.setProctored(user, c, req.body().getBoolean("on", true));
+            req.send(contestJson(c, user).build());
+            return true;
+        }
+        // Hoc sinh vao thi / nop bai som.
+        if (req.is("POST", "contests", "*", "join")) {
+            User user = req.user();
+            Contest c = contests.find(req.arg(0));
+            contests.join(c, user);
+            req.send(contestJson(c, user).build());
+            return true;
+        }
+        if (req.is("POST", "contests", "*", "finish")) {
+            User user = req.user();
+            Contest c = contests.find(req.arg(0));
+            contests.finish(c, user);
+            req.send(contestJson(c, user).build());
             return true;
         }
         // Trinh duyet cua thi sinh bao mot su kien giam sat (roi tab, sao chep, dan...).
@@ -143,6 +166,21 @@ public class ContestApi extends ApiModule {
                 "Contests");
     }
 
+    /** Thi sinh da vao thi (cho nguoi tao ky thi): ai dang lam bai, ai da nop bai som. */
+    private String participantsJson(Contest c) {
+        Map<String, User> users = usersById();
+        List<String> items = new ArrayList<>();
+        for (Map.Entry<String, java.time.LocalDateTime> e : c.getJoinedAt().entrySet()) {
+            User u = users.get(e.getKey());
+            if (u == null) continue;
+            java.time.LocalDateTime finished = c.getFinishedAt().get(e.getKey());
+            items.add(Json.obj().put("username", u.getUsername()).put("fullName", u.getFullName())
+                    .put("joinedAt", time(e.getValue()))
+                    .put("finishedAt", finished == null ? "" : time(finished)).build());
+        }
+        return Json.array(items);
+    }
+
     /** Nhat ky giam sat: bang tong hop theo thi sinh (nhieu vi pham nhat truoc) va 300 su kien gan nhat. */
     private String proctorJson(Contest c) {
         Map<String, User> users = usersById();
@@ -197,9 +235,21 @@ public class ContestApi extends ApiModule {
     }
 
     private Json.Obj contestJson(Contest c, User viewer) {
+        boolean manager = contests.canManage(viewer, c);
+        boolean student = isStudent(viewer);
         // Truoc gio thi chi nguoi quan ly ky thi thay danh sach bai; nguoi khac chi biet so bai.
-        boolean hidden = "UPCOMING".equals(c.getStatus()) && !contests.canManage(viewer, c);
-        return Json.obj()
+        // Trong gio thi, hoc sinh phai bam "Vao thi" moi thay de.
+        boolean hidden = !manager && ("UPCOMING".equals(c.getStatus())
+                || ("RUNNING".equals(c.getStatus()) && student && !c.hasJoined(viewer.getId())));
+        Json.Obj json = Json.obj()
+                .put("proctored", c.isProctored())
+                .put("joined", c.hasJoined(viewer.getId()))
+                .put("finished", c.hasFinished(viewer.getId()))
+                // sitting = dang trong bai thi: giao dien cua hoc sinh chi con man hinh ky thi.
+                .put("sitting", student && c.isSitting(viewer.getId()))
+                .put("finishedAt", c.hasFinished(viewer.getId()) ? time(c.getFinishedAt().get(viewer.getId())) : "");
+        if (manager) json.putRaw("participants", participantsJson(c));
+        return json
                 .put("id", c.getId())
                 .put("ownerName", c.getOwnerName())
                 .put("canManage", contests.canManage(viewer, c))

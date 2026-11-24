@@ -2,6 +2,8 @@ package com.ptit.oj.model;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -17,6 +19,15 @@ public class Contest extends Entity {
     private final List<String> problemIds;
     private final String ownerUsername;     // ten dang nhap cua nguoi tao
     private final String ownerName;         // ho ten nguoi tao, de hien thi
+    /** Nguoi tao ky thi bat / tat duoc: co ghi lai viec roi tab, sao chep, dan... cua thi sinh hay khong. */
+    private volatile boolean proctored = true;
+    /**
+     * Thi sinh da bam "Vao thi": userId -> luc vao. Tu luc do toi khi nop bai som hoac het gio,
+     * giao dien cua thi sinh chi con man hinh ky thi.
+     */
+    private final Map<String, LocalDateTime> joinedAt = new ConcurrentHashMap<>();
+    /** Thi sinh da nop bai som: userId -> luc nop. Bai nop sau thoi diem nay khong tinh vao ky thi. */
+    private final Map<String, LocalDateTime> finishedAt = new ConcurrentHashMap<>();
 
     public Contest(String id, String title, String description, LocalDateTime startAt,
                    int durationMin, List<String> problemIds, String ownerUsername, String ownerName) {
@@ -38,6 +49,19 @@ public class Contest extends Entity {
     public List<String> getProblemIds() { return problemIds; }
     public String getOwnerUsername() { return ownerUsername; }
     public String getOwnerName() { return ownerName; }
+
+    public boolean isProctored() { return proctored; }
+    public void setProctored(boolean proctored) { this.proctored = proctored; }
+
+    public Map<String, LocalDateTime> getJoinedAt() { return joinedAt; }
+    public Map<String, LocalDateTime> getFinishedAt() { return finishedAt; }
+    public boolean hasJoined(String userId) { return joinedAt.containsKey(userId); }
+    public boolean hasFinished(String userId) { return finishedAt.containsKey(userId); }
+
+    /** Thi sinh dang trong bai thi: da vao, chua nop bai som, ky thi con dang dien ra. */
+    public boolean isSitting(String userId) {
+        return "RUNNING".equals(getStatus()) && hasJoined(userId) && !hasFinished(userId);
+    }
 
     public LocalDateTime getEndAt() { return startAt.plusMinutes(durationMin); }
 

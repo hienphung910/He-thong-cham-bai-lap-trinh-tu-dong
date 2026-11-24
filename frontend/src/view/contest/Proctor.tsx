@@ -1,10 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { papi } from "../../shared/platformApi";
 import { Card, ErrorBox, INPUT, Muted, Table, Tag, useLoad } from "../../shared/kit";
 import type { Contest, ProctorEventType } from "../../shared/platformTypes";
-
-/** Ky thi dang duoc giam sat trong tab nay; nho lai de tai lai trang van tiep tuc giam sat. */
-const ACTIVE_KEY = "oj-proctor-contest";
 
 /** Ten hien thi cua tung loai su kien. */
 const EVENT_LABEL: Record<ProctorEventType, { label: string; color: string }> = {
@@ -16,6 +13,7 @@ const EVENT_LABEL: Record<ProctorEventType, { label: string; color: string }> = 
   CUT: { label: "Cắt", color: "orange" },
   PASTE: { label: "Dán", color: "orange" },
   PAGE_CLOSED: { label: "Đóng / tải lại trang", color: "red" },
+  MONITOR_START: { label: "Bắt đầu được giám sát", color: "green" },
 };
 
 /**
@@ -33,53 +31,20 @@ function seconds(since: number): string {
 }
 
 /**
- * Giam sat thi sinh trong ky thi (chi gan cho tai khoan hoc sinh, xem App.tsx).
+ * Giam sat thi sinh dang trong bai thi. Man hinh thi (ExamView) gan component nay khi ky thi co
+ * bat giam sat; no song suot thoi gian thi sinh o trong bai thi.
  *
- * Bat dau khi thi sinh mo mot bai thuoc ky thi DANG DIEN RA, va tiep tuc cho toi khi ky thi ket
- * thuc - ke ca khi thi sinh chuyen sang trang khac cua CodeHub. Trong luc do trinh duyet ghi lai:
- * roi tab, chuyen sang cua so khac, sao chep / cat / dan, dong hoac tai lai trang; moi su kien
- * duoc gui ngay len may chu de nguoi tao ky thi xem. Khong chan thao tac nao va khong ghi noi dung
- * duoc sao chep hay dan, chi ghi do dai. Thanh bao o dau trang cho thi sinh biet minh dang bi giam sat.
+ * Trinh duyet ghi lai: roi tab, chuyen sang cua so khac, sao chep / cat / dan, dong hoac tai lai
+ * trang; moi su kien duoc gui ngay len may chu de nguoi tao ky thi xem. Khong chan thao tac nao va
+ * khong ghi noi dung duoc sao chep hay dan, chi ghi do dai. Thanh bao cho thi sinh biet minh dang
+ * bi giam sat.
  */
-export default function ContestProctor({ problemId }: { problemId: string | null }) {
-  const [contests, setContests] = useState<Contest[]>([]);
-  const [activeId, setActiveId] = useState(() => {
-    try { return sessionStorage.getItem(ACTIVE_KEY) ?? ""; } catch { return ""; }
-  });
-  const [now, setNow] = useState(() => Date.now());
+export default function ContestProctor({ contest, problemId }: { contest: Contest; problemId: string | null }) {
   const problemRef = useRef(problemId);
   problemRef.current = problemId;
+  const contestId = contest.id;
 
-  // Danh sach ky thi: tai luc dau, moi 30 giay, va moi lan mo mot bai (de bat duoc ky thi vua bat dau).
   useEffect(() => {
-    let alive = true;
-    const load = () => { papi.contests().then((list) => { if (alive) setContests(list); }).catch(() => undefined); };
-    load();
-    const timer = setInterval(load, 30_000);
-    return () => { alive = false; clearInterval(timer); };
-  }, [problemId]);
-
-  const running = contests.filter((c) => c.status === "RUNNING" && Date.parse(c.endAt) > now);
-  const entering = problemId ? running.find((c) => c.problems.some((p) => p.id === problemId)) : undefined;
-  const active = running.find((c) => c.id === activeId) ?? null;
-
-  // Mo mot bai cua ky thi dang dien ra -> bat dau giam sat ky thi do.
-  useEffect(() => {
-    if (!entering || entering.id === activeId) return;
-    setActiveId(entering.id);
-    try { sessionStorage.setItem(ACTIVE_KEY, entering.id); } catch { /* khong nho duoc thi tai lai trang se phai mo lai bai */ }
-  }, [entering, activeId]);
-
-  // Dong ho dem nguoc, va de biet ky thi da het gio ngay ca khi chua tai lai danh sach.
-  useEffect(() => {
-    if (!active) return;
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, [active]);
-
-  const contestId = active?.id ?? "";
-  useEffect(() => {
-    if (!contestId) return;
     // Moi loai su kien toi da mot lan moi giay: giu phim Ctrl+V khong tao ra hang tram dong.
     const lastSent: Partial<Record<ProctorEventType, number>> = {};
     const send = (type: ProctorEventType, detail = "") => {
@@ -92,6 +57,9 @@ export default function ContestProctor({ problemId }: { problemId: string | null
     let hiddenAt = 0;
     let blurAt = 0;
     let blurTimer: number | undefined;
+
+    // Bao cho nguoi tao ky thi biet thi sinh nay dang duoc giam sat, du chua co vi pham nao.
+    send("MONITOR_START");
 
     const onVisibility = () => {
       if (document.hidden) {
@@ -145,19 +113,14 @@ export default function ContestProctor({ problemId }: { problemId: string | null
     };
   }, [contestId]);
 
-  if (!active) return null;
-  const left = Math.max(0, Math.floor((Date.parse(active.endAt) - now) / 1000));
-  const clock = `${String(Math.floor(left / 3600)).padStart(2, "0")}:${String(Math.floor((left % 3600) / 60)).padStart(2, "0")}:${String(left % 60).padStart(2, "0")}`;
   return (
     <div role="status" style={{
-      flexShrink: 0, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "7px 20px",
-      background: "#161616", color: "#E0E0E0", fontSize: 12.5, borderBottom: "2px solid var(--color-accent)",
+      flexShrink: 0, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "6px 20px",
+      background: "#2A1D0A", color: "#F3D9A4", fontSize: 12.5, borderBottom: "1px solid var(--color-accent-dark)",
     }}>
       <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#FF5252", animation: "livePulse 1.4s infinite", flexShrink: 0 }} />
-      <b style={{ color: "#fff" }}>Đang giám sát kỳ thi {active.title}</b>
+      <b style={{ color: "#fff" }}>Kỳ thi đang được giám sát.</b>
       <span>Rời tab, chuyển cửa sổ, sao chép và dán đều được ghi lại và gửi cho giảng viên.</span>
-      <span style={{ flex: 1 }} />
-      <span style={{ fontFamily: "var(--font-mono)", color: "var(--color-accent)", fontWeight: 700 }}>Còn {clock}</span>
     </div>
   );
 }
@@ -170,64 +133,74 @@ function clockOf(iso: string): string {
 /**
  * Bang giam sat tren trang ky thi, chi nguoi tao ky thi (va quan tri vien) thay: tong hop theo
  * thi sinh va nhat ky tung su kien. Tu tai lai moi 5 giay khi ky thi dang dien ra.
+ * toggle la nut bat / tat giam sat do trang ky thi truyen vao.
  */
-export function ProctorPanel({ contestId, running }: { contestId: string; running: boolean }) {
+export function ProctorPanel({ contestId, running, enabled, toggle }: {
+  contestId: string; running: boolean; enabled: boolean; toggle: ReactNode;
+}) {
   const log = useLoad(() => papi.proctorLog(contestId), [contestId]);
   const [student, setStudent] = useState("");
   const reload = log.reload;
 
   useEffect(() => {
-    if (!running) return;
+    if (!running || !enabled) return;
     const timer = setInterval(reload, 5000);
     return () => clearInterval(timer);
-  }, [running, reload]);
+  }, [running, enabled, reload]);
 
   const students = log.data?.students ?? [];
   const events = (log.data?.events ?? []).filter((e) => !student || e.username === student);
 
   return (
     <Card title="Giám sát thí sinh" right={<>
-      {running && <Tag color="green">Tự cập nhật mỗi 5 giây</Tag>}
-      <Tag color={students.length > 0 ? "orange" : "gray"}>{students.length} thí sinh có ghi nhận</Tag>
+      {enabled
+        ? <Tag color="green">Đang bật{running ? " · tự cập nhật mỗi 5 giây" : ""}</Tag>
+        : <Tag color="gray">Đang tắt</Tag>}
+      {toggle}
     </>}>
       <ErrorBox text={log.error} />
       <Muted>
-        Trình duyệt của thí sinh tự ghi lại khi các em rời tab, chuyển sang cửa sổ khác, sao chép, dán, hoặc đóng / tải lại trang
-        trong lúc làm bài của kỳ thi. Đây là dấu hiệu để tham khảo, không phải bằng chứng chắc chắn.
+        {enabled
+          ? "Trình duyệt của thí sinh tự ghi lại khi các em rời tab, chuyển sang cửa sổ khác, sao chép, dán, hoặc đóng / tải lại trang trong lúc đang ở trong bài thi. Đây là dấu hiệu để tham khảo, không phải bằng chứng chắc chắn."
+          : "Giám sát đang tắt: không ghi nhận thêm sự kiện nào của thí sinh. Các sự kiện đã ghi trước đó (nếu có) vẫn hiện bên dưới."}
       </Muted>
 
-      <div style={{ height: 12 }} />
-      <Table head={["Thí sinh", "Tổng", "Rời tab", "Chuyển cửa sổ", "Sao chép / cắt", "Dán", "Đóng / tải lại", "Gần nhất", ""]}
-        empty="Chưa ghi nhận sự kiện nào."
-        rows={students.map((s) => [
-          <span><b>{s.fullName}</b> <span style={{ color: "#9E9E9E" }}>@{s.username}</span></span>,
-          <Tag color={s.violations >= 5 ? "red" : "orange"}>{s.violations}</Tag>,
-          s.tabHidden, s.windowBlur, s.copy, s.paste, s.pageClosed, clockOf(s.lastAt),
-          <button onClick={() => setStudent(student === s.username ? "" : s.username)} style={{
-            background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 12.5, fontWeight: 600, color: "var(--color-red)",
-          }}>{student === s.username ? "Bỏ lọc" : "Xem nhật ký"}</button>,
-        ])} />
+      {(enabled || students.length > 0) && (
+        <>
+          <div style={{ height: 12 }} />
+          <Table head={["Thí sinh", "Tổng", "Rời tab", "Chuyển cửa sổ", "Sao chép / cắt", "Dán", "Đóng / tải lại", "Gần nhất", ""]}
+            empty="Chưa có thí sinh nào vào thi."
+            rows={students.map((s) => [
+              <span><b>{s.fullName}</b> <span style={{ color: "#9E9E9E" }}>@{s.username}</span></span>,
+              <Tag color={s.violations >= 5 ? "red" : s.violations > 0 ? "orange" : "green"}>{s.violations}</Tag>,
+              s.tabHidden, s.windowBlur, s.copy, s.paste, s.pageClosed, clockOf(s.lastAt),
+              <button onClick={() => setStudent(student === s.username ? "" : s.username)} style={{
+                background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 12.5, fontWeight: 600, color: "var(--color-red)",
+              }}>{student === s.username ? "Bỏ lọc" : "Xem nhật ký"}</button>,
+            ])} />
 
-      <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "16px 0 8px", flexWrap: "wrap" }}>
-        <b style={{ fontSize: 13.5, color: "#212121" }}>Nhật ký sự kiện</b>
-        <select style={{ ...INPUT, width: 240 }} value={student} onChange={(e) => setStudent(e.target.value)}>
-          <option value="">Tất cả thí sinh</option>
-          {students.map((s) => <option key={s.username} value={s.username}>{s.fullName} (@{s.username})</option>)}
-        </select>
-        <span style={{ fontSize: 12, color: "#9E9E9E" }}>
-          {events.length} sự kiện{log.data && log.data.total > log.data.events.length ? ` (hiện ${log.data.events.length} sự kiện mới nhất trên tổng ${log.data.total})` : ""}
-        </span>
-      </div>
-      <div style={{ maxHeight: 320, overflow: "auto" }}>
-        <Table head={["Lúc", "Thí sinh", "Sự kiện", "Chi tiết", "Bài đang mở"]} empty="Không có sự kiện nào."
-          rows={events.map((e) => [
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 12.5 }}>{clockOf(e.at)}</span>,
-            <span><b>{e.fullName}</b> <span style={{ color: "#9E9E9E" }}>@{e.username}</span></span>,
-            <Tag color={EVENT_LABEL[e.type]?.color ?? "gray"}>{EVENT_LABEL[e.type]?.label ?? e.type}</Tag>,
-            e.detail || "—",
-            e.problemId ? <span style={{ fontFamily: "var(--font-mono)" }}>{e.problemId}</span> : "—",
-          ])} />
-      </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "16px 0 8px", flexWrap: "wrap" }}>
+            <b style={{ fontSize: 13.5, color: "#212121" }}>Nhật ký sự kiện</b>
+            <select style={{ ...INPUT, width: 240 }} value={student} onChange={(e) => setStudent(e.target.value)}>
+              <option value="">Tất cả thí sinh</option>
+              {students.map((s) => <option key={s.username} value={s.username}>{s.fullName} (@{s.username})</option>)}
+            </select>
+            <span style={{ fontSize: 12, color: "#9E9E9E" }}>
+              {events.length} sự kiện{log.data && log.data.total > log.data.events.length ? ` (hiện ${log.data.events.length} sự kiện mới nhất trên tổng ${log.data.total})` : ""}
+            </span>
+          </div>
+          <div style={{ maxHeight: 320, overflow: "auto" }}>
+            <Table head={["Lúc", "Thí sinh", "Sự kiện", "Chi tiết", "Bài đang mở"]} empty="Không có sự kiện nào."
+              rows={events.map((e) => [
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 12.5 }}>{clockOf(e.at)}</span>,
+                <span><b>{e.fullName}</b> <span style={{ color: "#9E9E9E" }}>@{e.username}</span></span>,
+                <Tag color={EVENT_LABEL[e.type]?.color ?? "gray"}>{EVENT_LABEL[e.type]?.label ?? e.type}</Tag>,
+                e.detail || "—",
+                e.problemId ? <span style={{ fontFamily: "var(--font-mono)" }}>{e.problemId}</span> : "—",
+              ])} />
+          </div>
+        </>
+      )}
     </Card>
   );
 }

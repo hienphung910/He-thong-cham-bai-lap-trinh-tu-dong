@@ -79,9 +79,9 @@ public class DemoData {
         // --- cuoc thi: mot cuoc da xong (de xem lai) va mot cuoc dang dien ra ---
         LocalDateTime lastNight = LocalDate.now().minusDays(1).atTime(19, 0);
         platform.getContests().create(teacher, "Kỳ thi thử số 1", "Kỳ thi đã kết thúc, dùng để xem lại diễn biến.",
-                lastNight, 120, ids(path, 0, 4));
+                lastNight, 120, ids(path, 0, 4), false);
         platform.getContests().create(teacher, "Kỳ thi luyện tập tuần này", "Mở trong 7 ngày; nộp bài trong khung giờ này sẽ được tính điểm.",
-                LocalDateTime.now().minusMinutes(30).withSecond(0).withNano(0), 7 * 24 * 60, ids(path, 4, 8));
+                LocalDateTime.now().minusMinutes(30).withSecond(0).withNano(0), 7 * 24 * 60, ids(path, 4, 8), false);
 
         // --- cong dong ---
         CommunityService community = platform.getCommunity();

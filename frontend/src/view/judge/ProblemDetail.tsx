@@ -68,9 +68,14 @@ function CopyButton({ text }: { text: string }) {
 }
 
 export default function ProblemDetail({
-  problem, languages, onBack, onSubmitted, topicName, nextProblem, onNext, onOpen,
+  problem, languages, onBack, onSubmitted, topicName, nextProblem, onNext, onOpen, exam = false,
 }: {
   problem: Problem; languages: LanguageInfo[]; onBack: () => void; onSubmitted: () => void;
+  /**
+   * Dang lam bai trong man hinh thi: khong co nut quay lai lop hoc, khong co phan tich / goi y
+   * sau khi nop va khong co binh luan.
+   */
+  exam?: boolean;
   /** Mo mot bai khac ngay tai day (bam vao bai duoc goi y sau khi nop). */
   onOpen: (problemId: string) => void;
   /** Ten chu de cua bai trong lo trinh hoc. */
@@ -167,14 +172,16 @@ export default function ProblemDetail({
         padding: "10px 24px", background: "#fff", borderBottom: "1px solid #E0E0E0", flexShrink: 0,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <button onClick={onBack} style={{
-            display: "flex", alignItems: "center", gap: 4, background: "none", border: "1px solid #E0E0E0",
-            borderRadius: 6, height: 30, padding: "0 10px", color: "#757575", fontSize: 12, cursor: "pointer",
-          }}>
-            ← Lớp học
-          </button>
+          {!exam && (
+            <button onClick={onBack} style={{
+              display: "flex", alignItems: "center", gap: 4, background: "none", border: "1px solid #E0E0E0",
+              borderRadius: 6, height: 30, padding: "0 10px", color: "#757575", fontSize: 12, cursor: "pointer",
+            }}>
+              ← Lớp học
+            </button>
+          )}
           <span style={{ fontSize: 13, fontWeight: 600, color: "#212121" }}>
-            Làm bài lớp: CodeHub · {problem.id}
+            {exam ? `Bài thi · ${problem.id}` : `Làm bài lớp: CodeHub · ${problem.id}`}
           </span>
           {topicName && <span style={{ fontSize: 12, color: "#757575" }}>{topicName}</span>}
           {diff && (
@@ -381,10 +388,10 @@ export default function ProblemDetail({
         )}
 
         {/* ═══ THONG KE DIEM YEU SAU KHI NOP ═══ */}
-        {result && !error && <SubmitInsight problem={problem} result={result} onOpen={onOpen} />}
+        {!exam && result && !error && <SubmitInsight problem={problem} result={result} onOpen={onOpen} />}
 
         {/* ═══ BINH LUAN CUA NGUOI DUNG VE BAI NAY ═══ */}
-        <ProblemComments problemId={problem.id} />
+        {!exam && <ProblemComments problemId={problem.id} />}
       </div>
     </div>
   );

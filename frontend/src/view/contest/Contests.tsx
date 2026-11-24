@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { papi } from "../../shared/platformApi";
 import { Btn, Card, ErrorBox, Field, INPUT, Muted, Page, Row, Table, Tag, errorText, fmtTime, localDateTime, useLoad } from "../../shared/kit";
 import { parseIds, useBackState } from "../../shared/nav";
@@ -21,7 +21,7 @@ export default function Contests() {
   // Ky thi dang mo nam trong lich su trinh duyet: nut Back quay ve danh sach ky thi.
   const [openId, setOpenId] = useBackState<string | null>("contest", null);
   const [error, setError] = useState("");
-  const [form, setForm] = useState({ title: "", description: "", startAt: localDateTime(), durationMin: 120, problems: "" });
+  const [form, setForm] = useState({ title: "", description: "", startAt: localDateTime(), durationMin: 120, problems: "", proctored: true });
 
   async function act(work: () => Promise<unknown>) {
     setError("");
@@ -41,9 +41,14 @@ export default function Contests() {
             <Field label="Thời lượng (phút)"><input type="number" style={INPUT} value={form.durationMin} onChange={(e) => setForm({ ...form, durationMin: Number(e.target.value) })} /></Field>
             <Field label="Các bài (mã bài kho chung hoặc kho của bạn, cách nhau dấu phẩy)"><input style={INPUT} value={form.problems} onChange={(e) => setForm({ ...form, problems: e.target.value })} placeholder="K001, K002" /></Field>
             <Btn onClick={() => void act(async () => {
-              await papi.createContest({ title: form.title, description: form.description, startAt: form.startAt, durationMin: form.durationMin, problemIds: parseIds(form.problems) });
+              await papi.createContest({ title: form.title, description: form.description, startAt: form.startAt, durationMin: form.durationMin, problemIds: parseIds(form.problems), proctored: form.proctored });
               setForm({ ...form, title: "", problems: "" });
             })}>Tạo</Btn>
+            <label style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 13, height: 34, whiteSpace: "nowrap" }}
+              title="Ghi lại việc rời tab, chuyển cửa sổ, sao chép, dán của thí sinh trong lúc thi. Bật / tắt lại được ở trang kỳ thi.">
+              <input type="checkbox" checked={form.proctored} onChange={(e) => setForm({ ...form, proctored: e.target.checked })} />
+              Giám sát thí sinh
+            </label>
           </Row>
         </Card>
       )}
@@ -66,6 +71,25 @@ function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
   const contest = useLoad(() => papi.contest(id), [id]);
   const events = useLoad(() => papi.contestEvents(id), [id]);
   const c = contest.data;
+  const { user } = useAuth();
+  const isStudent = user?.role === "STUDENT";
+  // Nguoi tao ky thi: tai lai moi 10 giay khi ky thi dang dien ra de thay ai vua vao thi / nop bai.
+  const reloadContest = contest.reload;
+  const watching = !!c && c.canManage && c.status === "RUNNING";
+  useEffect(() => {
+    if (!watching) return;
+    const timer = setInterval(reloadContest, 10_000);
+    return () => clearInterval(timer);
+  }, [watching, reloadContest]);
+
+  /** Hoc sinh bam "Vao thi": App.tsx nghe su kien nay de chuyen sang man hinh thi. */
+  async function joinExam() {
+    setEditError("");
+    try {
+      await papi.joinContest(id);
+      window.dispatchEvent(new Event("oj-contests-changed"));
+    } catch (e) { setEditError(errorText(e)); }
+  }
   // Them / bot bai: chi nguoi tao ky thi (c.canManage) moi thay cac nut nay.
   const [newProblem, setNewProblem] = useState("");
   const [editError, setEditError] = useState("");
@@ -86,7 +110,7 @@ function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
           <Card title="Đề thi" right={<Tag color={STATUS[c.status].color}>{STATUS[c.status].label}</Tag>}>
             {c.problemsHidden && (
               <div style={{ fontSize: 13, color: "#757575" }}>
-                Kỳ thi có {c.problemCount} bài. Đề sẽ hiện khi kỳ thi bắt đầu.
+                Kỳ thi có {c.problemCount} bài. {c.status === "RUNNING" ? "Bấm Vào thi để xem đề và làm bài." : "Đề sẽ hiện khi kỳ thi bắt đầu."}
               </div>
             )}
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -109,15 +133,41 @@ function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
               </div>
             )}
             <div style={{ marginTop: 8 }}><Muted>Bấm vào mã bài để làm. Bài nộp trong khung giờ thi được tính vào bảng xếp hạng.</Muted></div>
-            {!c.canManage && (
-              <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 6, background: "var(--color-red-light)", border: "1px solid #F3D9A4", fontSize: 12.5, color: "#5D4037" }}>
-                <b>Kỳ thi có giám sát.</b> Khi bạn mở bài của kỳ thi đang diễn ra, việc rời tab, chuyển sang cửa sổ khác, sao chép và dán
-                sẽ được ghi lại và gửi cho giảng viên tạo kỳ thi.
+            {isStudent && c.status === "RUNNING" && !c.joined && !c.finished && (
+              <div style={{ marginTop: 10, padding: "12px 14px", borderRadius: 8, background: "var(--color-red-light)", border: "1px solid #F3D9A4", display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: 260, fontSize: 13, color: "#5D4037", lineHeight: 1.6 }}>
+                  <b>Kỳ thi đang diễn ra.</b> Sau khi bấm Vào thi, màn hình của bạn chỉ còn kỳ thi này cho tới khi bạn nộp bài sớm hoặc hết giờ:
+                  không có menu, không có bình luận và không có gợi ý sau khi nộp.
+                  {c.proctored && " Kỳ thi có giám sát: việc rời tab, chuyển cửa sổ, sao chép và dán sẽ được ghi lại và gửi cho giảng viên."}
+                </div>
+                <Btn onClick={() => void joinExam()}>Vào thi</Btn>
+              </div>
+            )}
+            {isStudent && c.finished && (
+              <div style={{ marginTop: 10, padding: "10px 14px", borderRadius: 8, background: "#F5F5F5", border: "1px solid #E0E0E0", fontSize: 13, color: "#424242" }}>
+                Bạn đã nộp bài và kết thúc kỳ thi lúc <b>{fmtTime(c.finishedAt)}</b>. Các bài nộp sau thời điểm đó không được tính vào kỳ thi.
               </div>
             )}
           </Card>
 
-          {c.canManage && <ProctorPanel contestId={c.id} running={c.status === "RUNNING"} />}
+          {c.canManage && (
+            <Card title={`Thí sinh tham gia (${c.participants?.length ?? 0})`}>
+              <Table head={["Thí sinh", "Vào thi lúc", "Trạng thái"]} empty="Chưa có thí sinh nào bấm Vào thi."
+                rows={(c.participants ?? []).map((p) => [
+                  <span><b>{p.fullName}</b> <span style={{ color: "#9E9E9E" }}>@{p.username}</span></span>,
+                  fmtTime(p.joinedAt),
+                  p.finishedAt ? <Tag color="gray">Đã nộp bài lúc {fmtTime(p.finishedAt).slice(11)}</Tag>
+                    : c.status === "RUNNING" ? <Tag color="green">Đang thi</Tag> : <Tag color="gray">Hết giờ</Tag>,
+                ])} />
+            </Card>
+          )}
+
+          {c.canManage && (
+            <ProctorPanel contestId={c.id} running={c.status === "RUNNING"} enabled={c.proctored}
+              toggle={<Btn small kind="ghost" onClick={() => void edit(() => papi.setProctoring(c.id, !c.proctored))}>
+                {c.proctored ? "Tắt giám sát" : "Bật giám sát"}
+              </Btn>} />
+          )}
 
           <Card title="Bảng xếp hạng">
             <Table head={["#", "Thí sinh", "Số bài", "Phút phạt", ...c.problems.map((p) => p.id)]}
