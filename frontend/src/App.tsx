@@ -154,10 +154,35 @@ function AppShell() {
   const routeRef = useRef(route);
   const page = route.page;
 
-  // Ghi trang dau tien vao lich su, va nghe nut Back / Forward cua trinh duyet.
+  // Dia chi chi mang ten trang (#Problems, #Contests...) khi DA DANG NHAP. O man hinh dang nhap thi
+  // dia chi de tron: neu khong, vao thang ten mien cung thay "#Problems" du chua mo trang nao.
+  // Trang trong link ban dau (vi du mo link "#Contests" luc chua dang nhap) van duoc nho trong
+  // routeRef, dang nhap xong la mo dung trang do.
+  const wasLoggedIn = useRef(false);
   useEffect(() => {
+    if (checking) return;
     const state = (window.history.state ?? {}) as { route?: Route };
-    if (!state.route) window.history.replaceState({ ...state, route: routeRef.current }, "", hashOf(routeRef.current));
+    if (user) {
+      wasLoggedIn.current = true;
+      if (!state.route || !window.location.hash) {
+        window.history.replaceState({ ...state, route: routeRef.current }, "", hashOf(routeRef.current));
+      }
+      return;
+    }
+    // Vua dang xuat: nguoi dang nhap tiep theo bat dau tu trang mac dinh, khong phai trang cua nguoi truoc.
+    if (wasLoggedIn.current) {
+      wasLoggedIn.current = false;
+      const home: Route = { page: "Problems", problemId: null };
+      routeRef.current = home;
+      setRoute(home);
+    }
+    if (window.location.hash) {
+      window.history.replaceState({}, "", window.location.pathname + window.location.search);
+    }
+  }, [user, checking]);
+
+  // Nghe nut Back / Forward cua trinh duyet.
+  useEffect(() => {
     const onPop = () => {
       const next = (window.history.state as { route?: Route } | null)?.route ?? routeFromHash();
       routeRef.current = next;
