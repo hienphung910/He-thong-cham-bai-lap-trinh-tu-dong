@@ -5,9 +5,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 /**
  * Chay mot tien trinh con: bom stdin, thu stdout/stderr bang thread rieng
@@ -21,16 +25,11 @@ public class ProcessRunner {
 
     private static final int OUTPUT_CAP_BYTES = 1 << 20; // 1 MB, chong sinh output vo han
 
-    public ExecutionResult run(List<String> command, Path workDir, String stdin, long timeLimitMs)
-            throws IOException, InterruptedException {
-        return run(command, workDir, stdin, timeLimitMs, 0);
-    }
-
-    /** memoryLimitMb: gioi han bo nho cua bai (0 = khong gioi han); chi co tac dung khi Sandbox bat. */
-    public ExecutionResult run(List<String> command, Path workDir, String stdin, long timeLimitMs, int memoryLimitMb)
+    /** limits: gioi han tai nguyen cua buoc nay (xem Language.compileLimits / runLimits); chi co tac dung khi Sandbox bat. */
+    public ExecutionResult run(List<String> command, Path workDir, String stdin, long timeLimitMs, Sandbox.Limits limits)
             throws IOException, InterruptedException {
         boolean sandboxed = Sandbox.isActive();
-        return start(sandboxed ? Sandbox.wrap(command, memoryLimitMb) : command, workDir, stdin, timeLimitMs, sandboxed);
+        return start(sandboxed ? Sandbox.wrap(command, limits) : command, workDir, stdin, timeLimitMs, sandboxed);
     }
 
     /** Chay lenh cua chinh he thong (khong chua ma cua thi sinh), khong qua sandbox. */
@@ -46,12 +45,52 @@ public class ProcessRunner {
         // Khong truyen cau hinh cua may chu (mat khau CSDL, mat khau admin...) cho tien trinh con.
         // Day chi la mot lop chan them, KHONG thay duoc sandbox (xem Sandbox).
         pb.environment().keySet().removeIf(name -> name.toUpperCase().startsWith("OJ_"));
-        Process process = pb.start();
+        Path stdinDir = sandboxed ? stdinFromFile(pb, stdin) : null;
         try {
-            return collect(process, stdin, timeLimitMs, sandboxed);
+            Process process = pb.start();
+            try {
+                return collect(process, sandboxed ? null : stdin, timeLimitMs, sandboxed);
+            } finally {
+                // Chay ca khi thread cham bi ngat (may chu dang dung): khong de lai tien trinh mo coi.
+                killTree(process, sandboxed);
+            }
         } finally {
-            // Chay ca khi thread cham bi ngat (may chu dang dung): khong de lai tien trinh mo coi.
-            killTree(process, sandboxed);
+            deleteStdin(stdinDir);
+        }
+    }
+
+    /**
+     * Khi chay bang tai khoan sandbox, input duoc dua vao tu MOT FILE thay vi mot ong (pipe) cua may chu:
+     * ong thuoc tai khoan may chu nen chuong trinh doc input qua duong dan "/dev/stdin" (rat pho bien voi
+     * Node: readFileSync("/dev/stdin"), va Python: open("/dev/stdin")) bi tu choi quyen.
+     *
+     * File nam trong mot thu muc RIENG cua tai khoan may chu, quyen 711: tai khoan sandbox doc duoc file
+     * nhung khong liet ke, tao, xoa hay thay file trong do - khong the tra file bang mot lien ket tro toi
+     * test an de may chu ghi de len. Tra ve thu muc do de xoa sau khi chay.
+     */
+    private static Path stdinFromFile(ProcessBuilder pb, String stdin) throws IOException {
+        Path dir = Files.createTempDirectory("oj-in-");
+        try {
+            Files.setPosixFilePermissions(dir, PosixFilePermissions.fromString("rwx--x--x"));
+            Path file = dir.resolve("stdin");
+            Files.write(file, (stdin == null ? "" : stdin).getBytes(StandardCharsets.UTF_8),
+                    StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE);
+            Files.setPosixFilePermissions(file, PosixFilePermissions.fromString("rw-r--r--"));
+            pb.redirectInput(file.toFile());
+            return dir;
+        } catch (IOException | RuntimeException e) {
+            deleteStdin(dir);
+            throw e instanceof IOException ? (IOException) e : new IOException(e.getMessage(), e);
+        }
+    }
+
+    private static void deleteStdin(Path dir) {
+        if (dir == null) return;
+        try {
+            Files.deleteIfExists(dir.resolve("stdin"));
+            Files.deleteIfExists(dir);
+        } catch (IOException ignored) {
+            // thu muc tam trong /tmp: khong xoa duoc thi he dieu hanh don sau
         }
     }
 
@@ -102,7 +141,15 @@ public class ProcessRunner {
         feeder.join(200);
 
         int exitCode = finished ? process.exitValue() : -1;
-        return new ExecutionResult(exitCode, out.getText(), err.getText(), elapsedMs, !finished);
+        return new ExecutionResult(exitCode, out.getText(), cleanStderr(err.getText()), elapsedMs, !finished);
+    }
+
+    /** Canh bao co dinh cua JDK khi bat Security Manager (xem Sandbox): khong phai loi cua thi sinh. */
+    private static final Pattern SECURITY_MANAGER_WARNING = Pattern.compile(
+            "(?m)^WARNING: (?:A command line option has enabled the Security Manager|The Security Manager is deprecated[^\\n]*)\\.?\\r?\\n?");
+
+    private static String cleanStderr(String stderr) {
+        return SECURITY_MANAGER_WARNING.matcher(stderr).replaceAll("");
     }
 
     /** Thread doc mot luong den EOF, gioi han dung luong. */

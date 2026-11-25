@@ -419,7 +419,14 @@ Mọi biến ở bảng trên đều đọc được từ biến môi trường 
 - Railway: tạo service từ repo GitHub, Railway tự nhận `Dockerfile` và cấp cổng qua biến `PORT`. Gắn một Volume vào `/app/data` để đề bài tạo trên web không mất khi deploy lại; lúc khởi động, đề bài gốc trong repo được chép vào volume mà không ghi đè bài đã có.
 - Aiven MySQL bắt buộc SSL: trong `OJ_DB_URL` dùng `sslMode=REQUIRED` thay cho `useSSL=false`, tên CSDL là `defaultdb`. Không cần chạy `01_create_database.sql`; bảng được tạo khi khởi động.
 - Đặt `OJ_ADMIN_PASSWORD` trước lần chạy đầu. Sau khi deploy, xem log có dòng `Cô lập bài nộp: Bật` không. Nếu là `Tắt` (nền tảng không cho chạy `sudo`), bài nộp chạy bằng quyền của máy chủ và tự đăng ký mặc định bị khoá; chỉ đặt `OJ_ALLOW_REGISTER=true` khi chấp nhận rủi ro đó.
-- Khi cô lập bật, bài nộp chạy bằng tài khoản `ojrunner`: không đọc được `data/` (test ẩn, file minh chứng), không đọc được mật khẩu trong biến môi trường của máy chủ, không dừng được máy chủ, bị giới hạn số tiến trình, kích thước file và bộ nhớ (C++, Python). Việc cô lập này KHÔNG chặn kết nối mạng ra ngoài.
+- Khi cô lập bật, bài nộp chạy bằng tài khoản `ojrunner`: không đọc được `data/` (test ẩn, file minh chứng), không đọc được mật khẩu trong biến môi trường của máy chủ, không dừng được máy chủ. Mỗi bước (biên dịch / chạy) có giới hạn riêng theo ngôn ngữ (`Language.compileLimits` / `runLimits`, đo trên image Docker của dự án):
+  - **C++, Python**: đúng 1 tiến trình (không fork, không tạo luồng), bộ nhớ ảo = giới hạn của bài + 128 MB.
+  - **Java**: Security Manager (JDK 17 của image; JDK 24 trở lên đã bỏ nên tự tắt) chặn gọi chương trình khác, mở mạng, đọc file, `Unsafe`; vẫn cho `System.getProperty`, đổi `System.out`, luồng có ngăn xếp lớn. Tối đa 24 luồng (JVM cần 14 với `-XX:+UseSerialGC -XX:ActiveProcessorCount=1`), bộ nhớ dữ liệu = heap + 128 MB. Log của JVM chuyển sang stderr để không lẫn vào kết quả.
+  - **JavaScript**: chế độ phân quyền của Node (`--permission`) chặn tiến trình con, worker, đọc / ghi file ngoài thư mục bài; tối đa 8 luồng (`--v8-pool-size=1`), bộ nhớ dữ liệu = heap + 128 MB.
+  - **Biên dịch**: g++ tối đa 8 tiến trình và 1 GB; javac 24 luồng và 1 GB.
+  - Mọi bước: giới hạn thời gian CPU, số file mở, file ghi ra tối đa 64 MB.
+  - Input được đưa vào từ một file chỉ-đọc trong thư mục riêng của máy chủ (không phải một ống), nên đọc bằng `/dev/stdin` chạy được và bài nộp không tráo được file input.
+  - Chặn mạng: lúc khởi động máy chủ thử tạo một network namespace trống (`unshare --user --net`); được thì mọi bước chạy trong đó, không thì dòng `Cô lập bài nộp` ghi "chặn mạng: không". Docker mặc định không cho, nên C++, Python và Node vẫn kết nối ra ngoài được (Java thì bị Security Manager chặn).
 - Dữ liệu mẫu (lớp, kỳ thi mẫu) chỉ được tạo ở chế độ `--no-db`. `database/mysql/03_seed_demo_data.sql` dùng mật khẩu công khai, chỉ nạp trên máy cá nhân.
 
 Chạy thử image trên máy, không cần MySQL:

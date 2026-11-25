@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -30,16 +31,39 @@ public class JavaLanguage extends Language {
 
     @Override
     public CompileResult compile(Path source, Path workDir) throws IOException, InterruptedException {
-        return runCompiler(workDir, "javac", "-encoding", "UTF-8", "-d", workDir.toString(), source.toString());
+        return runCompiler(workDir, "javac", "-J-XX:+UseSerialGC", "-J-XX:ActiveProcessorCount=1", "-J-Xmx512m",
+                "-encoding", "UTF-8", "-d", workDir.toString(), source.toString());
+    }
+
+    /** JVM giu cho truoc nhieu dia chi ao nen gioi han theo bo nho du lieu; javac can 16 luong. */
+    @Override
+    protected Sandbox.Limits compileLimits() {
+        return Sandbox.Limits.forManaged(24, 1024, 60, 256);
+    }
+
+    /**
+     * JVM can 14 luong voi -XX:+UseSerialGC -XX:ActiveProcessorCount=1 (mac dinh 19, tang theo so CPU cua may);
+     * de 24 cho chuong trinh tao them vai luong (vd. luong co ngan xep lon de de quy sau). Bo nho du lieu =
+     * heap + 128 MB cho metaspace, code cache, ngan xep: bo nho ngoai heap (ByteBuffer.allocateDirect...) cung
+     * khong vuot duoc.
+     */
+    @Override
+    public Sandbox.Limits runLimits(int memoryLimitMb, long timeLimitMs) {
+        return Sandbox.Limits.forManaged(24, memoryLimitMb + 128, Sandbox.Limits.cpuSecondsFor(timeLimitMs, 2), 128);
     }
 
     @Override
     public List<String> buildRunCommand(Path source, Path workDir, int memoryLimitMb) {
-        return Arrays.asList("java",
+        // Log cua JVM (vd. "Failed to start thread" khi cham gioi han luong) mac dinh in ra STDOUT, lan vao
+        // ket qua cua thi sinh: chuyen sang stderr.
+        List<String> command = new ArrayList<>(Arrays.asList("java",
+                "-Xlog:disable", "-Xlog:all=warning:stderr",
+                "-XX:+UseSerialGC", "-XX:ActiveProcessorCount=1",
                 "-Xmx" + memoryLimitMb + "m",
-                "-Dfile.encoding=UTF-8",
-                "-cp", workDir.toString(),
-                mainClassOf(source));
+                "-Dfile.encoding=UTF-8"));
+        command.addAll(Sandbox.javaRunArgs());
+        command.addAll(Arrays.asList("-cp", workDir.toString(), mainClassOf(source)));
+        return command;
     }
 
     /** Ten day du (kem package) cua class chua ham main; khong doc duoc file thi dung ten file. */
