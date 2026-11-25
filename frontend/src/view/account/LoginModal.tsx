@@ -4,6 +4,13 @@ import { api } from "../../shared/api";
 import { useAuth } from "./auth";
 import { EVIDENCE_ACCEPT, readEvidence } from "./evidence";
 import Turnstile from "./Turnstile";
+import { checkConfirm, checkEmail, checkFullName, checkLabel, checkPassword, checkStudentCode, checkUsername } from "./validate";
+
+/** Dong bao loi nho ngay duoi mot o nhap. */
+function FieldError({ text }: { text: string }) {
+  if (!text) return null;
+  return <div style={{ marginTop: 5, fontSize: 12, lineHeight: 1.4, color: "#C62828" }}>{text}</div>;
+}
 
 type Mode = "login" | "register" | "forgot";
 
@@ -74,7 +81,25 @@ export default function LoginModal() {
   const [busy, setBusy] = useState(false);
   const [showPass, setShowPass] = useState(false);
 
-  function switchMode(next: Mode) { setMode(next); setError(""); setNotice(""); setPassword(""); setConfirm(""); }
+  // Form dang ky bao loi ngay duoi tung o. Chi bao o nguoi dung DA ROI KHOI (hoac sau khi bam Tao tai
+  // khoan), de khong hien loi do khi ho con dang go do.
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const touch = (field: string) => setTouched((old) => (old[field] ? old : { ...old, [field]: true }));
+  const fieldErrors: Record<string, string> = mode !== "register" ? {} : {
+    username: checkUsername(username),
+    fullName: checkFullName(fullName),
+    email: checkEmail(email),
+    studentCode: role === "STUDENT" ? checkStudentCode(studentCode) : "",
+    className: role === "STUDENT" ? checkLabel(className, "Lớp") : "",
+    department: role === "TEACHER" ? checkLabel(department, "Bộ môn") : "",
+    password: checkPassword(password, username),
+    confirm: checkConfirm(password, confirm),
+  };
+  const shown = (field: string) => (touched[field] ? fieldErrors[field] ?? "" : "");
+  /** Vien do cho o dang co loi. */
+  const marked = (field: string): React.CSSProperties => (shown(field) ? { borderColor: "#E57373" } : {});
+
+  function switchMode(next: Mode) { setMode(next); setError(""); setNotice(""); setPassword(""); setConfirm(""); setTouched({}); }
 
   async function pickEvidence(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -129,9 +154,12 @@ export default function LoginModal() {
       }
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError("Hãy nhập một địa chỉ email hợp lệ."); return; }
-    if (password.length < 8) { setError("Mật khẩu phải có ít nhất 8 ký tự."); return; }
-    if (password !== confirm) { setError("Hai lần nhập mật khẩu không khớp."); return; }
+    // Bam Tao tai khoan: hien loi cua MOI o con sai, khong gui gi len may chu.
+    setTouched({ username: true, fullName: true, email: true, studentCode: true, className: true, department: true, password: true, confirm: true });
+    if (Object.values(fieldErrors).some((message) => message !== "")) {
+      setError("Hãy sửa các ô đang báo lỗi rồi thử lại.");
+      return;
+    }
     if (role === "TEACHER" && !evidence) { setError("Hãy tải minh chứng lên trước khi đăng ký giảng viên."); return; }
     if (siteKey && !captcha) { setError("Hãy hoàn thành bước xác minh CAPTCHA."); return; }
     setBusy(true);
@@ -174,9 +202,11 @@ export default function LoginModal() {
         <p style={{ fontSize: 13, color: "var(--color-accent)", margin: 0, fontFamily: "var(--font-mono)" }}>{">_"} ready to judge</p>
       </div>
       {/* Right panel - inline form */}
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 40 }}>
+      {/* Form dang ky kem cac dong bao loi co the cao hon man hinh: khung nay cuon duoc, va form can giua bang
+          margin auto (can giua bang alignItems thi phan tran phia tren bi cat mat, khong cuon toi duoc). */}
+      <div style={{ flex: 1, display: "flex", padding: 40, overflowY: "auto" }}>
         {/* noValidate: loi nhap sai do handleSubmit bao bang tieng Viet, khong dung bong bao cua trinh duyet. */}
-        <form onSubmit={handleSubmit} noValidate style={{ width: 400, display: "flex", flexDirection: "column", gap: 16 }}>
+        <form onSubmit={handleSubmit} noValidate style={{ width: 400, maxWidth: "100%", margin: "auto", display: "flex", flexDirection: "column", gap: 16 }}>
           <h2 style={{ fontSize: 24, fontWeight: 700, color: "#212121", margin: 0 }}>
             {mode === "login" ? "Đăng nhập" : mode === "register" ? "Đăng ký tài khoản" : "Quên mật khẩu"}
           </h2>
@@ -191,10 +221,14 @@ export default function LoginModal() {
           )}
 
           {/* Username */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, ...inputBox, padding: 0, paddingLeft: 12 }}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#BDBDBD" strokeWidth="1.4"><circle cx="8" cy="5" r="3" /><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6" /></svg>
-            <input type="text" placeholder={mode === "forgot" ? "Tên đăng nhập hoặc email" : "Tên đăng nhập"} value={username} onChange={(e) => setUsername(e.target.value)} autoFocus
-              style={{ flex: 1, border: "none", outline: "none", fontSize: 14, height: "100%", background: "transparent" }} />
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, ...inputBox, padding: 0, paddingLeft: 12, ...marked("username") }}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#BDBDBD" strokeWidth="1.4"><circle cx="8" cy="5" r="3" /><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6" /></svg>
+              <input type="text" placeholder={mode === "forgot" ? "Tên đăng nhập hoặc email" : "Tên đăng nhập"} value={username} onChange={(e) => setUsername(e.target.value)} autoFocus
+                onBlur={() => touch("username")} maxLength={mode === "register" ? 32 : undefined} autoComplete="username"
+                style={{ flex: 1, border: "none", outline: "none", fontSize: 14, height: "100%", background: "transparent" }} />
+            </div>
+            <FieldError text={shown("username")} />
           </div>
 
           {mode === "register" && (
@@ -210,16 +244,36 @@ export default function LoginModal() {
                   }}>{label}</button>
                 ))}
               </div>
-              <input type="text" placeholder="Họ và tên" value={fullName} onChange={(e) => setFullName(e.target.value)} style={inputBox} />
-              <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" style={inputBox} />
+              <div>
+                <input type="text" placeholder="Họ và tên" value={fullName} onChange={(e) => setFullName(e.target.value)}
+                  onBlur={() => touch("fullName")} maxLength={100} autoComplete="name" style={{ ...inputBox, ...marked("fullName") }} />
+                <FieldError text={shown("fullName")} />
+              </div>
+              <div>
+                <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)}
+                  onBlur={() => touch("email")} maxLength={190} autoComplete="email" style={{ ...inputBox, ...marked("email") }} />
+                <FieldError text={shown("email")} />
+              </div>
               {role === "STUDENT" ? (
                 <>
-                  <input type="text" placeholder="Mã sinh viên" value={studentCode} onChange={(e) => setStudentCode(e.target.value)} style={inputBox} />
-                  <input type="text" placeholder="Lớp" value={className} onChange={(e) => setClassName(e.target.value)} style={inputBox} />
+                  <div>
+                    <input type="text" placeholder="Mã sinh viên" value={studentCode} onChange={(e) => setStudentCode(e.target.value)}
+                      onBlur={() => touch("studentCode")} maxLength={30} style={{ ...inputBox, ...marked("studentCode") }} />
+                    <FieldError text={shown("studentCode")} />
+                  </div>
+                  <div>
+                    <input type="text" placeholder="Lớp" value={className} onChange={(e) => setClassName(e.target.value)}
+                      onBlur={() => touch("className")} maxLength={40} style={{ ...inputBox, ...marked("className") }} />
+                    <FieldError text={shown("className")} />
+                  </div>
                 </>
               ) : (
                 <>
-                  <input type="text" placeholder="Bộ môn" value={department} onChange={(e) => setDepartment(e.target.value)} style={inputBox} />
+                  <div>
+                    <input type="text" placeholder="Bộ môn" value={department} onChange={(e) => setDepartment(e.target.value)}
+                      onBlur={() => touch("department")} maxLength={40} style={{ ...inputBox, ...marked("department") }} />
+                    <FieldError text={shown("department")} />
+                  </div>
                   {/* Minh chung la giang vien: quan tri vien xem file nay khi duyet tai khoan. */}
                   <input ref={evidenceInput} type="file" accept={EVIDENCE_ACCEPT} style={{ display: "none" }} onChange={(e) => void pickEvidence(e)} />
                   {evidence ? (
@@ -266,14 +320,16 @@ export default function LoginModal() {
 
           {/* Password */}
           {mode !== "forgot" && <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, ...inputBox, padding: 0, paddingLeft: 12, paddingRight: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, ...inputBox, padding: 0, paddingLeft: 12, paddingRight: 8, ...marked("password") }}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#BDBDBD" strokeWidth="1.4"><rect x="3" y="7" width="10" height="7" rx="1.5" /><path d="M5 7V5a3 3 0 0 1 6 0v2" /></svg>
               <input type={showPass ? "text" : "password"} placeholder="Mật khẩu" value={password} onChange={(e) => setPassword(e.target.value)}
+                onBlur={() => touch("password")} maxLength={128} autoComplete={mode === "register" ? "new-password" : "current-password"}
                 style={{ flex: 1, border: "none", outline: "none", fontSize: 14, height: "100%", background: "transparent" }} />
               <button type="button" onClick={() => setShowPass((v) => !v)} style={{ background: "none", border: "none", cursor: "pointer", color: "#BDBDBD", display: "flex", padding: 4 }}>
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M1 8s3-5 7-5 7 5 7 5-3 5-7 5-7-5-7-5z" /><circle cx="8" cy="8" r="2" />{showPass && <line x1="2" y1="2" x2="14" y2="14" />}</svg>
               </button>
             </div>
+            <FieldError text={shown("password")} />
             {mode === "login" && canReset && (
               <div style={{ textAlign: "right", marginTop: 6 }}>
                 <button type="button" onClick={() => switchMode("forgot")} style={{ background: "none", border: "none", padding: 0, fontSize: 12, color: "var(--color-red)", cursor: "pointer" }}>Quên mật khẩu?</button>
@@ -282,7 +338,11 @@ export default function LoginModal() {
           </div>}
 
           {mode === "register" && (
-            <input type="password" placeholder="Nhập lại mật khẩu" value={confirm} onChange={(e) => setConfirm(e.target.value)} style={inputBox} />
+            <div>
+              <input type="password" placeholder="Nhập lại mật khẩu" value={confirm} onChange={(e) => setConfirm(e.target.value)}
+                onBlur={() => touch("confirm")} maxLength={128} autoComplete="new-password" style={{ ...inputBox, ...marked("confirm") }} />
+              <FieldError text={shown("confirm")} />
+            </div>
           )}
 
           {siteKey && (

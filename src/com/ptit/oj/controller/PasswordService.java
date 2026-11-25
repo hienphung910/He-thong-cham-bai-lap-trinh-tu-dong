@@ -50,6 +50,41 @@ public class PasswordService {
         }
     }
 
+    /** Vai mat khau dat du do dai, co ca chu lan so nhung ai cung doan duoc (hoac da lo cong khai). */
+    private static final java.util.Set<String> TOO_COMMON = new java.util.HashSet<>(java.util.Arrays.asList(
+            "password1", "password123", "matkhau123", "12345678a", "a12345678", "abc12345", "abcd1234",
+            "qwerty123", "1q2w3e4r", "1qaz2wsx", "iloveyou1", "admin123", "admin1234", "ptit@2026", "ptit2026"));
+
+    /**
+     * Quy tac cho mat khau do NGUOI DUNG tu dat (dang ky, doi mat khau, dat lai mat khau) - chat hon
+     * validate(), von chi kiem tra do dai va con dung cho mat khau lay tu bien moi truong luc khoi tao.
+     * username co the null (chua biet tai khoan nao).
+     */
+    public void validateChosen(String rawPassword, String username) {
+        validate(rawPassword);
+        if (!rawPassword.equals(rawPassword.trim())) {
+            throw new IllegalArgumentException("Mật khẩu không được bắt đầu hoặc kết thúc bằng khoảng trắng");
+        }
+        boolean letter = false;
+        boolean digit = false;
+        for (int i = 0; i < rawPassword.length(); i++) {
+            char c = rawPassword.charAt(i);
+            if (Character.isLetter(c)) letter = true;
+            else if (Character.isDigit(c)) digit = true;
+        }
+        if (!letter || !digit) {
+            throw new IllegalArgumentException("Mật khẩu phải có cả chữ cái và chữ số");
+        }
+        String lower = rawPassword.toLowerCase(java.util.Locale.ROOT);
+        if (TOO_COMMON.contains(lower)) {
+            throw new IllegalArgumentException("Mật khẩu này quá dễ đoán, hãy chọn mật khẩu khác");
+        }
+        if (username != null && username.trim().length() >= 3
+                && lower.contains(username.trim().toLowerCase(java.util.Locale.ROOT))) {
+            throw new IllegalArgumentException("Mật khẩu không được chứa tên đăng nhập");
+        }
+    }
+
     /** Sinh muoi moi va bam mat khau. */
     public Credentials hash(String rawPassword) {
         validate(rawPassword);
@@ -112,7 +147,10 @@ public class PasswordService {
             throw new IllegalArgumentException("Tên đăng nhập phải dài 3-32 ký tự");
         }
         if (!u.matches("[A-Za-z0-9_.]+")) {
-            throw new IllegalArgumentException("Tên đăng nhập chỉ gồm chữ, số, dấu chấm hoặc gạch dưới");
+            throw new IllegalArgumentException("Tên đăng nhập chỉ gồm chữ không dấu, số, dấu chấm hoặc gạch dưới");
+        }
+        if (!Character.isLetterOrDigit(u.charAt(0)) || u.endsWith(".") || u.contains("..")) {
+            throw new IllegalArgumentException("Tên đăng nhập phải bắt đầu bằng chữ hoặc số, không kết thúc bằng dấu chấm và không có hai dấu chấm liền nhau");
         }
         return u;
     }

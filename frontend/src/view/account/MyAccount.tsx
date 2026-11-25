@@ -89,7 +89,7 @@ export default function MyAccount() {
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <Row>
             <Field label="Mật khẩu hiện tại"><input type="password" style={INPUT} value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} autoComplete="current-password" /></Field>
-            <Field label="Mật khẩu mới (ít nhất 8 ký tự)"><input type="password" style={INPUT} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" /></Field>
+            <Field label="Mật khẩu mới (ít nhất 8 ký tự, có cả chữ và số)"><input type="password" style={INPUT} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" /></Field>
             <Btn disabled={!oldPassword || !newPassword} onClick={() => void change()}>Đổi mật khẩu</Btn>
           </Row>
           <ErrorBox text={error} />

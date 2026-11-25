@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Logo from "../../shared/Logo";
 import { api, setToken } from "../../shared/api";
+import { checkConfirm, checkPassword } from "./validate";
 
 /**
  * Trang dat lai mat khau, mo tu link trong thu "Quen mat khau": /reset-password?token=...
@@ -29,8 +30,9 @@ export default function ResetPassword() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault(); setError("");
-    if (password.length < 8) { setError("Mật khẩu phải có ít nhất 8 ký tự."); return; }
-    if (password !== confirm) { setError("Hai lần nhập mật khẩu không khớp."); return; }
+    // Chua biet ten dang nhap (chi co ma trong link): may chu kiem tra not "mat khau khong chua ten dang nhap".
+    const problem = checkPassword(password, "") || checkConfirm(password, confirm);
+    if (problem) { setError(problem); return; }
     setBusy(true);
     try {
       const res = await api.resetPassword(token, password);

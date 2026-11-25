@@ -790,7 +790,8 @@ public class ApiServer {
         }
         String password = body.getString("password", "");
         // Kiem tra mat khau TRUOC khi dung ma: mat khau qua yeu thi ma van con, nguoi dung sua roi gui lai.
-        service.getAuth().checkPassword(password);
+        // (Xem truoc ma thuoc tai khoan nao de kiem tra ca "mat khau khong chua ten dang nhap".)
+        service.getAuth().checkPassword(password, resets.peek(token).orElse(null));
         Optional<String> userId = resets.consume(token);
         if (!userId.isPresent()) {
             limiter.hit(ipKey, RESET_WINDOW_MS);

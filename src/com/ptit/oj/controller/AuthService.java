@@ -102,8 +102,15 @@ public class AuthService {
                                       String studentCode, String className, String department, String email,
                                       boolean saveEmail) {
         String cleanUsername = normalizeOrFail(username);
-        passwords.validate(rawPassword);
+        // Ten de bi nham la tai khoan cua he thong: khong cho tu dang ky (tai khoan quan tri do bootstrapAdmin tao).
+        if (RESERVED_USERNAMES.contains(cleanUsername.toLowerCase(Locale.ROOT))) {
+            throw new AuthException(400, "Tên đăng nhập \"" + cleanUsername + "\" không dùng được, hãy chọn tên khác");
+        }
+        passwords.validateChosen(rawPassword, cleanUsername);
         String cleanFullName = requireText(fullName, "Họ tên", MAX_FULL_NAME);
+        if (cleanFullName.length() < 2 || !FULL_NAME.matcher(cleanFullName).matches()) {
+            throw new AuthException(400, "Họ tên chỉ gồm chữ cái và khoảng trắng, ít nhất 2 ký tự");
+        }
         // Email bat buoc khi dang ky: do la duong duy nhat de tu lay lai mat khau. Kho khong luu duoc
         // email (CSDL cu thieu cot) thi bo qua, khong chan viec dang ky.
         String cleanEmail = users.supportsEmail() ? normalizeEmail(email) : "";
@@ -112,7 +119,11 @@ public class AuthService {
         User user;
         if (role == null || role.isEmpty() || User.ROLE_STUDENT.equals(role)) {
             String cleanCode = optionalText(studentCode, "Mã sinh viên", MAX_STUDENT_CODE);
+            if (!cleanCode.isEmpty() && !STUDENT_CODE.matcher(cleanCode).matches()) {
+                throw new AuthException(400, "Mã sinh viên chỉ gồm chữ không dấu, số, dấu chấm, gạch ngang hoặc gạch dưới");
+            }
             String cleanClass = optionalText(className, "Lớp", MAX_CODE);
+            requirePlainLabel(cleanClass, "Lớp");
             user = new Student(newUserId(), cleanUsername, cleanFullName, cleanCode, cleanClass);
         } else if (User.ROLE_TEACHER.equals(role)) {
             if (!users.supportsApproval()) {
@@ -122,6 +133,7 @@ public class AuthService {
                 throw new AuthException(503, "Đang có quá nhiều đăng ký giảng viên chờ duyệt. Hãy thử lại sau");
             }
             String cleanDepartment = optionalText(department, "Bộ môn", MAX_CODE);
+            requirePlainLabel(cleanDepartment, "Bộ môn");
             user = new Teacher(newUserId(), cleanUsername, cleanFullName, cleanDepartment);
             user.setApproved(false);
         } else {
@@ -151,15 +163,35 @@ public class AuthService {
     /** Do dai toi da cua email; khop voi cot users.email VARCHAR(190). */
     private static final int MAX_EMAIL = 190;
     /** Mot ten, mot @, mot ten mien co dau cham; khong khoang trang. Du de bat loi go nham. */
-    private static final java.util.regex.Pattern EMAIL =
-            java.util.regex.Pattern.compile("^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)+$");
+    private static final java.util.regex.Pattern EMAIL = java.util.regex.Pattern.compile(
+            "^[A-Za-z0-9_%+-]+(\\.[A-Za-z0-9_%+-]+)*@[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?"
+          + "(\\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)*\\.[A-Za-z]{2,}$");
+
+    /** Ten tu dang ky khong duoc dung, vi de bi nham la tai khoan cua he thong. */
+    private static final java.util.Set<String> RESERVED_USERNAMES = new java.util.HashSet<>(java.util.Arrays.asList(
+            "admin", "administrator", "root", "system", "support", "codehub", "quantri", "quantrivien", "moderator"));
+    /** Ho ten: chu cai (ca tieng Viet co dau), khoang trang, dau cham, nhay don, gach ngang; bat dau bang chu cai. */
+    private static final java.util.regex.Pattern FULL_NAME =
+            java.util.regex.Pattern.compile("^[\\p{L}\\p{M}][\\p{L}\\p{M} .'-]*$");
+    private static final java.util.regex.Pattern STUDENT_CODE = java.util.regex.Pattern.compile("^[A-Za-z0-9._-]+$");
+    /** Ten lop / bo mon: chu, so, khoang trang va vai dau thong dung. */
+    private static final java.util.regex.Pattern PLAIN_LABEL =
+            java.util.regex.Pattern.compile("^[\\p{L}\\p{M}\\p{N} .,&/_-]*$");
+
+    private static void requirePlainLabel(String value, String label) {
+        if (!PLAIN_LABEL.matcher(value).matches()) {
+            throw new AuthException(400, label + " chỉ gồm chữ, số, khoảng trắng và các dấu . , & / - _");
+        }
+    }
 
     /** Dua email ve dang chu thuong, nem 400 neu thieu hoac sai dang. */
     public static String normalizeEmail(String email) {
         String clean = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
         if (clean.isEmpty()) throw new AuthException(400, "Email không được để trống");
-        if (clean.length() > MAX_EMAIL || !EMAIL.matcher(clean).matches()) {
-            throw new AuthException(400, "Email không hợp lệ");
+        if (clean.length() > MAX_EMAIL) throw new AuthException(400, "Email tối đa " + MAX_EMAIL + " ký tự");
+        int at = clean.indexOf('@');
+        if (at < 1 || at > 64 || !EMAIL.matcher(clean).matches()) {
+            throw new AuthException(400, "Email không hợp lệ (ví dụ đúng: ten@example.com)");
         }
         return clean;
     }
@@ -226,8 +258,9 @@ public class AuthService {
     }
 
     /** Kiem tra mat khau moi co dat yeu cau khong (nem IllegalArgumentException neu khong) ma chua doi gi. */
-    public void checkPassword(String rawPassword) {
-        passwords.validate(rawPassword);
+    public void checkPassword(String rawPassword, String userId) {
+        Optional<User> owner = findById(userId);
+        passwords.validateChosen(rawPassword, owner.isPresent() ? owner.get().getUsername() : null);
     }
 
     /**
@@ -235,8 +268,8 @@ public class AuthService {
      * Moi phien dang nhap cu bi huy: ai dang giu token cu khong dung tiep duoc.
      */
     public synchronized User resetPassword(String userId, String newPassword) {
-        passwords.validate(newPassword);
         Optional<User> found = findById(userId);
+        passwords.validateChosen(newPassword, found.isPresent() ? found.get().getUsername() : null);
         if (!found.isPresent() || !found.get().isApproved()) {
             throw new AuthException(400, "Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn");
         }
@@ -386,7 +419,10 @@ public class AuthService {
         if (oldPassword == null || !credentials.isPresent() || !passwords.matches(oldPassword, credentials.get())) {
             throw new WrongPasswordException();
         }
-        passwords.validate(newPassword);
+        passwords.validateChosen(newPassword, user.getUsername());
+        if (newPassword.equals(oldPassword)) {
+            throw new AuthException(400, "Mật khẩu mới phải khác mật khẩu hiện tại");
+        }
         users.saveWithCredentials(user, passwords.hash(newPassword));
         // Dang xuat moi thiet bi khac: ai dang giu token cu khong dung tiep duoc.
         sessions.invalidateUser(user.getId(), currentToken);

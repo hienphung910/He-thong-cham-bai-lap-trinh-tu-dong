@@ -58,6 +58,12 @@ public final class PasswordResetService {
         return find(token) != null;
     }
 
+    /** Ma nay thuoc tai khoan nao; khong lam mat hieu luc cua ma. Rong neu ma sai / het han. */
+    public synchronized Optional<String> peek(String token) {
+        Entry entry = find(token);
+        return entry == null ? Optional.<String>empty() : Optional.of(entry.userId);
+    }
+
     /** Dung ma: tra ve ma tai khoan va huy ma ngay. Rong neu ma sai, het han hoac da dung. */
     public synchronized Optional<String> consume(String token) {
         Entry entry = find(token);
