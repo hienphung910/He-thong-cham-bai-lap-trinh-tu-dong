@@ -1,2 +1,6 @@
 # Script chay trong container Linux phai giu xuong dong kieu LF, ke ca khi checkout tren Windows.
 *.sh text eol=lf
+
+# data/ chi chua de bai, test va loi giai mau (300 file ref.cpp), khong phai ma nguon cua project.
+# Danh dau vendored de GitHub khong tinh vao thanh ngon ngu (neu khong C++ chiem ~22%).
+data/** linguist-vendored
