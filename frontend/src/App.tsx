@@ -124,7 +124,7 @@ const NAV_GROUPS: { title: string; icon: ReactNode; items: NavItem[] }[] = [
     items: [
       { key: "Admin", label: "Kho bài chung và bộ test", role: "admin" },
       { key: "Accounts", label: "Tài khoản, giảng viên", role: "admin" },
-      { key: "Comments", label: "Duyệt bình luận", role: "admin" },
+      { key: "Comments", label: "Bình luận bài tập", role: "admin" },
       { key: "Organizations", label: "Tổ chức", role: "admin" },
       { key: "System", label: "Hệ thống", role: "admin" },
       { key: "Audit", label: "Nhật ký hoạt động", role: "admin" },

@@ -1,55 +1,43 @@
 import { useState } from "react";
 import { papi } from "../../shared/platformApi";
-import { Btn, Card, ErrorBox, Page, Table, Tag, errorText, fmtTime, useLoad } from "../../shared/kit";
+import { Btn, ErrorBox, Page, Table, errorText, fmtTime, useLoad } from "../../shared/kit";
 import ProblemChip from "../../shared/ProblemChip";
-import type { ProblemComment } from "../../shared/platformTypes";
 
 /**
- * Quan tri vien duyet binh luan duoi cac bai tap. Binh luan cho duyet chi tac gia thay;
- * duyet thi moi nguoi thay, tu choi thi binh luan bi xoa va tac gia nhan thong bao.
+ * Quan ly binh luan duoi cac bai tap. Binh luan khong con qua buoc duyet: may chu loc tu bay va ma
+ * nguon loi giai luc gui, qua duoc thi hien ngay. Trang nay de xoa binh luan lot luoi: quan tri vien
+ * thay moi binh luan, giang vien thay binh luan duoi bai trong kho rieng cua minh.
  */
 export default function CommentModeration() {
   const list = useLoad(() => papi.allComments());
   const [error, setError] = useState("");
-  const pending = (list.data ?? []).filter((c) => c.status === "PENDING");
-  const approved = (list.data ?? []).filter((c) => c.status === "APPROVED");
+  const [search, setSearch] = useState("");
+  const q = search.trim().toLowerCase();
+  const shown = (list.data ?? []).filter((c) => !q || c.text.toLowerCase().includes(q)
+    || c.authorName.toLowerCase().includes(q) || c.problemId.toLowerCase().includes(q));
 
-  async function act(work: () => Promise<unknown>) {
+  async function remove(id: string) {
+    if (!window.confirm("Xoá bình luận này? Người viết sẽ nhận được thông báo.")) return;
     setError("");
-    try { await work(); list.reload(); } catch (e) { setError(errorText(e)); }
+    try { await papi.deleteComment(id); list.reload(); } catch (e) { setError(errorText(e)); }
   }
-
-  function row(c: ProblemComment) {
-    return [
-      <span style={{ display: "inline-flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-        <ProblemChip id={c.problemId} title={c.problemTitle} />
-        <span style={{ fontSize: 12, color: "#757575" }}>{c.problemTitle}</span>
-      </span>,
-      <span><b>{c.authorName}</b><div style={{ fontSize: 12, color: "#9E9E9E" }}>{c.authorRole}</div></span>,
-      <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", maxWidth: 520, lineHeight: 1.5 }}>{c.text}</div>,
-      fmtTime(c.createdAt),
-      c.status === "PENDING" ? (
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          <Btn small onClick={() => void act(() => papi.approveComment(c.id))}>Duyệt</Btn>
-          <Btn small kind="danger" onClick={() => void act(() => papi.deleteComment(c.id))}>Từ chối</Btn>
-        </div>
-      ) : (
-        <Btn small kind="danger" onClick={() => { if (window.confirm("Xoá bình luận đã duyệt này?")) void act(() => papi.deleteComment(c.id)); }}>Xoá</Btn>
-      ),
-    ];
-  }
-
-  const HEAD = ["Bài", "Người gửi", "Nội dung", "Thời điểm", ""];
 
   return (
-    <Page title="Duyệt bình luận">
+    <Page title="Bình luận bài tập"
+      actions={<input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Tìm theo nội dung, người viết, mã bài"
+        style={{ height: 34, width: 300, padding: "0 12px", border: "1px solid #E0E0E0", borderRadius: 6, fontSize: 13, outline: "none" }} />}>
       <ErrorBox text={error || list.error} />
-      <Card title="Chờ duyệt" right={<Tag color={pending.length > 0 ? "orange" : "gray"}>{pending.length} bình luận</Tag>}>
-        <Table head={HEAD} empty="Không có bình luận nào đang chờ duyệt." rows={pending.map(row)} />
-      </Card>
-      <Card title="Đã duyệt" right={<Tag color="green">{approved.length} bình luận</Tag>}>
-        <Table head={HEAD} empty="Chưa có bình luận nào được duyệt." rows={approved.map(row)} />
-      </Card>
+      <Table head={["Bài", "Người viết", "Nội dung", "Thời điểm", ""]} empty="Chưa có bình luận nào."
+        rows={shown.map((c) => [
+          <span style={{ display: "inline-flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <ProblemChip id={c.problemId} title={c.problemTitle} />
+            <span style={{ fontSize: 12, color: "#757575" }}>{c.problemTitle}</span>
+          </span>,
+          <span><b>{c.authorName}</b><div style={{ fontSize: 12, color: "#9E9E9E" }}>{c.authorRole}</div></span>,
+          <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", maxWidth: 520, lineHeight: 1.5 }}>{c.text}</div>,
+          fmtTime(c.createdAt),
+          <Btn small kind="danger" onClick={() => void remove(c.id)}>Xoá</Btn>,
+        ])} />
     </Page>
   );
 }

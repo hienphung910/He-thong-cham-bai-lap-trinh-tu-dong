@@ -11,6 +11,7 @@ export default function SystemAdmin({ onSettingsChanged }: { onSettingsChanged: 
   const settings = useLoad(() => papi.settings());
   const [announcement, setAnnouncement] = useState("");
   const [allowRegister, setAllowRegister] = useState(true);
+  const [bannedWords, setBannedWords] = useState("");
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
 
@@ -19,13 +20,14 @@ export default function SystemAdmin({ onSettingsChanged }: { onSettingsChanged: 
     if (!settings.data) return;
     setAnnouncement(settings.data.announcement);
     setAllowRegister(settings.data.allowRegister);
+    setBannedWords(settings.data.bannedWords ?? "");
   }, [settings.data]);
 
   async function save() {
     setError("");
     setSaved(false);
     try {
-      await papi.updateSettings({ announcement, allowRegister });
+      await papi.updateSettings({ announcement, allowRegister, bannedWords });
       setSaved(true);
       onSettingsChanged();
     } catch (e) { setError(errorText(e)); }
@@ -38,6 +40,9 @@ export default function SystemAdmin({ onSettingsChanged }: { onSettingsChanged: 
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <Field label="Thông báo chung">
             <input style={INPUT} value={announcement} onChange={(e) => setAnnouncement(e.target.value)} />
+          </Field>
+          <Field label="Từ cấm bổ sung trong bình luận (cách nhau dấu phẩy)">
+            <input style={INPUT} value={bannedWords} maxLength={500} onChange={(e) => setBannedWords(e.target.value)} />
           </Field>
           <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13.5 }}>
             <input type="checkbox" checked={allowRegister} onChange={(e) => setAllowRegister(e.target.checked)} />

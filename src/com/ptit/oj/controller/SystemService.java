@@ -19,6 +19,9 @@ public class SystemService {
 
     public static final String ALLOW_REGISTER = "allowRegister";
     public static final String ANNOUNCEMENT = "announcement";
+    /** Tu cam bo sung cho bo loc binh luan, cach nhau bang dau phay hoac xuong dong (xem CommentFilter). */
+    public static final String BANNED_WORDS = "bannedWords";
+    public static final String BANNED_WORDS_ENV = "OJ_BANNED_WORDS";
 
     /** Chi giu so dong nhat ky gan nhat nay de bo nho khong tang mai. */
     private static final int MAX_AUDIT_LOGS = 2000;
@@ -51,6 +54,9 @@ public class SystemService {
         this.auditFile = auditFile;
         settings.put(ALLOW_REGISTER, defaultAllowRegister() ? "true" : "false");
         settings.put(ANNOUNCEMENT, "");
+        // Cau hinh nam trong RAM: muon danh sach tu cam bo sung con sau khi khoi dong lai thi dat OJ_BANNED_WORDS.
+        String banned = com.ptit.oj.dao.DatabaseConfig.setting(BANNED_WORDS_ENV);
+        settings.put(BANNED_WORDS, banned == null ? "" : clip(banned.trim(), 500));
         loadAuditFile();
     }
 
@@ -89,6 +95,15 @@ public class SystemService {
     public synchronized void setSetting(String key, String value) {
         if (!settings.containsKey(key)) throw ApiException.badRequest("Không có cấu hình " + key);
         settings.put(key, Check.optional(value, "Giá trị cấu hình", 500));
+    }
+
+    /** Cac tu cam quan tri vien bo sung cho bo loc binh luan. */
+    public List<String> bannedWords() {
+        List<String> words = new ArrayList<>();
+        for (String w : getSetting(BANNED_WORDS).split("[,;\\n]")) {
+            if (!w.trim().isEmpty()) words.add(w.trim());
+        }
+        return words;
     }
 
     public boolean isRegisterAllowed() {

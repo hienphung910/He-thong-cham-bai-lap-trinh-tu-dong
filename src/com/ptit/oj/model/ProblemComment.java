@@ -5,12 +5,12 @@ import java.time.LocalDateTime;
 /**
  * Binh luan cua nguoi dung duoi mot bai tap.
  *
- * Binh luan moi o trang thai PENDING va chi tac gia thay; quan tri vien duyet thi chuyen sang
- * APPROVED va moi nguoi mo duoc bai deu thay. Binh luan bi tu choi thi xoa han.
+ * Binh luan KHONG qua nguoi duyet: may chu loc tu bay va ma nguon loi giai luc gui (CommentFilter),
+ * qua duoc thi hien ngay cho moi nguoi mo duoc bai. Truong status luon la APPROVED, giu lai de giao
+ * dien cu doc duoc.
  */
 public class ProblemComment extends Entity {
 
-    public static final String PENDING = "PENDING";
     public static final String APPROVED = "APPROVED";
 
     private final String problemId;
@@ -40,5 +40,4 @@ public class ProblemComment extends Entity {
 
     public String getStatus() { return status; }
     public boolean isApproved() { return APPROVED.equals(status); }
-    public void approve() { this.status = APPROVED; }
 }

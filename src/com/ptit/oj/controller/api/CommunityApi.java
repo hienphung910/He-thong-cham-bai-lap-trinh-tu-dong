@@ -2,6 +2,7 @@ package com.ptit.oj.controller.api;
 
 import com.ptit.oj.controller.ApiException;
 import com.ptit.oj.controller.Check;
+import com.ptit.oj.controller.CommentFilter;
 import com.ptit.oj.controller.CommunityService;
 import com.ptit.oj.controller.Json;
 import com.ptit.oj.controller.Platform;
@@ -111,24 +112,41 @@ public class CommunityApi extends ApiModule {
     // ------------------------------------------------- binh luan duoi bai tap
 
     /**
-     *   GET / POST /api/problems/{maBai}/comments   xem, gui binh luan duoi mot bai
-     *   DELETE     /api/comments/{id}               tac gia hoac quan tri vien xoa
-     *   GET        /api/admin/comments              quan tri vien: toan bo binh luan, cho duyet truoc
-     *   POST       /api/admin/comments/{id}/approve quan tri vien duyet
+     *   GET / POST /api/problems/{maBai}/comments   xem, gui binh luan duoi mot bai (loc tu bay va ma nguon loi giai)
+     *   DELETE     /api/comments/{id}               tac gia hoac nguoi quan ly binh luan xoa
+     *   GET        /api/admin/comments              cac binh luan minh quan ly duoc, moi nhat truoc
      */
     private boolean handleComments(Request req) throws IOException {
         if (req.is("GET", "problems", "*", "comments")) {
             User user = req.user();
             Problem problem = visibleProblem(req.arg(0), user);
             List<String> items = new ArrayList<>();
-            for (ProblemComment c : community.commentsOf(problem.getId(), user)) items.add(commentJson(c, user, null));
+            for (ProblemComment c : community.commentsOf(problem.getId())) items.add(commentJson(c, user, null));
             req.send(Json.array(items));
             return true;
         }
         if (req.is("POST", "problems", "*", "comments")) {
             User user = req.user();
             Problem problem = visibleProblem(req.arg(0), user);
-            ProblemComment created = community.addComment(problem.getId(), user, req.body().getString("text"));
+            String text = req.body().getString("text");
+            // Khong con nguoi duyet: gioi han tan suat va loc noi dung ngay luc gui.
+            if (platform.getLimiter().retryAfterSeconds("comment:" + user.getId(), COMMENT_WINDOW_MS, COMMENT_LIMIT) > 0) {
+                throw new ApiException(429, "Bạn bình luận quá nhanh. Hãy đợi vài phút rồi gửi tiếp");
+            }
+            String badWord = CommentFilter.findProfanity(text, platform.getSystem().bannedWords());
+            if (badWord != null) {
+                throw ApiException.badRequest("Bình luận có từ ngữ không phù hợp (\"" + badWord + "\"). Hãy sửa lại rồi gửi");
+            }
+            // Giang vien va quan tri vien duoc dua ma vao binh luan (goi y, giai thich); hoc sinh thi khong dang loi giai.
+            if (isStudent(user)) {
+                String reason = CommentFilter.findSolutionCode(text);
+                if (reason != null) {
+                    throw ApiException.badRequest("Bình luận chứa mã nguồn lời giải: " + reason
+                            + ". Hãy hỏi về ý tưởng, hoặc chỉ trích tối đa " + CommentFilter.MAX_CODE_LINES + " dòng mã cần hỏi");
+                }
+            }
+            ProblemComment created = community.addComment(problem.getId(), user, text);
+            platform.getLimiter().hit("comment:" + user.getId(), COMMENT_WINDOW_MS);
             req.send(commentJson(created, user, null));
             return true;
         }
@@ -138,10 +156,10 @@ public class CommunityApi extends ApiModule {
             boolean own = comment.getAuthorId().equals(user.getId());
             if (!own && !canModerate(user, comment)) throw ApiException.forbidden("Bạn chỉ xoá được bình luận của chính mình");
             community.deleteComment(comment.getId());
-            // Quan tri vien tu choi mot binh luan dang cho duyet: bao cho tac gia biet.
-            if (!own && !comment.isApproved()) {
-                community.notifyUser(comment.getAuthorId(), "Bình luận không được duyệt",
-                        "Bình luận của bạn ở bài " + comment.getProblemId() + " không được duyệt.",
+            // Nguoi quan ly xoa binh luan cua nguoi khac: bao cho tac gia biet.
+            if (!own) {
+                community.notifyUser(comment.getAuthorId(), "Bình luận của bạn đã bị xoá",
+                        "Bình luận của bạn ở bài " + comment.getProblemId() + " đã bị " + user.getFullName() + " xoá.",
                         "Problems/" + comment.getProblemId());
             }
             req.sendOk();
@@ -150,30 +168,13 @@ public class CommunityApi extends ApiModule {
         if (req.is("GET", "admin", "comments")) {
             // Quan tri vien: moi binh luan. Giang vien: chi binh luan duoi bai trong kho rieng cua minh.
             User admin = req.staff();
-            List<String> pending = new ArrayList<>();
-            List<String> approved = new ArrayList<>();
+            List<String> items = new ArrayList<>();
             for (ProblemComment c : community.getComments()) {
                 if (!canModerate(admin, c)) continue;
                 String title = judge.findProblem(c.getProblemId()).map(Problem::getTitle).orElse(c.getProblemId());
-                (c.isApproved() ? approved : pending).add(commentJson(c, admin, title));
+                items.add(commentJson(c, admin, title));
             }
-            pending.addAll(approved);
-            req.send(Json.array(pending));
-            return true;
-        }
-        if (req.is("POST", "admin", "comments", "*", "approve")) {
-            User moderator = req.staff();
-            ProblemComment comment = community.findComment(req.arg(0));
-            if (!canModerate(moderator, comment)) {
-                throw ApiException.forbidden("Bạn chỉ duyệt được bình luận dưới bài trong kho của mình");
-            }
-            if (!comment.isApproved()) {
-                community.approveComment(comment);
-                community.notifyUser(comment.getAuthorId(), "Bình luận đã được duyệt",
-                        "Bình luận của bạn ở bài " + comment.getProblemId() + " đã hiện cho mọi người.",
-                        "Problems/" + comment.getProblemId());
-            }
-            req.sendOk();
+            req.send(Json.array(items));
             return true;
         }
         return false;
@@ -190,8 +191,8 @@ public class CommunityApi extends ApiModule {
     }
 
     /**
-     * Ai duyet / xoa duoc mot binh luan: quan tri vien voi moi bai; giang vien voi bai trong KHO RIENG
-     * cua minh (bai kho chung van chi quan tri vien duyet).
+     * Ai xoa duoc binh luan cua nguoi khac: quan tri vien voi moi bai; giang vien voi bai trong KHO RIENG
+     * cua minh (binh luan duoi bai kho chung chi quan tri vien xoa).
      */
     private boolean canModerate(User user, ProblemComment comment) {
         if (isAdmin(user)) return true;
@@ -200,7 +201,11 @@ public class CommunityApi extends ApiModule {
         return problem != null && !problem.isShared() && user.canEditProblem(problem);
     }
 
-    /** problemTitle != null: kem ten bai, dung cho trang duyet cua quan tri vien. */
+    /** Moi nguoi toi da chung nay binh luan trong 10 phut. */
+    private static final int COMMENT_LIMIT = 10;
+    private static final long COMMENT_WINDOW_MS = 10 * 60_000L;
+
+    /** problemTitle != null: kem ten bai, dung cho trang quan ly binh luan. */
     private String commentJson(ProblemComment c, User viewer, String problemTitle) {
         Json.Obj json = Json.obj()
                 .put("id", c.getId())
@@ -211,7 +216,7 @@ public class CommunityApi extends ApiModule {
                 .put("createdAt", time(c.getCreatedAt()))
                 .put("status", c.getStatus())
                 .put("mine", c.getAuthorId().equals(viewer.getId()))
-                .put("canDelete", isAdmin(viewer) || c.getAuthorId().equals(viewer.getId()));
+                .put("canDelete", c.getAuthorId().equals(viewer.getId()) || canModerate(viewer, c));
         if (problemTitle != null) json.put("problemTitle", problemTitle);
         return json.build();
     }

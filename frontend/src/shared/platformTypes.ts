@@ -77,10 +77,10 @@ export interface AssignmentProgress {
 // ---- binh luan duoi bai tap ----
 export interface ProblemComment {
   id: string; problemId: string; authorName: string; authorRole: string; text: string; createdAt: string;
-  /** PENDING: dang cho quan tri vien duyet, chi tac gia thay. */
-  status: "PENDING" | "APPROVED";
+  /** Binh luan khong con qua buoc duyet (may chu loc luc gui) nen luon la APPROVED. */
+  status: "APPROVED";
   mine: boolean; canDelete: boolean;
-  /** Chi co o trang duyet cua quan tri vien. */
+  /** Chi co o trang quan ly binh luan. */
   problemTitle?: string;
 }
 
@@ -204,7 +204,8 @@ export interface Billing {
   plans: { code: string; name: string; price: number; features: string }[];
   payments: Payment[];
 }
-export interface Settings { announcement: string; allowRegister: boolean }
+/** bannedWords: tu cam bo sung cho bo loc binh luan, cach nhau dau phay - chi quan tri vien nhan duoc. */
+export interface Settings { announcement: string; allowRegister: boolean; bannedWords?: string }
 export interface AuditRow { id: string; time: string; username: string; action: string; detail: string; success: boolean }
 
 // ---- cong cu ----

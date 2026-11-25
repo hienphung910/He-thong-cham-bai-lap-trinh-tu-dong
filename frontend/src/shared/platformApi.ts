@@ -102,13 +102,13 @@ export const papi = {
   markNotificationsRead: () => postJson<Ok>("/api/notifications/read", {}),
   chat: (channel: string, after: number) => request<ChatMessage[]>(`/api/chat/${enc(channel)}?after=${after}`),
   sendChat: (channel: string, text: string) => postJson<Ok>(`/api/chat/${enc(channel)}`, { text }),
-  // --- binh luan duoi bai tap (quan tri vien duyet) ---
+  // --- binh luan duoi bai tap (may chu loc tu bay va ma nguon loi giai luc gui, khong qua nguoi duyet) ---
   comments: (problemId: string) => request<ProblemComment[]>(`/api/problems/${enc(problemId)}/comments`),
   addComment: (problemId: string, text: string) =>
     postJson<ProblemComment>(`/api/problems/${enc(problemId)}/comments`, { text }),
   deleteComment: (id: string) => del(`/api/comments/${enc(id)}`),
+  /** Cac binh luan minh xoa duoc: quan tri vien thay het, giang vien thay binh luan duoi bai cua minh. */
   allComments: () => request<ProblemComment[]>("/api/admin/comments"),
-  approveComment: (id: string) => postJson<Ok>(`/api/admin/comments/${enc(id)}/approve`, {}),
 
   // --- thanh toan mo phong, he thong, nhat ky (Module 34, 39, 40) ---
   settings: () => request<Settings>("/api/settings"),

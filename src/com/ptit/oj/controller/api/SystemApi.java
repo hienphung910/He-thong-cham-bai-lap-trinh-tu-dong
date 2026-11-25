@@ -30,8 +30,7 @@ public class SystemApi extends ApiModule {
     @Override
     public boolean handle(Request req) throws IOException {
         if (req.is("GET", "settings")) {
-            req.user();
-            req.send(settingsJson());
+            req.send(settingsJson(isAdmin(req.user())));
             return true;
         }
         if (req.is("PUT", "admin", "settings")) {
@@ -44,7 +43,10 @@ public class SystemApi extends ApiModule {
                 system.setSetting(SystemService.ALLOW_REGISTER,
                         String.valueOf(body.getBoolean(SystemService.ALLOW_REGISTER, true)));
             }
-            req.send(settingsJson());
+            if (body.has(SystemService.BANNED_WORDS)) {
+                system.setSetting(SystemService.BANNED_WORDS, body.getString(SystemService.BANNED_WORDS, ""));
+            }
+            req.send(settingsJson(true));
             return true;
         }
         if (req.is("GET", "admin", "system")) {
@@ -77,10 +79,12 @@ public class SystemApi extends ApiModule {
         return false;
     }
 
-    private String settingsJson() {
-        return Json.obj()
+    /** Danh sach tu cam bo sung chi gui cho quan tri vien (nguoi khac khong can biet de ne). */
+    private String settingsJson(boolean admin) {
+        Json.Obj json = Json.obj()
                 .put(SystemService.ANNOUNCEMENT, system.getSetting(SystemService.ANNOUNCEMENT))
-                .put(SystemService.ALLOW_REGISTER, system.isRegisterAllowed())
-                .build();
+                .put(SystemService.ALLOW_REGISTER, system.isRegisterAllowed());
+        if (admin) json = json.put(SystemService.BANNED_WORDS, system.getSetting(SystemService.BANNED_WORDS));
+        return json.build();
     }
 }

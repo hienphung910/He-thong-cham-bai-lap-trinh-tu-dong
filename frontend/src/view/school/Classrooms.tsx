@@ -7,6 +7,7 @@ import { useAuth } from "../account/auth";
 import ChatBox from "../community/ChatBox";
 import Analytics from "../profile/Analytics";
 import { DIFFICULTY_META } from "../problem/learningPath";
+import ProblemPicker from "../problem/ProblemPicker";
 import type { Classroom } from "../../shared/platformTypes";
 
 /** Khung noi bat hien ma tham gia cua lop, de giang vien doc / chep cho hoc sinh. */
@@ -133,6 +134,8 @@ function ClassroomDetail({ id, onBack }: { id: string; onBack: () => void }) {
   const [student, setStudent] = useState("");
   const [assistant, setAssistant] = useState("");
   const [problemIds, setProblemIds] = useState("");
+  /** Dang mo bang chon bai luyen tap (thay cho viec go ma bai). */
+  const [picking, setPicking] = useState(false);
   /** Hoc sinh dang duoc xem phan tich hoc tap (ten dang nhap); null = dang o trang lop. */
   const [viewing, setViewing] = useBackState<string | null>("classStudent", null);
   const c: Classroom | null = detail.data;
@@ -182,6 +185,7 @@ function ClassroomDetail({ id, onBack }: { id: string; onBack: () => void }) {
                     await papi.addPracticeProblems(id, parseIds(problemIds));
                     setProblemIds("");
                   })}>Thêm bài</Btn>
+                  <Btn kind="ghost" onClick={() => setPicking(true)}>Chọn từ danh sách</Btn>
                 </Row>
               </div>
             )}
@@ -202,6 +206,12 @@ function ClassroomDetail({ id, onBack }: { id: string; onBack: () => void }) {
               })}
             </div>
           </Card>
+
+          {picking && (
+            <ProblemPicker title={`Chọn bài luyện tập — ${c.name}`} excluded={practice.map((p) => p.id)}
+              onClose={() => setPicking(false)}
+              onPick={(ids) => { setPicking(false); void act(() => papi.addPracticeProblems(id, ids)); }} />
+          )}
 
           <Card title={`Học sinh (${c.students?.length ?? 0})`}>
             {c.canManage && (

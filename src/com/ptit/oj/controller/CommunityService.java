@@ -35,8 +35,6 @@ public class CommunityService {
     private final Map<String, Long> lastSeq = new HashMap<>();
     private final Repository<ForumPost> posts = new InMemoryRepository<>();
     private final Repository<ProblemComment> comments = new InMemoryRepository<>();
-    /** Moi nguoi chi duoc co toi da chung nay binh luan dang cho duyet, de khong lam ngap hang cho cua quan tri vien. */
-    private static final int MAX_PENDING_PER_USER = 10;
 
     // ----------------------------------------------------------- thong bao
 
@@ -111,38 +109,26 @@ public class CommunityService {
     // ------------------------------------------------- binh luan duoi bai tap
 
     /**
-     * Gui binh luan duoi mot bai. Binh luan cua quan tri vien hien ngay; cua nguoi khac
-     * o trang thai cho duyet cho toi khi quan tri vien duyet.
+     * Luu binh luan duoi mot bai; hien ngay cho moi nguoi mo duoc bai. Viec loc tu bay va ma nguon
+     * loi giai do CommunityApi lam TRUOC khi goi ham nay (xem CommentFilter).
      */
     public synchronized ProblemComment addComment(String problemId, User author, String text) {
-        boolean admin = User.ROLE_ADMIN.equals(author.getRoleCode());
-        if (!admin) {
-            int pending = 0;
-            for (ProblemComment c : comments.findAll()) {
-                if (!c.isApproved() && c.getAuthorId().equals(author.getId())) pending++;
-            }
-            if (pending >= MAX_PENDING_PER_USER) {
-                throw ApiException.badRequest("Bạn đang có " + pending
-                        + " bình luận chờ duyệt. Hãy chờ quản trị viên duyệt rồi gửi tiếp");
-            }
-        }
         ProblemComment comment = new ProblemComment(IdGenerator.next("CMT"), problemId, author,
-                Check.text(text, "Bình luận", 1000), admin ? ProblemComment.APPROVED : ProblemComment.PENDING);
+                Check.text(text, "Bình luận", 1000), ProblemComment.APPROVED);
         comments.save(comment);
         return comment;
     }
 
-    /** Binh luan nguoi xem duoc thay duoi mot bai: da duyet, cong voi binh luan cho duyet cua chinh ho. Cu truoc, moi sau. */
-    public List<ProblemComment> commentsOf(String problemId, User viewer) {
+    /** Binh luan duoi mot bai, cu truoc, moi sau. */
+    public List<ProblemComment> commentsOf(String problemId) {
         List<ProblemComment> result = new ArrayList<>();
         for (ProblemComment c : comments.findAll()) {
-            if (!c.getProblemId().equals(problemId)) continue;
-            if (c.isApproved() || c.getAuthorId().equals(viewer.getId())) result.add(c);
+            if (c.getProblemId().equals(problemId)) result.add(c);
         }
         return result;
     }
 
-    /** Toan bo binh luan cho trang duyet cua quan tri vien, moi nhat truoc. */
+    /** Toan bo binh luan cho trang quan ly binh luan, moi nhat truoc. */
     public List<ProblemComment> getComments() {
         List<ProblemComment> all = comments.findAll();
         Collections.reverse(all);
@@ -151,10 +137,6 @@ public class CommunityService {
 
     public ProblemComment findComment(String id) {
         return comments.findById(id).orElseThrow(() -> ApiException.notFound("Không có bình luận " + id));
-    }
-
-    public synchronized void approveComment(ProblemComment comment) {
-        comment.approve();
     }
 
     public void deleteComment(String id) {

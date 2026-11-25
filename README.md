@@ -21,7 +21,7 @@ Backend chỉ dùng API chuẩn của JDK. Máy chủ HTTP, bộ đọc/ghi JSON
 >
 > - **Lịch học** thay cho Phòng học trực tuyến: giảng viên lên lịch buổi học cho lớp và dán link phòng học (Google Meet, Zoom...) vào buổi đó, lúc lên lịch hoặc về sau. Học sinh thấy giờ học, lớp, giảng viên; từ 10 phút trước giờ học tới hết buổi, nút *Tham gia phòng học* mở link đó. Phòng học tự viết (bảng trắng, mã nguồn dùng chung, điểm danh, bản ghi) không còn trên giao diện.
 > - **Lớp của tôi** có thêm mục *Bài tập luyện tập*: các bài giảng viên chọn riêng cho lớp. Giảng viên bấm vào một học sinh trong danh sách lớp để xem phân tích học tập của em đó.
-> - **Bình luận dưới bài tập**: mỗi bài có phần bình luận ở cuối trang làm bài. Bình luận mới ở trạng thái chờ duyệt và chỉ tác giả thấy; quản trị viên duyệt ở Quản trị → Duyệt bình luận thì mọi người mới thấy (giảng viên duyệt được bình luận dưới bài trong kho riêng của mình, ở Giảng dạy → Bình luận bài của tôi). Bình luận lưu trong RAM như các module mở rộng khác.
+> - **Bình luận dưới bài tập**: mỗi bài có phần bình luận ở cuối trang làm bài. Bình luận không qua người duyệt: máy chủ lọc lúc gửi (`CommentFilter.java`), qua được thì hiện ngay. Bộ lọc chặn từ bậy (tiếng Việt có dấu, không dấu, viết tắt, tiếng Anh; quản trị viên bổ sung từ ở Quản trị → Hệ thống hoặc biến `OJ_BANNED_WORDS`) và chặn học sinh đăng mã nguồn lời giải: được trích tối đa 3 dòng mã để hỏi, không được đăng cả chương trình hay đoạn mã vừa đọc dữ liệu vừa in kết quả. Mỗi người tối đa 10 bình luận trong 10 phút. Bình luận lọt lưới thì quản trị viên xoá ở Quản trị → Bình luận bài tập, giảng viên xoá bình luận dưới bài trong kho riêng của mình ở Giảng dạy → Bình luận bài của tôi; người viết nhận thông báo. Bình luận lưu trong RAM như các module mở rộng khác.
 > - **Tải file**: trang làm bài có nút icon tải file mã nguồn cạnh nút *Chèn code mẫu* (nội dung file được đưa vào ô soạn, đuôi file quyết định ngôn ngữ). Chỉ nhận một file mã nguồn, không nhận file nén. Form tạo bài có *Tải thư mục test* và *Tải nhiều file test*: mỗi test là một cặp `01.in` + `01.out` (nhận cả `.inp`, `.ans`), hoặc mỗi test một thư mục con kiểu `Test01/BAI.INP` + `Test01/BAI.OUT`; tên bắt đầu bằng `sample` là test ví dụ.
 > - **Sinh test** (Công cụ CP): mảng số chọn được số nguyên hoặc số thực; đồ thị chọn được có hướng / vô hướng, có trọng số / không có và số cạnh.
 > - **Kỳ thi theo lớp**: mỗi kỳ thi tổ chức cho một lớp, giảng viên chọn lớp lúc tạo (trong các lớp mình quản lý). Chỉ thành viên của lớp đó và quản trị viên thấy kỳ thi; chỉ học sinh của lớp vào thi được; bảng xếp hạng chỉ tính bài của thí sinh đã bấm *Vào thi*, nộp sau lúc vào. Học sinh của lớp nhận thông báo khi có kỳ thi mới. Xoá lớp thì các kỳ thi của lớp cũng bị xoá.
@@ -395,6 +395,7 @@ Các biến được đọc từ biến môi trường hoặc file `.env` (biế
 | `OJ_ADMIN_PASSWORD` | Mật khẩu admin lần đầu. Bỏ trống thì hệ thống tự sinh: chế độ `--no-db` in ra màn hình một lần; chạy với CSDL thật thì ghi vào `data/admin-password.txt` (không in ra log), đọc xong hãy xoá file |
 | `OJ_SEED_PASSWORD` | Mật khẩu của 4 tài khoản mẫu. Không có mật khẩu mặc định: bỏ trống thì chế độ `--no-db` sinh ngẫu nhiên và in ra, còn chạy với CSDL thật thì không tạo tài khoản mẫu |
 | `OJ_SANDBOX_USER` | Tên tài khoản hệ thống dùng để chạy bài nộp (image Docker đặt sẵn `ojrunner`). Máy chủ tự kiểm tra lúc khởi động và in dòng `Cô lập bài nộp: Bật / Tắt`; cũng hiện ở Quản trị → Hệ thống. Bỏ trống, hoặc máy không chạy được `sudo`, thì bài nộp chạy bằng chính tài khoản của máy chủ |
+| `OJ_BANNED_WORDS` | Từ cấm bổ sung cho bộ lọc bình luận, cách nhau dấu phẩy. Quản trị viên sửa được trong Quản trị → Hệ thống, nhưng cấu hình nằm trong RAM nên khởi động lại là quay về giá trị của biến này |
 | `OJ_TRUST_PROXY` | Đặt `true` khi máy chủ đứng sau reverse proxy (image Docker đặt sẵn) để lấy địa chỉ người dùng từ `X-Forwarded-For` cho việc giới hạn tần suất. Không đặt khi máy chủ nhận kết nối trực tiếp |
 | `OJ_BIND_ADDRESS` | Địa chỉ lắng nghe. Bỏ trống thì chỉ nghe `127.0.0.1`; trong container đặt `0.0.0.0` (Dockerfile đã đặt sẵn) |
 | `OJ_ALLOW_REGISTER` | `true` / `false`: mở hay khoá tự đăng ký lúc khởi động. Bỏ trống thì mở, trừ khi máy chủ đang mở ra mạng mà việc cô lập bài nộp không bật được (lúc đó mặc định khoá). Quản trị viên vẫn đổi được trong Quản trị → Hệ thống cho tới lần khởi động sau |
@@ -492,10 +493,9 @@ Trừ 4 endpoint công khai, mọi request phải gửi header `Authorization: B
 | GET | `/api/dashboard` | GV / admin | Số liệu toàn hệ thống |
 | GET, POST | `/api/notifications`, `/api/notifications/read` | đăng nhập | Thông báo của mình; đánh dấu đã đọc |
 | GET, POST | `/api/chat/{kênh}?after=N` | đăng nhập; kênh lớp cần là thành viên lớp | Đọc các tin có số thứ tự (`seq`) lớn hơn N; gửi tin nhắn (tối đa 30 tin mỗi phút). Mỗi kênh giữ 500 tin gần nhất |
-| GET, POST | `/api/problems/{mã bài}/comments` | đăng nhập, mở được bài | Bình luận dưới một bài: đã duyệt, cộng với bình luận chờ duyệt của chính mình; gửi bình luận mới (`text`, tối đa 1000 ký tự). Bình luận của quản trị viên hiện ngay |
-| DELETE | `/api/comments/{id}` | tác giả / người duyệt | Xoá bình luận; người duyệt xoá bình luận đang chờ duyệt tức là từ chối |
-| GET | `/api/admin/comments` | admin; GV với bài kho riêng của mình | Bình luận mình duyệt được, chờ duyệt đứng trước |
-| POST | `/api/admin/comments/{id}/approve` | admin; GV với bài kho riêng của mình | Duyệt một bình luận |
+| GET, POST | `/api/problems/{mã bài}/comments` | đăng nhập, mở được bài | Bình luận dưới một bài; gửi bình luận mới (`text`, tối đa 1000 ký tự). Bình luận hiện ngay nếu qua bộ lọc từ bậy và mã nguồn lời giải, không thì trả về 400 kèm lý do |
+| DELETE | `/api/comments/{id}` | tác giả; admin; GV với bài kho riêng của mình | Xoá bình luận. Người khác xoá thì tác giả nhận thông báo |
+| GET | `/api/admin/comments` | admin; GV với bài kho riêng của mình | Các bình luận mình xoá được, mới nhất trước |
 | GET | `/api/settings` | đăng nhập | Cấu hình công khai |
 | PUT | `/api/admin/settings` | admin | Đổi cấu hình |
 | GET | `/api/admin/system`, `/api/admin/audit?q=...` | admin | Thông tin máy chủ; nhật ký hoạt động |
