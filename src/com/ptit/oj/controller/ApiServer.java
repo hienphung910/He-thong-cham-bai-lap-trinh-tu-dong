@@ -898,18 +898,31 @@ public class ApiServer {
         return Json.array(items);
     }
 
+    /**
+     * Trang "Trang thai": hien bai nop cua MOI NGUOI, nhung chi o muc ai nop bai nao, ket qua gi.
+     * Ma nguon va ket qua tung test van phai qua handleSubmissionDetail (xem canSeeSubmission).
+     *
+     * Mot dong duoc hien khi:
+     *  - nguoi xem co quyen xem chi tiet bai nop do (bai cua minh, cua hoc sinh lop minh...), HOAC
+     *  - bai tap do nguoi xem mo duoc (kho chung, bai cua lop minh - xem ProblemAccess).
+     * Hoc sinh dang trong bai thi thi chi thay bai minh nop cho chinh bai thi do (xem partOfSitting),
+     * de khong nhin ket qua cua ban cung thi va khong mo lai bai nop cu.
+     */
     private String submissionsJson(User viewer) {
         List<String> items = new ArrayList<>();
-        if (User.ROLE_STUDENT.equals(viewer.getRoleCode())) {
-            com.ptit.oj.model.Contest sitting = platform.getContests().sittingContestOf(viewer.getId());
+        com.ptit.oj.model.Contest sitting = User.ROLE_STUDENT.equals(viewer.getRoleCode())
+                ? platform.getContests().sittingContestOf(viewer.getId()) : null;
+        if (sitting != null) {
             for (Submission s : service.getSubmissionsOf(viewer)) {
                 if (partOfSitting(sitting, viewer, s)) items.add(submissionJson(s, false));
             }
             return Json.array(items);
         }
+        ProblemAccess access = platform.accessFor(viewer);
         Set<String> myStudents = platform.getSchool().studentIdsTaughtBy(viewer.getId());
         for (Submission s : service.getSubmissionsNewestFirst()) {
-            if (canSeeSubmission(viewer, s, myStudents)) items.add(submissionJson(s, false));
+            boolean canSeeDetail = canSeeSubmission(viewer, s, myStudents);
+            if (canSeeDetail || access.canOpen(s.getProblem())) items.add(submissionJson(s, false));
         }
         return Json.array(items);
     }
@@ -985,11 +998,12 @@ public class ApiServer {
              .put("judgeTimeMs", r.getJudgeTimeMs())
              .put("score", r.getScore())
              .put("passed", r.getPassedCount())
-             .put("total", r.getTotalTests())
-             .put("message", r.getGlobalMessage());
+             .put("total", r.getTotalTests());
         }
 
         if (detail) {
+            // Thong bao loi bien dich co the trich ca dong code, nen chi gui kem ban chi tiet.
+            if (r != null) o.put("message", r.getGlobalMessage());
             List<String> tests = new ArrayList<>();
             if (r != null) {
                 for (TestCaseResult tr : r.getTestResults()) {

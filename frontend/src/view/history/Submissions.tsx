@@ -27,7 +27,7 @@ export function fmtTime(iso: string) {
   return d.toLocaleString("vi-VN", { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit", day: "2-digit", month: "2-digit", year: "2-digit" });
 }
 
-/** Trang "Trạng thái": giang vien va quan tri thay bai nop cua moi nguoi, sinh vien chi thay bai cua minh. */
+/** Trang "Trạng thái": bai nop cua moi nguoi (ai nop bai nao, ket qua gi). Ma nguon thi chi mo duoc bai minh co quyen xem. */
 export default function Submissions({ reloadKey }: { reloadKey: number }) {
   const [subs, setSubs] = useState<Submission[]>([]);
   const [detail, setDetail] = useState<Submission | null>(null);
