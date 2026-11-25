@@ -7,6 +7,13 @@ import Turnstile from "./Turnstile";
 
 type Mode = "login" | "register";
 
+/** Dung luong file de doc: "182 KB", "1,0 MB". */
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
+}
+
 /**
  * Man hinh dang nhap / dang ky (LoginView + RegisterView trong bao cao).
  * Mot thanh phan, hai che do: "login" va "register". App.tsx hien thanh phan nay
@@ -25,17 +32,24 @@ export default function LoginModal() {
   // Vai tro chon khi dang ky: hoc sinh hoac giang vien (quan tri vien khong tu dang ky duoc).
   const [role, setRole] = useState<"STUDENT" | "TEACHER">("STUDENT");
   const [department, setDepartment] = useState("");
-  // Minh chung giang vien gui kem de quan tri vien xem khi duyet: ten file va noi dung base64.
-  const [evidence, setEvidence] = useState<{ name: string; data: string } | null>(null);
+  // Minh chung giang vien gui kem de quan tri vien xem khi duyet: ten file, noi dung base64 va
+  // dung luong se gui di (anh da duoc thu nho nen co the nho hon file goc).
+  const [evidence, setEvidence] = useState<{ name: string; data: string; size: number } | null>(null);
   const evidenceInput = useRef<HTMLInputElement>(null);
   // CAPTCHA cho ca dang nhap va dang ky: may chu cho biet co bat khong (siteKey khac ""). Token dung
   // duoc mot lan nen sau moi lan gui form tang captchaReset de widget cap token moi.
   const [siteKey, setSiteKey] = useState("");
   const [captcha, setCaptcha] = useState("");
   const [captchaReset, setCaptchaReset] = useState(0);
+  /** May chu co dang cho tu dang ky khong; mac dinh coi la co cho toi khi hoi duoc may chu. */
+  const [allowRegister, setAllowRegister] = useState(true);
   useEffect(() => {
-    api.config().then((c) => setSiteKey(c.turnstileSiteKey)).catch(() => undefined);
+    api.config().then((c) => {
+      setSiteKey(c.turnstileSiteKey);
+      setAllowRegister(c.allowRegister !== false);
+    }).catch(() => undefined);
   }, []);
+  const registerClosed = mode === "register" && !allowRegister;
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
@@ -48,7 +62,12 @@ export default function LoginModal() {
     e.target.value = "";      // de chon lai dung file do van nhan duoc su kien
     if (!file) return;
     setError("");
-    try { setEvidence({ name: file.name, data: await readEvidence(file) }); }
+    try {
+      const data = await readEvidence(file);
+      // 4 ky tu base64 = 3 byte; bo phan dem "=" o cuoi.
+      const size = Math.floor(data.length * 3 / 4) - (data.endsWith("==") ? 2 : data.endsWith("=") ? 1 : 0);
+      setEvidence({ name: file.name, data, size });
+    }
     catch (e2) { setEvidence(null); setError(e2 instanceof Error ? e2.message : String(e2)); }
   }
 
@@ -117,6 +136,11 @@ export default function LoginModal() {
           {notice && (
             <div style={{ padding: "10px 14px", background: "#E8F5E9", border: "1px solid #C8E6C9", borderRadius: 6, fontSize: 12.5, color: "#2E7D32" }}>{notice}</div>
           )}
+          {registerClosed && (
+            <div style={{ padding: "10px 14px", background: "#FFF8E1", border: "1px solid #FFE082", borderRadius: 6, fontSize: 12.5, color: "#7A5200" }}>
+              Hệ thống đang tạm khoá tự đăng ký. Hãy liên hệ quản trị viên để được cấp tài khoản.
+            </div>
+          )}
 
           {/* Username */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, ...inputBox, padding: 0, paddingLeft: 12 }}>
@@ -149,23 +173,43 @@ export default function LoginModal() {
                   <input type="text" placeholder="Bộ môn" value={department} onChange={(e) => setDepartment(e.target.value)} style={inputBox} />
                   {/* Minh chung la giang vien: quan tri vien xem file nay khi duyet tai khoan. */}
                   <input ref={evidenceInput} type="file" accept={EVIDENCE_ACCEPT} style={{ display: "none" }} onChange={(e) => void pickEvidence(e)} />
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  {evidence ? (
+                    // Da chon file: mot the dinh kem (bieu tuong loai file, ten, dung luong, doi / go) nhu cac form nop ho so.
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 8px 8px 10px", background: "#fff", border: "1px solid #E0E0E0", borderRadius: 8 }}>
+                      <span style={{
+                        width: 36, height: 36, borderRadius: 8, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
+                        background: "var(--color-red-light)", color: "var(--color-red)",
+                      }}>
+                        {/\.pdf$/i.test(evidence.name) ? (
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5M9 13h6M9 17h4" /></svg>
+                        ) : (
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="9" cy="10" r="1.6" /><path d="m21 16-5-5-8 8" /></svg>
+                        )}
+                      </span>
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <span title={evidence.name} style={{ display: "block", fontSize: 13.5, fontWeight: 600, color: "#212121", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{evidence.name}</span>
+                        <span style={{ display: "block", fontSize: 11.5, color: "#9E9E9E", marginTop: 1 }}>Minh chứng · {formatSize(evidence.size)}</span>
+                      </span>
+                      <button type="button" onClick={() => evidenceInput.current?.click()} style={{
+                        height: 30, padding: "0 10px", borderRadius: 6, border: "1px solid #E0E0E0", background: "#fff",
+                        color: "#424242", fontSize: 12.5, fontWeight: 600, cursor: "pointer", flexShrink: 0,
+                      }}>Đổi file</button>
+                      <button type="button" onClick={() => setEvidence(null)} title="Gỡ minh chứng" aria-label="Gỡ minh chứng" style={{
+                        width: 30, height: 30, borderRadius: 6, border: "none", background: "none", color: "#9E9E9E", cursor: "pointer",
+                        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                      }}>
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" /></svg>
+                      </button>
+                    </div>
+                  ) : (
                     <button type="button" onClick={() => evidenceInput.current?.click()} title="Ảnh PNG, JPG, WEBP hoặc file PDF, tối đa 1 MB" style={{
-                      display: "inline-flex", alignItems: "center", gap: 8, height: 40, padding: "0 14px", borderRadius: 8, cursor: "pointer",
-                      border: "1px dashed var(--color-accent-dark)", background: evidence ? "var(--color-red-light)" : "#fff",
-                      color: "#424242", fontSize: 13.5, fontWeight: 600, flexShrink: 0,
+                      display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", height: 44, borderRadius: 8, cursor: "pointer",
+                      border: "1px dashed #BDBDBD", background: "#fff", color: "#616161", fontSize: 13.5, fontWeight: 600, boxSizing: "border-box",
                     }}>
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 10.5V2.5M4.8 5.5 8 2.3l3.2 3.2M2.5 10.5v2a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-2" /></svg>
-                      {evidence ? "Đổi minh chứng" : "Tải minh chứng lên"}
+                      Tải minh chứng lên
                     </button>
-                    {evidence && (
-                      <>
-                        <span title={evidence.name} style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: "#2E7D32", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>✓ {evidence.name}</span>
-                        <button type="button" onClick={() => setEvidence(null)} title="Gỡ minh chứng"
-                          style={{ border: "none", background: "none", color: "#9E9E9E", cursor: "pointer", fontSize: 18, lineHeight: 1, padding: "0 4px" }}>×</button>
-                      </>
-                    )}
-                  </div>
+                  )}
                 </>
               )}
             </>
@@ -196,10 +240,10 @@ export default function LoginModal() {
             <div style={{ padding: "10px 14px", background: "#FFEBEE", border: "1px solid #FFCDD2", borderRadius: 6, fontSize: 12.5, color: "#C62828" }}>{error}</div>
           )}
 
-          <button type="submit" disabled={busy} style={{
+          <button type="submit" disabled={busy || registerClosed} style={{
             height: 44, background: "var(--color-accent)", border: "none", borderRadius: 8,
-            color: "var(--color-on-accent)", fontSize: 15, fontWeight: 700, cursor: busy ? "not-allowed" : "pointer",
-            opacity: busy ? 0.6 : 1,
+            color: "var(--color-on-accent)", fontSize: 15, fontWeight: 700, cursor: busy || registerClosed ? "not-allowed" : "pointer",
+            opacity: busy || registerClosed ? 0.6 : 1,
           }}>
             {busy ? "Đang xử lý..." : mode === "login" ? "Đăng nhập" : "Tạo tài khoản"}
           </button>

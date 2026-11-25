@@ -349,7 +349,9 @@ public class ApiServer {
         }
         // Cau hinh cong khai ma form dang nhap / dang ky can biet truoc khi co phien dang nhap.
         if ("GET".equals(method) && path.equals("/api/config")) {
-            sendJson(ex, 200, Json.obj().put("turnstileSiteKey", turnstile.getSiteKey()).build());
+            sendJson(ex, 200, Json.obj().put("turnstileSiteKey", turnstile.getSiteKey())
+                    // De form dang ky bao ngay "dang tam khoa" thay vi de nguoi dung dien het roi moi bi tu choi.
+                    .put("allowRegister", platform.getSystem().isRegisterAllowed()).build());
             return;
         }
         if ("POST".equals(method) && path.equals("/api/auth/register")) {

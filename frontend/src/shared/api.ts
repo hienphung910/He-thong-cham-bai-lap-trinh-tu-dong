@@ -93,7 +93,7 @@ export function putJson<T>(path: string, body: unknown): Promise<T> {
 export const api = {
   // --- xac thuc ---
   /** Cau hinh cong khai cho form dang nhap / dang ky: turnstileSiteKey khac "" thi phai lam CAPTCHA truoc khi gui. */
-  config: () => request<{ turnstileSiteKey: string }>("/api/config"),
+  config: () => request<{ turnstileSiteKey: string; allowRegister: boolean }>("/api/config"),
   /** pending = true: tai khoan giang vien vua tao con phai cho quan tri vien duyet. */
   register: (body: RegisterRequest) => postJson<{ message: string; pending: boolean }>("/api/auth/register", body),
   /** captcha: token Turnstile, chi can khi may chu bat CAPTCHA (xem config()). */
