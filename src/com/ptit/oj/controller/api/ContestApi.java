@@ -94,7 +94,7 @@ public class ContestApi extends ApiModule {
             int minute = req.queryInt("minute", c.getDurationMin());
             req.send(contestJson(c, user)
                     .put("minute", minute)
-                    .putRaw("standings", standingsJson(c, minute))
+                    .putRaw("standings", standingsJson(c, minute, problemsHidden(c, user)))
                     .build());
             return true;
         }
@@ -164,8 +164,14 @@ public class ContestApi extends ApiModule {
             return true;
         }
         if (req.is("GET", "contests", "*", "events")) {
-            Contest c = visibleContest(req.arg(0), req.user());
+            User user = req.user();
+            Contest c = visibleContest(req.arg(0), user);
             List<String> events = new ArrayList<>();
+            // Nguoi chua duoc thay de (chua vao thi) thi cung khong xem dien bien tung bai: no ghi ro ma bai.
+            if (problemsHidden(c, user)) {
+                req.send(Json.array(events));
+                return true;
+            }
             for (Submission s : contests.submissionsOf(c)) {
                 events.add(Json.obj()
                         .put("minute", contests.minuteOf(c, s))
@@ -300,13 +306,21 @@ public class ContestApi extends ApiModule {
         return "(lớp đã xoá)";
     }
 
+    /**
+     * De cua ky thi co dang an voi nguoi nay khong. Truoc gio thi chi nguoi quan ly ky thi thay danh
+     * sach bai, nguoi khac chi biet so bai; trong gio thi, hoc sinh phai bam "Vao thi" moi thay de.
+     * Khi an thi MOI cho tra ve ma bai (danh sach bai, cac o cua bang diem, dien bien) deu phai an.
+     */
+    private boolean problemsHidden(Contest c, User viewer) {
+        if (contests.canManage(viewer, c)) return false;
+        return "UPCOMING".equals(c.getStatus())
+                || ("RUNNING".equals(c.getStatus()) && isStudent(viewer) && !c.hasJoined(viewer.getId()));
+    }
+
     private Json.Obj contestJson(Contest c, User viewer) {
         boolean manager = contests.canManage(viewer, c);
         boolean student = isStudent(viewer);
-        // Truoc gio thi chi nguoi quan ly ky thi thay danh sach bai; nguoi khac chi biet so bai.
-        // Trong gio thi, hoc sinh phai bam "Vao thi" moi thay de.
-        boolean hidden = !manager && ("UPCOMING".equals(c.getStatus())
-                || ("RUNNING".equals(c.getStatus()) && student && !c.hasJoined(viewer.getId())));
+        boolean hidden = problemsHidden(c, viewer);
         Json.Obj json = Json.obj()
                 .put("classroomId", c.getClassroomId())
                 .put("classroomName", classroomName(c))
@@ -332,12 +346,13 @@ public class ContestApi extends ApiModule {
                 .putRaw("problems", hidden ? "[]" : problemsJson(c.getProblemIds()));
     }
 
-    private String standingsJson(Contest c, int minute) {
+    /** hideProblems = true: van co thu hang va so bai da giai, nhung khong co o tung bai (o ghi ma bai). */
+    private String standingsJson(Contest c, int minute, boolean hideProblems) {
         List<String> rows = new ArrayList<>();
         int rank = 1;
         for (ContestService.Row row : contests.standings(c, minute)) {
             List<String> cells = new ArrayList<>();
-            for (String problemId : c.getProblemIds()) {
+            for (String problemId : hideProblems ? java.util.Collections.<String>emptyList() : c.getProblemIds()) {
                 Json.Obj cell = Json.obj().put("problemId", problemId)
                         .put("wrong", row.getWrong().getOrDefault(problemId, 0));
                 Long solvedAt = row.getSolvedAt().get(problemId);

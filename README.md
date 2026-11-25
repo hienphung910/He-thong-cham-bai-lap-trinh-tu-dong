@@ -437,15 +437,17 @@ Trừ 4 endpoint công khai, mọi request phải gửi header `Authorization: B
 | POST | `/api/auth/login` | công khai | Đăng nhập, trả về token. Khi bật CAPTCHA phải gửi kèm `captcha` (token Turnstile) |
 | POST | `/api/auth/logout` | đăng nhập | Huỷ token |
 | GET | `/api/auth/me` | đăng nhập | Thông tin tài khoản đang đăng nhập |
-| POST | `/api/auth/password` | đăng nhập | Đổi mật khẩu của chính mình |
-| PUT | `/api/auth/email` | đăng nhập | Đổi email khôi phục của chính mình; phải gửi kèm `password` (mật khẩu hiện tại) |
+| POST | `/api/auth/password` | đăng nhập | Đổi mật khẩu của chính mình. Nhập sai mật khẩu hiện tại 8 lần trong 10 phút (tính chung với `/api/auth/email`) thì bị tạm khoá chức năng này. Đổi xong, liên kết đặt lại mật khẩu đã xin trước đó bị huỷ |
+| PUT | `/api/auth/email` | đăng nhập | Đổi email khôi phục của chính mình; phải gửi kèm `password` (mật khẩu hiện tại). Khi máy chủ gửi được thư, email mới chỉ ở trạng thái chờ (`pendingEmail`) cho tới khi người dùng bấm liên kết trong thư xác minh; email cũ vẫn dùng tới lúc đó |
+| POST | `/api/auth/email/resend` | đăng nhập | Gửi lại thư xác minh cho email đang chờ (cách nhau ít nhất 60 giây) |
+| POST | `/api/auth/email/verify` | công khai | Xác minh email bằng `token` trong liên kết `/verify-email?token=...` của thư (hiệu lực 24 giờ, dùng một lần). Email chỉ được ghi vào tài khoản ở bước này; hai tài khoản cùng khai một địa chỉ thì ai xác minh trước được địa chỉ đó |
 | POST | `/api/auth/forgot` | công khai | Quên mật khẩu: `account` là tên đăng nhập hoặc email. Luôn trả lời cùng một câu dù tài khoản có tồn tại hay không; nếu có và đã khai email thì gửi thư chứa link `/reset-password?token=...` (hiệu lực 30 phút, dùng một lần). Giới hạn: gửi lại cho cùng một tên phải cách nhau 60 giây (trả 429 kèm số giây phải đợi, giao diện đếm ngược trên nút), 10 yêu cầu / giờ mỗi địa chỉ, mỗi tài khoản tối đa 1 thư / phút, 3 thư / giờ, 6 thư / ngày (quá thì lặng lẽ không gửi). Trả 503 nếu chưa cấu hình gửi email |
 | POST | `/api/auth/reset/check` | công khai | Mã trong link còn dùng được không: `{ valid }` |
 | POST | `/api/auth/reset` | công khai | Đặt mật khẩu mới bằng `token` trong link và `password`. Thành công thì mã bị huỷ và mọi phiên đăng nhập cũ của tài khoản bị đăng xuất |
 | GET | `/api/problems` | đăng nhập | Các bài người gọi mở được, kèm đề, chủ đề, độ khó, chủ bài và test ví dụ. Kho chung ai cũng thấy; bài kho riêng chỉ mở qua lớp của mình (bài luyện tập, bài tập giao, kỳ thi của lớp). Bài của kỳ thi đang diễn ra chỉ mở cho học sinh đang ở trong bài thi; đang thi thì chỉ thấy bài của kỳ thi đó |
 | GET | `/api/topics` | đăng nhập | Lộ trình học theo thứ tự |
 | GET | `/api/submissions` | đăng nhập | Lịch sử nộp: học sinh chỉ thấy của mình; giảng viên thấy của học sinh các lớp mình dạy và bài nộp vào bài thuộc kho của mình; admin thấy tất cả |
-| GET | `/api/submissions/{id}` | người nộp / GV của lớp / admin | Chi tiết từng test và mã nguồn (cùng quy tắc với danh sách) |
+| GET | `/api/submissions/{id}` | người nộp / GV của lớp / admin | Chi tiết từng test và mã nguồn (cùng quy tắc với danh sách). Học sinh đang trong bài thi chỉ xem được bài nộp của chính bài thi đó |
 | GET | `/api/scoreboard` | đăng nhập | Bảng xếp hạng |
 | POST | `/api/submit` | đăng nhập, mở được bài | Nộp bài; chấm xong trả về bài nộp kèm kết quả từng test |
 | POST | `/api/admin/problems` | GV / admin | Tạo bài tập. Bài của admin vào kho chung, bài của giảng viên vào kho riêng của người đó |

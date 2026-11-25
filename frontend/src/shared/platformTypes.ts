@@ -10,7 +10,9 @@ export interface BasicUser {
   roleName: string;
   /** Lop cua hoc sinh hoac bo mon cua giang vien (chi co o /api/users). */
   detail?: string;
-  /** false = giang vien tu dang ky dang cho quan tri vien duyet (chi co o /api/users). */
+  /** ACTIVE: dang dung; PENDING: giang vien tu dang ky cho duyet; LOCKED: bi quan tri vien khoa (chi co o /api/users). */
+  status?: "ACTIVE" | "PENDING" | "LOCKED";
+  /** false = chua dang nhap duoc: dang cho duyet hoac dang bi khoa, xem status (chi co o /api/users). */
   approved?: boolean;
   /** Tai khoan dang cho duyet co gui kem file minh chung khong (chi co o /api/users). */
   hasEvidence?: boolean;

@@ -69,7 +69,11 @@ public final class RateLimiter {
         while (!entry.times.isEmpty() && entry.times.peekFirst() <= now - entry.windowMs) entry.times.pollFirst();
     }
 
-    /** Bo cac khoa da het han; van con qua nhieu thi xoa het (tha cho qua con hon tu choi nham moi nguoi). */
+    /**
+     * Bo cac khoa da het han. Van con day thi bo 1/10 so khoa LAU KHONG DUNG NHAT, khong xoa sach:
+     * neu xoa sach, ke co nhieu dia chi chi can nhoi day bang la moi bo dem (dang nhap sai...) ve 0.
+     * Khoa dang bi tan cong thi vua duoc cham toi nen khong nam trong nhom bi bo.
+     */
     private void purge(long now) {
         Iterator<Entry> it = entries.values().iterator();
         while (it.hasNext()) {
@@ -77,6 +81,18 @@ public final class RateLimiter {
             prune(entry, now);
             if (entry.times.isEmpty()) it.remove();
         }
-        if (entries.size() >= MAX_KEYS) entries.clear();
+        if (entries.size() < MAX_KEYS) return;
+        long[] lastHits = new long[entries.size()];
+        int n = 0;
+        for (Entry entry : entries.values()) lastHits[n++] = entry.times.peekLast();
+        java.util.Arrays.sort(lastHits);
+        long cutoff = lastHits[lastHits.length / 10];
+        int toRemove = lastHits.length / 10 + 1;
+        for (it = entries.values().iterator(); it.hasNext() && toRemove > 0;) {
+            if (it.next().times.peekLast() <= cutoff) {
+                it.remove();
+                toRemove--;
+            }
+        }
     }
 }

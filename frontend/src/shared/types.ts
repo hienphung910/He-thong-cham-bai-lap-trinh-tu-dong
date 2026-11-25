@@ -22,8 +22,10 @@ export interface AuthUser {
   role: RoleCode;
   roleName: string;
   canCreateProblem: boolean;
-  /** Email khoi phuc mat khau; "" neu tai khoan chua khai. */
+  /** Email khoi phuc mat khau DA XAC MINH; "" neu tai khoan chua co. */
   email: string;
+  /** Email da khai nhung chua bam lien ket xac minh trong thu ("" neu khong co): chua dung de lay lai mat khau duoc. */
+  pendingEmail: string;
 }
 
 export interface LoginResponse {

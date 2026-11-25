@@ -6,6 +6,14 @@ import ProblemChip from "../../shared/ProblemChip";
 import { useAuth } from "../account/auth";
 import type { Contest } from "../../shared/platformTypes";
 import { ProctorPanel } from "./Proctor";
+import ProblemPicker from "../problem/ProblemPicker";
+
+/** Gop cac ma bai vua chon trong bang vao o nhap ma bai (bo ma trung, giu thu tu). */
+function mergeIds(text: string, picked: string[]): string {
+  const ids = parseIds(text);
+  for (const id of picked) if (!ids.includes(id)) ids.push(id);
+  return ids.join(", ");
+}
 
 const STATUS: Record<Contest["status"], { label: string; color: string }> = {
   UPCOMING: { label: "Sắp diễn ra", color: "blue" },
@@ -25,6 +33,8 @@ export default function Contests() {
   const [openId, setOpenId] = useBackState<string | null>("contest", null);
   const [error, setError] = useState("");
   const [form, setForm] = useState({ title: "", description: "", startAt: localDateTime(), durationMin: 120, problems: "", proctored: true, classroomId: "" });
+  /** Dang mo bang chon bai cho ky thi sap tao (thay cho viec go ma bai). */
+  const [picking, setPicking] = useState(false);
 
   async function act(work: () => Promise<unknown>) {
     setError("");
@@ -49,6 +59,7 @@ export default function Contests() {
             <Field label="Bắt đầu"><input type="datetime-local" style={INPUT} value={form.startAt} onChange={(e) => setForm({ ...form, startAt: e.target.value })} /></Field>
             <Field label="Thời lượng (phút)"><input type="number" style={INPUT} value={form.durationMin} onChange={(e) => setForm({ ...form, durationMin: Number(e.target.value) })} /></Field>
             <Field label="Các bài (mã bài, cách nhau dấu phẩy)"><input style={INPUT} value={form.problems} onChange={(e) => setForm({ ...form, problems: e.target.value })} placeholder="K001, K002" /></Field>
+            <Btn kind="ghost" onClick={() => setPicking(true)}>Chọn từ danh sách</Btn>
             <Switch label="Giám sát thí sinh" checked={form.proctored} onChange={(proctored) => setForm({ ...form, proctored })}
               title="Ghi lại việc rời tab, chuyển cửa sổ, sao chép, dán của thí sinh trong lúc thi. Bật / tắt lại được ở trang kỳ thi." />
             <Btn disabled={!form.classroomId} title={form.classroomId ? undefined : "Hãy chọn lớp tham gia kỳ thi"} onClick={() => void act(async () => {
@@ -57,6 +68,11 @@ export default function Contests() {
             })}>Tạo</Btn>
           </Row>
         </Card>
+      )}
+      {picking && (
+        <ProblemPicker title="Chọn bài cho kỳ thi" excluded={parseIds(form.problems)}
+          onClose={() => setPicking(false)}
+          onPick={(ids) => { setPicking(false); setForm((old) => ({ ...old, problems: mergeIds(old.problems, ids) })); }} />
       )}
       <Table head={["Kỳ thi", "Lớp", "Người tạo", "Bắt đầu", "Thời lượng", "Số bài", "Trạng thái", ""]}
         empty={isStaff ? "Chưa có kỳ thi nào." : "Các lớp của bạn chưa có kỳ thi nào."}
@@ -97,6 +113,8 @@ function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
       window.dispatchEvent(new Event("oj-contests-changed"));
     } catch (e) { setEditError(errorText(e)); }
   }
+  /** Dang mo bang chon bai de them vao ky thi nay. */
+  const [pickingMore, setPickingMore] = useState(false);
   // Them / bot bai: chi nguoi quan ly ky thi (c.canManage) va chi TRUOC khi thi moi thay cac nut nay.
   const [newProblem, setNewProblem] = useState("");
   // Gio thi dang sua trong form; null = chua sua, hien gia tri hien tai cua ky thi.
@@ -142,7 +160,17 @@ function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
                   placeholder="Mã bài (kho chung hoặc kho của bạn)"
                   onKeyDown={(e) => { if (e.key === "Enter" && newProblem.trim()) void edit(() => papi.addContestProblem(c.id, newProblem.trim())); }} />
                 <Btn disabled={!newProblem.trim()} onClick={() => void edit(() => papi.addContestProblem(c.id, newProblem.trim()))}>Thêm bài</Btn>
+                <Btn kind="ghost" onClick={() => setPickingMore(true)}>Chọn từ danh sách</Btn>
               </div>
+            )}
+            {pickingMore && (
+              <ProblemPicker title={`Thêm bài — ${c.title}`} excluded={c.problems.map((p) => p.id)}
+                onClose={() => setPickingMore(false)}
+                onPick={(ids) => {
+                  setPickingMore(false);
+                  // May chu nhan tung bai mot: them lan luot, gap bai loi thi dung va bao loi.
+                  void edit(async () => { for (const pid of ids) await papi.addContestProblem(c.id, pid); });
+                }} />
             )}
             {isStudent && c.status === "RUNNING" && !c.joined && !c.finished && (
               <div style={{ marginTop: 10, padding: "12px 14px", borderRadius: 8, background: "var(--color-red-light)", border: "1px solid #F3D9A4", display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>

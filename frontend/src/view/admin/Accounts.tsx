@@ -11,17 +11,23 @@ const ROLE_LABEL: Record<string, string> = { ADMIN: "Quản trị viên", TEACHE
  * Module 1 (tai khoan va phan quyen): xem moi tai khoan,
  * loc theo vai tro, tao tai khoan giang vien / hoc sinh / quan tri. Chi quan tri vien.
  *
- * Tai khoan chua dang nhap duoc nam o muc "Cho duyet hoac dang khoa": giang vien tu dang ky dang
- * cho duyet, va tai khoan bi quan tri vien khoa. Kich hoat = cho dang nhap; Xoa = xoa han tai khoan.
- * Giang vien gui kem file minh chung thi bam Xem de mo file ngay trong trang; file bi xoa khoi may
- * chu sau khi kich hoat hoac xoa. Tai khoan dang dung thi doi vai tro, khoa, xoa duoc o bang duoi.
+ * Tai khoan chua dang nhap duoc nam o muc "Tai khoan chua hoat dong", moi dong ghi ro trang thai:
+ * "Cho duyet" (giang vien tu dang ky - nut Duyet / Tu choi) hoac "Dang khoa" (bi quan tri vien khoa -
+ * nut Mo khoa / Xoa). Giang vien gui kem file minh chung thi bam Xem de mo file ngay trong trang; file
+ * bi xoa khoi may chu sau khi duyet hoac tu choi. Tai khoan dang dung thi doi vai tro, khoa, xoa duoc
+ * o bang duoi.
  */
 export default function Accounts() {
   const { user: me } = useAuth();
   const users = useLoad(() => papi.users());
   const [role, setRole] = useState("");
   const [error, setError] = useState("");
-  const pending = (users.data ?? []).filter((u) => u.approved === false);
+  // Chua dang nhap duoc: cho duyet xep truoc (viec can lam), dang khoa xep sau.
+  const inactive = (users.data ?? []).filter((u) => u.approved === false);
+  const isPending = (u: BasicUser) => u.status === "PENDING";
+  const pending = [...inactive.filter(isPending), ...inactive.filter((u) => !isPending(u))];
+  const pendingCount = inactive.filter(isPending).length;
+  const lockedCount = inactive.length - pendingCount;
   const shown = (users.data ?? []).filter((u) => u.approved !== false && (role === "" || u.role === role));
 
   // File minh chung dang mo: tai ve dang base64 roi doi thanh blob URL de hien anh / PDF.
@@ -52,18 +58,25 @@ export default function Accounts() {
     <Page title="Tài khoản và giảng viên">
       <ErrorBox text={error || users.error} />
       {pending.length > 0 && (
-        <Card title="Chờ duyệt hoặc đang khoá" right={<Tag color="orange">{pending.length} tài khoản</Tag>}>
-          <Table head={["Tên đăng nhập", "Họ tên", "Vai trò", "Lớp / bộ môn", "Minh chứng", ""]}
+        <Card title="Tài khoản chưa hoạt động" right={<span style={{ display: "inline-flex", gap: 6 }}>
+          {pendingCount > 0 && <Tag color="orange">{pendingCount} chờ duyệt</Tag>}
+          {lockedCount > 0 && <Tag color="red">{lockedCount} đang khoá</Tag>}
+        </span>}>
+          <Table head={["Tên đăng nhập", "Họ tên", "Vai trò", "Lớp / bộ môn", "Trạng thái", "Minh chứng", ""]}
             rows={pending.map((u) => [
               <b>{u.username}</b>, u.fullName, <Tag color={ROLE_COLOR[u.role]}>{u.roleName}</Tag>, u.detail || "—",
+              isPending(u) ? <Tag color="orange">Chờ duyệt</Tag> : <Tag color="red">Đang khoá</Tag>,
               u.hasEvidence
                 ? <Btn small kind="ghost" onClick={() => void openEvidence(u)}>Xem</Btn>
-                : <span style={{ color: "#9E9E9E" }}>Không có</span>,
+                : <span style={{ color: "#9E9E9E" }}>—</span>,
               <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
-                <Btn small onClick={() => void decide(() => papi.approveUser(u.id))}>Kích hoạt</Btn>
+                <Btn small onClick={() => void decide(() => papi.approveUser(u.id))}>{isPending(u) ? "Duyệt" : "Mở khoá"}</Btn>
                 <Btn small kind="danger" onClick={() => {
-                  if (window.confirm(`Xoá tài khoản @${u.username}?`)) void decide(() => papi.rejectUser(u.id));
-                }}>Xoá</Btn>
+                  const question = isPending(u)
+                    ? `Từ chối đăng ký giảng viên của @${u.username}? Tài khoản sẽ bị xoá.`
+                    : `Xoá hẳn tài khoản đang khoá @${u.username}?\n\nBài nộp của tài khoản này cũng bị xoá, không khôi phục được.`;
+                  if (window.confirm(question)) void decide(() => papi.rejectUser(u.id));
+                }}>{isPending(u) ? "Từ chối" : "Xoá"}</Btn>
               </div>,
             ])} />
         </Card>
@@ -78,7 +91,7 @@ export default function Accounts() {
               </div>
             )}
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 12 }}>
-            <Btn onClick={() => { const id = viewing.user.id; closeEvidence(); void decide(() => papi.approveUser(id)); }}>Kích hoạt</Btn>
+            <Btn onClick={() => { const id = viewing.user.id; closeEvidence(); void decide(() => papi.approveUser(id)); }}>Duyệt</Btn>
           </div>
         </Modal>
       )}

@@ -136,7 +136,7 @@ export default function LoginModal() {
     if (siteKey && !captcha) { setError("Hãy hoàn thành bước xác minh CAPTCHA."); return; }
     setBusy(true);
     try {
-      const pending = await register({
+      const { pending, emailVerification } = await register({
         role, username: username.trim(), password, fullName: fullName.trim(), email: email.trim(),
         studentCode: studentCode.trim(), className: className.trim(), department: department.trim(),
         evidence: role === "TEACHER" && evidence ? evidence.data : "",
@@ -144,9 +144,10 @@ export default function LoginModal() {
       });
       setEvidence(null);
       switchMode("login");
-      setNotice(pending
+      setNotice((pending
         ? `Đã gửi đăng ký giảng viên @${username.trim()}. Tài khoản cần quản trị viên duyệt rồi mới đăng nhập được.`
-        : `Đã tạo tài khoản học sinh @${username.trim()}. Mời bạn đăng nhập.`);
+        : `Đã tạo tài khoản học sinh @${username.trim()}. Mời bạn đăng nhập.`)
+        + (emailVerification ? ` Thư xác minh đã gửi tới ${email.trim()}.` : ""));
     } catch (e2) { setError(e2 instanceof Error ? e2.message : String(e2)); }
     finally {
       setBusy(false);

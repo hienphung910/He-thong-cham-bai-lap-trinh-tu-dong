@@ -7,6 +7,7 @@ import Logo from "./shared/Logo";
 import { AuthProvider, useAuth } from "./view/account/auth";
 import LoginModal from "./view/account/LoginModal";
 import ResetPassword from "./view/account/ResetPassword";
+import VerifyEmail from "./view/account/VerifyEmail";
 import MyAccount from "./view/account/MyAccount";
 import StreakBadge, { StreakToast } from "./view/account/StreakBadge";
 import { useStreak } from "./view/account/streak";
@@ -548,11 +549,13 @@ const MENU_ITEM: React.CSSProperties = {
  * du dang dang nhap hay chua. Xong thi trang tu tai lai ve "/", nen chi can doc mot lan luc mo tab.
  */
 const RESETTING_PASSWORD = window.location.pathname === "/reset-password";
+/** Tuong tu, tab mo tu link xac minh email trong thu (/verify-email?token=...). */
+const VERIFYING_EMAIL = window.location.pathname === "/verify-email";
 
 export default function App() {
   return (
     <AuthProvider>
-      {RESETTING_PASSWORD ? <ResetPassword /> : <AppShell />}
+      {RESETTING_PASSWORD ? <ResetPassword /> : VERIFYING_EMAIL ? <VerifyEmail /> : <AppShell />}
     </AuthProvider>
   );
 }

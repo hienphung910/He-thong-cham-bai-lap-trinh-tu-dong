@@ -95,7 +95,11 @@ export const api = {
   /** Cau hinh cong khai cho form dang nhap / dang ky: turnstileSiteKey khac "" thi phai lam CAPTCHA truoc khi gui. */
   config: () => request<{ turnstileSiteKey: string; allowRegister: boolean; passwordReset: boolean }>("/api/config"),
   /** pending = true: tai khoan giang vien vua tao con phai cho quan tri vien duyet. */
-  register: (body: RegisterRequest) => postJson<{ message: string; pending: boolean }>("/api/auth/register", body),
+  /** emailVerification = true: email chua co hieu luc, may chu vua gui thu xac minh toi dia chi do. */
+  register: (body: RegisterRequest) =>
+    postJson<{ message: string; pending: boolean; emailVerification: boolean }>("/api/auth/register", body),
+  /** Xac minh email bang ma trong link cua thu. */
+  verifyEmail: (token: string) => postJson<{ ok: boolean; username: string; email: string }>("/api/auth/email/verify", { token }),
   /** captcha: token Turnstile, chi can khi may chu bat CAPTCHA (xem config()). */
   login: (username: string, password: string, captcha = "") =>
     postJson<LoginResponse>("/api/auth/login", { username, password, captcha }),

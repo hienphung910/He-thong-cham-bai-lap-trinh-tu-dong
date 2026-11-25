@@ -109,8 +109,8 @@ public class ApiServer {
     private final TurnstileVerifier turnstile = new TurnstileVerifier();
 
     /** Gui email qua Resend; tat neu chua cau hinh (xem ResendMailer). Chi dung cho "Quen mat khau". */
-    private final ResendMailer mailer = new ResendMailer();
-    private final PasswordResetService resets = new PasswordResetService();
+    private final ResendMailer mailer;
+    private final PasswordResetService resets;
     private static final long RESET_WINDOW_MS = 60 * 60_000L;
     /** Yeu cau "quen mat khau" moi gio tu mot dia chi (moi yeu cau co the lam may chu gui mot thu). */
     private static final int FORGOT_IP_LIMIT = 10;
@@ -214,6 +214,8 @@ public class ApiServer {
 
     public ApiServer(Platform platform, int port, Path webRoot) {
         this.platform = platform;
+        this.mailer = platform.getMailer();
+        this.resets = platform.getResets();
         this.service = platform.getJudge();
         this.port = port;
         this.webRoot = webRoot;
@@ -395,6 +397,10 @@ public class ApiServer {
             handleLogout(ex);
             return;
         }
+        if ("POST".equals(method) && path.equals("/api/auth/email/verify")) {
+            handleVerifyEmail(ex);
+            return;
+        }
         if ("POST".equals(method) && path.equals("/api/auth/forgot")) {
             handleForgotPassword(ex);
             return;
@@ -526,6 +532,7 @@ public class ApiServer {
             limiter.hit("register-teacher-try:" + ip, REGISTER_WINDOW_MS);
             evidence = EvidenceStore.decode(rawEvidence);
         }
+        boolean verifyEmail = platform.getAccountMailer().isEnabled();
         // role chi duoc la STUDENT hoac TEACHER; gui "ADMIN" thi register() tu choi (400).
         User created = service.getAuth().register(
                 role,
@@ -535,7 +542,9 @@ public class ApiServer {
                 body.getString("studentCode", ""),
                 body.getString("className", ""),
                 body.getString("department", ""),
-                body.getString("email", ""));
+                body.getString("email", ""),
+                // Gui duoc thu thi email phai xac minh roi moi ghi vao tai khoan (xem EmailVerificationService).
+                !verifyEmail);
         if (evidence != null) {
             try {
                 platform.getEvidence().save(created.getId(), evidence);
@@ -560,7 +569,11 @@ public class ApiServer {
         }
         platform.getSystem().log(created.getUsername(), "Đăng ký",
                 pending ? "Giảng viên, chờ duyệt" : "Học sinh", true);
+        String toVerify = verifyEmail ? service.getAuth().emailToVerify(body.getString("email", "")) : "";
+        if (!toVerify.isEmpty()) platform.getAccountMailer().sendVerification(created, toVerify);
         sendJson(ex, 201, Json.obj()
+                // true: email chua co hieu luc, nguoi dung can bam lien ket trong thu xac minh.
+                .put("emailVerification", !toVerify.isEmpty())
                 .put("message", pending
                         ? "Đã gửi đăng ký. Tài khoản giảng viên cần quản trị viên duyệt rồi mới đăng nhập được"
                         : "Đăng ký thành công, mời bạn đăng nhập")
@@ -729,6 +742,32 @@ public class ApiServer {
     }
 
     /**
+     * Nguoi dung bam lien ket trong thu xac minh: email dang cho duoc ghi vao tai khoan va tu luc nay
+     * dung de lay lai mat khau. Khong can dang nhap - giu duoc lien ket nghia la doc duoc hop thu do.
+     */
+    private void handleVerifyEmail(HttpExchange ex) throws IOException {
+        RateLimiter limiter = platform.getLimiter();
+        String ipKey = "verify-ip:" + clientIp(ex);
+        long wait = limiter.retryAfterSeconds(ipKey, RESET_WINDOW_MS, RESET_IP_LIMIT);
+        if (wait > 0) {
+            ex.getResponseHeaders().set("Retry-After", String.valueOf(wait));
+            throw new ApiException(429, "Bạn đã thử quá nhiều lần. Hãy thử lại sau " + (wait + 59) / 60 + " phút");
+        }
+        Json.Value body = Json.parseObject(readBody(ex, MAX_BODY_BYTES));
+        Optional<EmailVerificationService.Pending> pending =
+                platform.getVerifications().consume(body.getString("token", "").trim());
+        if (!pending.isPresent()) {
+            limiter.hit(ipKey, RESET_WINDOW_MS);
+            throw ApiException.badRequest("Liên kết xác minh không hợp lệ hoặc đã hết hạn. Hãy gửi lại thư xác minh ở trang Tài khoản của tôi");
+        }
+        User user = service.getAuth().confirmEmail(pending.get().getUserId(), pending.get().getEmail());
+        // Email khoi phuc vua doi: lien ket dat lai mat khau gui toi dia chi cu khong con dung duoc.
+        resets.revokeUser(user.getId());
+        platform.getSystem().log(user.getUsername(), "Xác minh email", "", true);
+        sendJson(ex, 200, Json.obj().put("ok", true).put("username", user.getUsername()).put("email", user.getEmail()).build());
+    }
+
+    /**
      * Dat mat khau moi bang ma trong link cua thu. checkOnly = true: chi hoi ma con dung duoc khong
      * (trang dat lai mat khau hoi truoc de bao "link het han" ngay, khong bat nguoi dung go xong moi biet).
      */
@@ -782,6 +821,8 @@ public class ApiServer {
                 .put("canCreateProblem", user.canCreateProblem())
                 // Ham nay chi dung cho CHINH tai khoan dang dang nhap (dang nhap, /api/auth/me, dang ky).
                 .put("email", user.getEmail())
+                // Email da khai nhung chua xac minh qua thu ("" neu khong co): chua dung de lay lai mat khau duoc.
+                .put("pendingEmail", platform.getVerifications().pendingEmailOf(user.getId()))
                 .build();
     }
 
@@ -860,7 +901,10 @@ public class ApiServer {
     private String submissionsJson(User viewer) {
         List<String> items = new ArrayList<>();
         if (User.ROLE_STUDENT.equals(viewer.getRoleCode())) {
-            for (Submission s : service.getSubmissionsOf(viewer)) items.add(submissionJson(s, false));
+            com.ptit.oj.model.Contest sitting = platform.getContests().sittingContestOf(viewer.getId());
+            for (Submission s : service.getSubmissionsOf(viewer)) {
+                if (partOfSitting(sitting, viewer, s)) items.add(submissionJson(s, false));
+            }
             return Json.array(items);
         }
         Set<String> myStudents = platform.getSchool().studentIdsTaughtBy(viewer.getId());
@@ -882,6 +926,18 @@ public class ApiServer {
         return myStudents.contains(s.getAuthor().getId()) || (!s.getProblem().isShared() && viewer.canEditProblem(s.getProblem()));
     }
 
+    /**
+     * Hoc sinh DANG TRONG BAI THI chi thay cac bai minh nop cho chinh bai thi do (bai thuoc ky thi, nop
+     * sau luc bam "Vao thi"): bai nop cu - kem ma nguon - cua cac bai khac khong mo lai duoc trong luc thi.
+     * sitting = null (khong dang thi) thi khong han che gi.
+     */
+    private static boolean partOfSitting(com.ptit.oj.model.Contest sitting, User viewer, Submission s) {
+        if (sitting == null) return true;
+        java.time.LocalDateTime joined = sitting.getJoinedAt().get(viewer.getId());
+        return sitting.getProblemIds().contains(s.getProblem().getId())
+                && joined != null && !s.getSubmittedAt().isBefore(joined);
+    }
+
     private void handleSubmissionDetail(HttpExchange ex, User viewer, String id) throws IOException {
         Optional<Submission> found = service.findSubmission(id);
         if (!found.isPresent()) {
@@ -893,6 +949,10 @@ public class ApiServer {
             throw ApiException.forbidden(User.ROLE_TEACHER.equals(viewer.getRoleCode())
                     ? "Bạn chỉ xem được bài nộp của học sinh trong lớp mình dạy"
                     : "Bạn chỉ được xem bài nộp của chính mình");
+        }
+        if (User.ROLE_STUDENT.equals(viewer.getRoleCode())
+                && !partOfSitting(platform.getContests().sittingContestOf(viewer.getId()), viewer, s)) {
+            throw ApiException.forbidden("Bạn đang trong bài thi nên chỉ xem được bài nộp của bài thi này");
         }
         sendJson(ex, 200, submissionJson(s, true));
     }

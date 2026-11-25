@@ -144,7 +144,8 @@ public class SchoolApi extends ApiModule {
             platform.getLimiter().hit("join:" + user.getId(), 10 * 60_000L);
             Classroom c = school.join(req.arg(0), user);
             boolean pending = !c.getStudentIds().contains(user.getId());
-            if (pending) {
+            // Gui roi huy roi gui lai lien tuc: giang vien chi nhan MOT thong bao moi gio cho moi hoc sinh.
+            if (pending && firstNotice("join-notice:" + c.getId() + "|" + user.getId())) {
                 platform.getCommunity().notifyUser(c.getTeacherId(), "Yêu cầu vào lớp " + c.getName(),
                         user.getFullName() + " (@" + user.getUsername() + ") xin vào lớp " + c.getName()
                                 + ". Vào Lớp của tôi để duyệt hoặc từ chối.",
@@ -197,7 +198,8 @@ public class SchoolApi extends ApiModule {
             Classroom c = managedClassroom(req);
             User student = requireUsername(req.body().getString("username"));
             // Chi MOI: hoc sinh phai tu dong y moi vao lop (moi lai nguoi da moi / da trong lop thi khong bao nua).
-            if (school.invite(c, student)) {
+            // Moi roi rut roi moi lai lien tuc: hoc sinh chi nhan mot thong bao moi gio cho moi lop.
+            if (school.invite(c, student) && firstNotice("invite-notice:" + c.getId() + "|" + student.getId())) {
                 platform.getCommunity().notifyUser(student.getId(), "Bạn được mời vào lớp " + c.getName(),
                         req.user().getFullName() + " mời bạn vào lớp " + c.getName()
                                 + ". Vào Lớp của tôi để đồng ý hoặc từ chối.",
@@ -233,6 +235,13 @@ public class SchoolApi extends ApiModule {
             return true;
         }
         return false;
+    }
+
+    /** true neu trong mot gio qua chua gui thong bao nao voi khoa nay (va ghi nhan lan nay). */
+    private boolean firstNotice(String key) {
+        if (platform.getLimiter().retryAfterSeconds(key, 60 * 60_000L, 1) > 0) return false;
+        platform.getLimiter().hit(key, 60 * 60_000L);
+        return true;
     }
 
     /** Lop trong duong dan, kem kiem tra nguoi goi co quyen quan ly lop do. */

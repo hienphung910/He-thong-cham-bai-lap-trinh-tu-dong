@@ -23,7 +23,10 @@ export const papi = {
   changePassword: (oldPassword: string, newPassword: string) =>
     postJson<Ok>("/api/auth/password", { oldPassword, newPassword }),
   /** Doi email khoi phuc cua chinh minh; phai nhap mat khau hien tai. */
-  changeEmail: (password: string, email: string) => putJson<{ email: string }>("/api/auth/email", { password, email }),
+  /** pendingEmail khac "": email moi con cho xac minh qua thu, email cu (neu co) van dang dung. */
+  changeEmail: (password: string, email: string) =>
+    putJson<{ email: string; pendingEmail: string }>("/api/auth/email", { password, email }),
+  resendEmailVerification: () => postJson<Ok>("/api/auth/email/resend", {}),
 
   // --- to chuc, lop hoc, phu huynh (Module 2, 3, 32) ---
   organizations: () => request<Organization[]>("/api/organizations"),

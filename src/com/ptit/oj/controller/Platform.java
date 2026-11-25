@@ -27,6 +27,13 @@ public class Platform {
     private final BillingService billing = new BillingService();
     private final SystemService system;
     private final RateLimiter limiter = new RateLimiter();
+    /** Gui email qua Resend; tat neu chua cau hinh (xem ResendMailer). */
+    private final ResendMailer mailer = new ResendMailer();
+    /** Ma dat lai mat khau dang cho (quen mat khau). */
+    private final PasswordResetService resets = new PasswordResetService();
+    /** Email khoi phuc dang cho nguoi dung xac minh. */
+    private final EmailVerificationService verifications = new EmailVerificationService();
+    private final AccountMailer accountMailer = new AccountMailer(mailer, verifications, limiter);
     /** Noi luu du lieu cac module mo rong xuong o dia; null neu khong bat (che do --no-db). */
     private volatile StateStore stateStore;
     private final SubmissionGate gate = new SubmissionGate();
@@ -70,6 +77,16 @@ public class Platform {
     }
     /** Dem tan suat (dang nhap sai, dang ky, chat...) dung chung cho moi module. */
     public RateLimiter getLimiter() { return limiter; }
+    public ResendMailer getMailer() { return mailer; }
+    public PasswordResetService getResets() { return resets; }
+    public EmailVerificationService getVerifications() { return verifications; }
+    public AccountMailer getAccountMailer() { return accountMailer; }
+
+    /** Tai khoan vua doi mat khau / email, bi khoa hoac bi xoa: moi lien ket gui qua thu truoc do mat hieu luc. */
+    public void revokeMailLinks(String userId) {
+        resets.revokeUser(userId);
+        verifications.revokeUser(userId);
+    }
     /** Cong vao cua bo cham: moi nguoi mot bai mot luc, ca he thong co tran so bai dang cho. */
     public SubmissionGate getGate() { return gate; }
     public ContestService getContests() { return contests; }
