@@ -22,6 +22,7 @@ import java.util.List;
  *   PUT  /api/admin/users/{id}/role    - doi vai tro
  *   DELETE /api/admin/users/{id}       - xoa han tai khoan
  *   POST /api/auth/password    - doi mat khau cua chinh minh
+ *   PUT  /api/auth/email       - doi email khoi phuc cua chinh minh (phai nhap mat khau hien tai)
  */
 public class AccountApi extends ApiModule {
 
@@ -108,6 +109,13 @@ public class AccountApi extends ApiModule {
             judge.getAuth().changePassword(user, body.getString("oldPassword"), body.getString("newPassword"),
                     req.token());
             req.sendOk();
+            return true;
+        }
+        if (req.is("PUT", "auth", "email")) {
+            User user = req.user();
+            Json.Value body = req.body();
+            User changed = judge.getAuth().changeEmail(user, body.getString("password", ""), body.getString("email", ""));
+            req.send(Json.obj().put("email", changed.getEmail()).build());
             return true;
         }
         return false;

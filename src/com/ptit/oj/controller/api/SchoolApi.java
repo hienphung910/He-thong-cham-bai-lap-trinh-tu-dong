@@ -133,11 +133,59 @@ public class SchoolApi extends ApiModule {
             req.sendOk();
             return true;
         }
-        // Hoc sinh tu tham gia lop: doan * trong duong dan la MA THAM GIA, khong phai ma lop.
+        // Hoc sinh xin vao lop: doan * trong duong dan la MA THAM GIA, khong phai ma lop.
+        // Chi tao yeu cau cho giang vien duyet (pending = true); da duoc moi san thi vao luon (pending = false).
         if (req.is("POST", "classrooms", "*", "join")) {
             User user = req.user();
+            // Ma tham gia dai 8 ky tu ngau nhien, nhung van chan viec do ma hang loat.
+            if (platform.getLimiter().retryAfterSeconds("join:" + user.getId(), 10 * 60_000L, 20) > 0) {
+                throw new ApiException(429, "Bạn nhập mã tham gia quá nhiều lần. Hãy thử lại sau ít phút");
+            }
+            platform.getLimiter().hit("join:" + user.getId(), 10 * 60_000L);
             Classroom c = school.join(req.arg(0), user);
-            req.send(classroomJson(c, user, usersById()).build());
+            boolean pending = !c.getStudentIds().contains(user.getId());
+            if (pending) {
+                platform.getCommunity().notifyUser(c.getTeacherId(), "Yêu cầu vào lớp " + c.getName(),
+                        user.getFullName() + " (@" + user.getUsername() + ") xin vào lớp " + c.getName()
+                                + ". Vào Lớp của tôi để duyệt hoặc từ chối.",
+                        "Classrooms");
+            }
+            req.send(Json.obj().put("id", c.getId()).put("name", c.getName()).put("pending", pending).build());
+            return true;
+        }
+        // Cac yeu cau vao lop cua nguoi dang dang nhap con cho duyet, va viec tu huy.
+        if (req.is("GET", "classroom-requests")) {
+            User user = req.user();
+            Map<String, User> users = usersById();
+            List<String> items = new ArrayList<>();
+            for (Classroom c : school.requestsOf(user)) {
+                items.add(Json.obj().put("id", c.getId()).put("name", c.getName())
+                        .put("teacherName", nameOf(users, c.getTeacherId())).build());
+            }
+            req.send(Json.array(items));
+            return true;
+        }
+        if (req.is("DELETE", "classrooms", "*", "request")) {
+            User user = req.user();
+            school.dropRequest(school.findClassroom(req.arg(0)), user.getId());
+            req.sendOk();
+            return true;
+        }
+        // Giang vien duyet / tu choi yeu cau vao lop.
+        if (req.is("POST", "classrooms", "*", "requests", "*", "approve")) {
+            Classroom c = managedClassroom(req);
+            school.approveRequest(c, req.arg(1));
+            platform.getCommunity().notifyUser(req.arg(1), "Bạn đã được duyệt vào lớp " + c.getName(),
+                    req.user().getFullName() + " đã duyệt yêu cầu vào lớp " + c.getName() + " của bạn.", "Classrooms");
+            req.sendOk();
+            return true;
+        }
+        if (req.is("POST", "classrooms", "*", "requests", "*", "reject")) {
+            Classroom c = managedClassroom(req);
+            school.dropRequest(c, req.arg(1));
+            platform.getCommunity().notifyUser(req.arg(1), "Yêu cầu vào lớp " + c.getName() + " bị từ chối",
+                    "Giảng viên đã từ chối yêu cầu vào lớp " + c.getName() + " của bạn.", "Classrooms");
+            req.sendOk();
             return true;
         }
         return false;
@@ -214,6 +262,8 @@ public class SchoolApi extends ApiModule {
                 .put("teacherName", nameOf(users, c.getTeacherId()))
                 .put("studentCount", c.getStudentIds().size())
                 .put("practiceCount", c.getPracticeProblemIds().size())
+                // So yeu cau vao lop dang cho duyet: chi nguoi quan ly lop thay.
+                .put("requestCount", school.canManage(viewer, c) ? c.getPendingIds().size() : 0)
                 .put("canManage", school.canManage(viewer, c))
                 // isOwner: giang vien phu trach (hoac quan tri vien) - xoa lop, xoa hoc sinh.
                 .put("isOwner", school.isOwner(viewer, c))
@@ -240,6 +290,15 @@ public class SchoolApi extends ApiModule {
                 if (u != null) invited.add(userJson(u).build());
             }
         }
+        // Hoc sinh dang xin vao lop, cho duyet: chi nguoi quan ly lop thay.
+        List<String> requests = new ArrayList<>();
+        if (school.canManage(viewer, c)) {
+            for (String id : c.getPendingIds()) {
+                User u = users.get(id);
+                if (u != null) requests.add(userJson(u).put("detail", u instanceof com.ptit.oj.model.Student
+                        ? ((com.ptit.oj.model.Student) u).getClassName() : "").build());
+            }
+        }
         // Bai luyen tap cua lop, kem viec nguoi dang xem da giai chua.
         Set<String> mySolved = platform.getAnalytics().solvedByUser().get(viewer.getId());
         List<String> practice = new ArrayList<>();
@@ -254,6 +313,7 @@ public class SchoolApi extends ApiModule {
                 .putRaw("practice", Json.array(practice))
                 .putRaw("students", Json.array(students))
                 .putRaw("invited", Json.array(invited))
+                .putRaw("requests", Json.array(requests))
                 .build();
     }
 

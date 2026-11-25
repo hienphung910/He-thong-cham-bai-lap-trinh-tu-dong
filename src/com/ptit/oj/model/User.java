@@ -29,6 +29,15 @@ public abstract class User extends Entity {
     public boolean isApproved() { return approved; }
     public void setApproved(boolean approved) { this.approved = approved; }
 
+    /**
+     * Email de khoi phuc mat khau ("" neu tai khoan chua khai). Luon o dang chu thuong; moi email chi
+     * gan voi mot tai khoan.
+     */
+    private volatile String email = "";
+
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email == null ? "" : email; }
+
     /** Ten vai tro de hien thi cho nguoi dung doc. */
     public abstract String getRole();
 

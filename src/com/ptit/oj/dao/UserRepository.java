@@ -28,6 +28,15 @@ public interface UserRepository extends Repository<User> {
      */
     default boolean supportsApproval() { return true; }
 
+    /** Tim theo email khoi phuc, KHONG phan biet hoa thuong; rong neu khong tai khoan nao dung email do. */
+    Optional<User> findByEmail(String email);
+
+    /**
+     * Kho co luu duoc email cua tai khoan khong. Chi false khi bang users cua MySQL thieu cot email
+     * va khong tu them duoc; khi do khong dat lai mat khau qua email duoc.
+     */
+    default boolean supportsEmail() { return true; }
+
     /** Bang solvedCount cho tat ca tai khoan: userId -> so bai da giai. */
     Map<String, Integer> solvedCountByUser();
 }

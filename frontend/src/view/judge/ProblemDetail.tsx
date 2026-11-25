@@ -3,7 +3,6 @@ import { api } from "../../shared/api";
 import { useAuth } from "../account/auth";
 import CodeEditor from "./CodeEditor";
 import TestTable from "./TestTable";
-import SubmitInsight from "./SubmitInsight";
 import ProblemComments from "./ProblemComments";
 import { markFileDialog } from "../contest/Proctor";
 import { DIFFICULTY_META } from "../problem/learningPath";
@@ -68,16 +67,13 @@ function CopyButton({ text }: { text: string }) {
 }
 
 export default function ProblemDetail({
-  problem, languages, onBack, onSubmitted, topicName, nextProblem, onNext, onOpen, exam = false,
+  problem, languages, onBack, onSubmitted, topicName, nextProblem, onNext, exam = false,
 }: {
   problem: Problem; languages: LanguageInfo[]; onBack: () => void; onSubmitted: () => void;
   /**
-   * Dang lam bai trong man hinh thi: khong co nut quay lai lop hoc, khong co phan tich / goi y
-   * sau khi nop va khong co binh luan.
+   * Dang lam bai trong man hinh thi: khong co nut quay lai lop hoc va khong co binh luan.
    */
   exam?: boolean;
-  /** Mo mot bai khac ngay tai day (bam vao bai duoc goi y sau khi nop). */
-  onOpen: (problemId: string) => void;
   /** Ten chu de cua bai trong lo trinh hoc. */
   topicName?: string;
   /** Bai ke tiep theo lo trinh (null neu day la bai cuoi). */
@@ -388,7 +384,6 @@ export default function ProblemDetail({
         )}
 
         {/* ═══ THONG KE DIEM YEU SAU KHI NOP ═══ */}
-        {!exam && result && !error && <SubmitInsight problem={problem} result={result} onOpen={onOpen} />}
 
         {/* ═══ BINH LUAN CUA NGUOI DUNG VE BAI NAY ═══ */}
         {!exam && <ProblemComments problemId={problem.id} />}

@@ -9,8 +9,9 @@ import java.util.concurrent.CopyOnWriteArraySet;
 /**
  * Lop hoc (Module 3): mot giang vien phu trach va nhieu hoc sinh.
  *
- * Hoc sinh tu tham gia bang MA THAM GIA (joinCode) sinh ngau nhien, khong phai bang ma lop:
- * ma lop danh so tuan tu (CLS-001, CLS-002...) nen ai cung doan duoc.
+ * Hoc sinh xin vao lop bang MA THAM GIA (joinCode) sinh ngau nhien, khong phai bang ma lop:
+ * ma lop danh so tuan tu (CLS-001, CLS-002...) nen ai cung doan duoc. Nhap dung ma moi chi tao
+ * mot YEU CAU (pendingIds); giang vien duyet thi hoc sinh moi thanh thanh vien.
  *
  * Cac tap thanh vien dung CopyOnWriteArraySet: nhieu request cung doc trong luc mot request
  * khac them / xoa thanh vien ma khong bi ConcurrentModificationException, va van giu thu tu them.
@@ -30,6 +31,11 @@ public class Classroom extends Entity {
      * khong thay bai cua lop, va giang vien chua xem duoc phan tich hoc tap cua ho.
      */
     private final Set<String> invitedIds = new CopyOnWriteArraySet<>();
+    /**
+     * Hoc sinh da nhap ma tham gia va dang cho giang vien duyet. Chua phai thanh vien.
+     * Truong nay duoc them sau: ban luu cu (StateStore) khong co nen doc len la null - xem getPendingIds().
+     */
+    private volatile Set<String> pendingIds = new CopyOnWriteArraySet<>();
     /** Hoc sinh da bi giang vien xoa khoi lop: khong tu tham gia lai duoc. */
     private final Set<String> removedIds = new CopyOnWriteArraySet<>();
     private final String joinCode = newJoinCode();
@@ -59,6 +65,17 @@ public class Classroom extends Entity {
     public Set<String> getStudentIds() { return studentIds; }
     public Set<String> getRemovedIds() { return removedIds; }
     public Set<String> getInvitedIds() { return invitedIds; }
+
+    public Set<String> getPendingIds() {
+        Set<String> ids = pendingIds;
+        if (ids == null) {
+            synchronized (this) {
+                if (pendingIds == null) pendingIds = new CopyOnWriteArraySet<>();
+                ids = pendingIds;
+            }
+        }
+        return ids;
+    }
 
     /** Ma cac bai giang vien chon rieng cho lop nay luyen tap, theo thu tu them. */
     private final List<String> practiceProblemIds = new CopyOnWriteArrayList<>();

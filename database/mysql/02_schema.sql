@@ -41,8 +41,11 @@ CREATE TABLE IF NOT EXISTS users (
     -- 0 = giang vien tu dang ky dang cho quan tri vien duyet (chua dang nhap duoc).
     -- CSDL tao tu ban cu chua co cot nay: may chu tu ALTER TABLE them vao luc khoi dong.
     approved            TINYINT(1)   NOT NULL DEFAULT 1,
+    -- Email khoi phuc mat khau; NULL = chua khai. CSDL cu chua co cot nay: may chu tu them luc khoi dong.
+    email               VARCHAR(190)     NULL,
     PRIMARY KEY (id),
     UNIQUE KEY uq_users_username (username),
+    UNIQUE KEY uq_users_email (email),
     CONSTRAINT chk_users_role CHECK (role IN ('STUDENT', 'TEACHER', 'ADMIN'))
 ) ENGINE = InnoDB
   DEFAULT CHARACTER SET = utf8mb4

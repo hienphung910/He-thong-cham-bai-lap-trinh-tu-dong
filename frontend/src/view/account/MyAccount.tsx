@@ -5,7 +5,26 @@ import { useAuth } from "./auth";
 
 /** Module 1 (tai khoan): thong tin tai khoan dang dang nhap va doi mat khau. */
 export default function MyAccount() {
-  const { user } = useAuth();
+  const { user, refresh } = useAuth();
+  // Email khoi phuc: doi phai nhap mat khau hien tai, vi ai giu email la dat lai duoc mat khau.
+  const [email, setEmail] = useState(user?.email ?? "");
+  const [emailPassword, setEmailPassword] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [emailDone, setEmailDone] = useState(false);
+
+  async function saveEmail() {
+    setEmailError("");
+    setEmailDone(false);
+    try {
+      await papi.changeEmail(emailPassword, email.trim());
+      setEmailPassword("");
+      setEmailDone(true);
+      await refresh();
+    } catch (e) {
+      setEmailError(errorText(e));
+    }
+  }
+
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [error, setError] = useState("");
@@ -32,6 +51,18 @@ export default function MyAccount() {
           <div>Họ tên: <b>{user.fullName}</b></div>
           <div>Tên đăng nhập: <b>@{user.username}</b></div>
           <div>Vai trò: <Tag color={user.role === "ADMIN" ? "red" : user.role === "TEACHER" ? "purple" : "blue"}>{user.roleName}</Tag></div>
+          <div>Email khôi phục: {user.email ? <b>{user.email}</b> : <span style={{ color: "#C62828" }}>chưa khai</span>}</div>
+        </div>
+      </Card>
+      <Card title="Email khôi phục mật khẩu">
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <Row>
+            <Field label="Email"><input type="email" style={INPUT} value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" /></Field>
+            <Field label="Mật khẩu hiện tại"><input type="password" style={INPUT} value={emailPassword} onChange={(e) => setEmailPassword(e.target.value)} autoComplete="current-password" /></Field>
+            <Btn disabled={!email.trim() || !emailPassword || email.trim().toLowerCase() === user.email} onClick={() => void saveEmail()}>Lưu email</Btn>
+          </Row>
+          <ErrorBox text={emailError} />
+          {emailDone && <div style={{ fontSize: 13, color: "#2E7D32" }}>Đã lưu email.</div>}
         </div>
       </Card>
       <Card title="Đổi mật khẩu">

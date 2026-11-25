@@ -122,6 +122,7 @@ public class SchoolService {
         for (Classroom c : classrooms.findAll()) {
             c.getStudentIds().remove(userId);
             c.getInvitedIds().remove(userId);
+            c.getPendingIds().remove(userId);
             c.getRemovedIds().remove(userId);
         }
     }
@@ -138,7 +139,15 @@ public class SchoolService {
         }
     }
 
-    /** Hoc sinh tu tham gia lop bang ma tham gia do giang vien cung cap. */
+    /** So yeu cau vao lop dang cho duyet toi da cua mot lop / cua mot hoc sinh: chan viec gui yeu cau hang loat. */
+    private static final int MAX_PENDING_PER_CLASS = 200;
+    private static final int MAX_PENDING_PER_STUDENT = 10;
+
+    /**
+     * Hoc sinh xin vao lop bang ma tham gia do giang vien cung cap. Chi tao YEU CAU cho giang vien
+     * duyet (approveRequest); rieng hoc sinh da duoc giang vien moi san thi vao lop luon, vi loi moi
+     * chinh la su dong y cua giang vien. Nguoi goi xem classroom.getStudentIds() de biet da vao hay con cho.
+     */
     public synchronized Classroom join(String joinCode, User student) {
         String code = joinCode == null ? "" : joinCode.trim().toUpperCase();
         Classroom classroom = null;
@@ -155,8 +164,48 @@ public class SchoolService {
         if (classroom.getRemovedIds().contains(student.getId())) {
             throw ApiException.forbidden("Bạn đã bị xoá khỏi lớp này. Hãy liên hệ giảng viên để được thêm lại");
         }
-        classroom.getStudentIds().add(student.getId());
+        if (classroom.getStudentIds().contains(student.getId())) {
+            throw ApiException.badRequest("Bạn đã ở trong lớp " + classroom.getName());
+        }
+        if (classroom.getInvitedIds().remove(student.getId())) {
+            classroom.getStudentIds().add(student.getId());
+            return classroom;
+        }
+        if (classroom.getPendingIds().contains(student.getId())) {
+            throw ApiException.badRequest("Bạn đã gửi yêu cầu vào lớp " + classroom.getName() + ", hãy chờ giảng viên duyệt");
+        }
+        if (classroom.getPendingIds().size() >= MAX_PENDING_PER_CLASS) {
+            throw new ApiException(409, "Lớp này đang có quá nhiều yêu cầu chờ duyệt. Hãy thử lại sau");
+        }
+        if (requestsOf(student).size() >= MAX_PENDING_PER_STUDENT) {
+            throw new ApiException(409, "Bạn đang có quá nhiều yêu cầu vào lớp chờ duyệt. Hãy huỷ bớt hoặc chờ giảng viên duyệt");
+        }
+        classroom.getPendingIds().add(student.getId());
         return classroom;
+    }
+
+    /** Giang vien duyet yeu cau vao lop: hoc sinh thanh thanh vien. */
+    public synchronized void approveRequest(Classroom classroom, String studentId) {
+        if (!classroom.getPendingIds().remove(studentId)) {
+            throw ApiException.notFound("Không có yêu cầu vào lớp này");
+        }
+        classroom.getStudentIds().add(studentId);
+    }
+
+    /** Giang vien tu choi yeu cau, hoac hoc sinh tu huy yeu cau cua minh. Hoc sinh gui lai duoc. */
+    public synchronized void dropRequest(Classroom classroom, String studentId) {
+        if (!classroom.getPendingIds().remove(studentId)) {
+            throw ApiException.notFound("Không có yêu cầu vào lớp này");
+        }
+    }
+
+    /** Cac lop nguoi nay dang xin vao va chua duoc duyet. */
+    public List<Classroom> requestsOf(User user) {
+        List<Classroom> pending = new ArrayList<>();
+        for (Classroom c : classrooms.findAll()) {
+            if (c.getPendingIds().contains(user.getId())) pending.add(c);
+        }
+        return pending;
     }
 
     /**
@@ -169,6 +218,9 @@ public class SchoolService {
             throw ApiException.badRequest(student.getUsername() + " không phải tài khoản học sinh");
         }
         if (classroom.getStudentIds().contains(student.getId())) return false;
+        if (classroom.getPendingIds().contains(student.getId())) {
+            throw ApiException.badRequest(student.getUsername() + " đang xin vào lớp này. Hãy duyệt ở mục Yêu cầu vào lớp");
+        }
         classroom.getRemovedIds().remove(student.getId());
         return classroom.getInvitedIds().add(student.getId());
     }
@@ -206,6 +258,7 @@ public class SchoolService {
 
     public synchronized void removeStudent(Classroom classroom, String studentId) {
         classroom.getInvitedIds().remove(studentId);       // xoa nguoi chua dong y = rut loi moi
+        classroom.getPendingIds().remove(studentId);
         if (classroom.getStudentIds().remove(studentId)) classroom.getRemovedIds().add(studentId);
     }
 

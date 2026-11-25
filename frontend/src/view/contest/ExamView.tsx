@@ -175,7 +175,6 @@ export default function ExamView({ contest, user, problems, languages, onChanged
             problem={selected}
             languages={languages}
             onBack={() => undefined}
-            onOpen={() => undefined}
             onSubmitted={() => { onSubmitted(); reloadDetail(); }}
           />
         )}

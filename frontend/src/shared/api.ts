@@ -93,13 +93,20 @@ export function putJson<T>(path: string, body: unknown): Promise<T> {
 export const api = {
   // --- xac thuc ---
   /** Cau hinh cong khai cho form dang nhap / dang ky: turnstileSiteKey khac "" thi phai lam CAPTCHA truoc khi gui. */
-  config: () => request<{ turnstileSiteKey: string; allowRegister: boolean }>("/api/config"),
+  config: () => request<{ turnstileSiteKey: string; allowRegister: boolean; passwordReset: boolean }>("/api/config"),
   /** pending = true: tai khoan giang vien vua tao con phai cho quan tri vien duyet. */
   register: (body: RegisterRequest) => postJson<{ message: string; pending: boolean }>("/api/auth/register", body),
   /** captcha: token Turnstile, chi can khi may chu bat CAPTCHA (xem config()). */
   login: (username: string, password: string, captcha = "") =>
     postJson<LoginResponse>("/api/auth/login", { username, password, captcha }),
   me: () => request<AuthUser>("/api/auth/me"),
+  /** Quen mat khau: account la ten dang nhap hoac email. May chu luon tra loi nhu nhau du tai khoan co hay khong. */
+  forgotPassword: (account: string, captcha = "") =>
+    postJson<{ ok: boolean; message: string; retryAfter: number }>("/api/auth/forgot", { account, captcha }),
+  /** Ma trong link dat lai mat khau con dung duoc khong. */
+  checkResetToken: (token: string) => postJson<{ valid: boolean }>("/api/auth/reset/check", { token }),
+  resetPassword: (token: string, password: string) =>
+    postJson<{ ok: boolean; username: string }>("/api/auth/reset", { token, password }),
   logout: () => postJson<{ ok: boolean }>("/api/auth/logout", {}),
 
   // --- du lieu ---

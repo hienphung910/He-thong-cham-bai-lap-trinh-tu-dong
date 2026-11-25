@@ -22,6 +22,8 @@ export interface AuthUser {
   role: RoleCode;
   roleName: string;
   canCreateProblem: boolean;
+  /** Email khoi phuc mat khau; "" neu tai khoan chua khai. */
+  email: string;
 }
 
 export interface LoginResponse {
@@ -37,6 +39,8 @@ export interface RegisterRequest {
   username: string;
   password: string;
   fullName: string;
+  /** Email khoi phuc mat khau, bat buoc. */
+  email: string;
   studentCode: string;
   className: string;
   /** File minh chung dang base64 (PNG / JPG / WEBP / PDF, toi da 1 MB). Giang vien bat buoc co; hoc sinh de "". */

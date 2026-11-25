@@ -89,10 +89,13 @@ public class AuthService {
      * Tai khoan giang vien tra ve o trang thai cho duyet (isApproved() == false).
      */
     public synchronized User register(String role, String username, String rawPassword, String fullName,
-                                      String studentCode, String className, String department) {
+                                      String studentCode, String className, String department, String email) {
         String cleanUsername = normalizeOrFail(username);
         passwords.validate(rawPassword);
         String cleanFullName = requireText(fullName, "Họ tên", MAX_FULL_NAME);
+        // Email bat buoc khi dang ky: do la duong duy nhat de tu lay lai mat khau. Kho khong luu duoc
+        // email (CSDL cu thieu cot) thi bo qua, khong chan viec dang ky.
+        String cleanEmail = users.supportsEmail() ? normalizeEmail(email) : "";
 
         // Tao dung lop con theo vai tro duoc chon.
         User user;
@@ -117,8 +120,85 @@ public class AuthService {
         if (users.existsByUsername(cleanUsername)) {
             throw new AuthException(409, "Tên đăng nhập \"" + cleanUsername + "\" đã tồn tại");
         }
+        if (!cleanEmail.isEmpty() && users.findByEmail(cleanEmail).isPresent()) {
+            throw new AuthException(409, "Email này đã được dùng cho một tài khoản khác");
+        }
+        user.setEmail(cleanEmail);
         users.saveWithCredentials(user, passwords.hash(rawPassword));
         return user;
+    }
+
+    // ------------------------------------------------- email va dat lai mat khau
+
+    /** Do dai toi da cua email; khop voi cot users.email VARCHAR(190). */
+    private static final int MAX_EMAIL = 190;
+    /** Mot ten, mot @, mot ten mien co dau cham; khong khoang trang. Du de bat loi go nham. */
+    private static final java.util.regex.Pattern EMAIL =
+            java.util.regex.Pattern.compile("^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)+$");
+
+    /** Dua email ve dang chu thuong, nem 400 neu thieu hoac sai dang. */
+    private static String normalizeEmail(String email) {
+        String clean = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+        if (clean.isEmpty()) throw new AuthException(400, "Email không được để trống");
+        if (clean.length() > MAX_EMAIL || !EMAIL.matcher(clean).matches()) {
+            throw new AuthException(400, "Email không hợp lệ");
+        }
+        return clean;
+    }
+
+    /** Doi email khoi phuc cua chinh minh: phai nhap dung mat khau hien tai, vi ai giu email la lay duoc tai khoan. */
+    public synchronized User changeEmail(User user, String password, String email) {
+        if (!users.supportsEmail()) {
+            throw new AuthException(503, "Hệ thống chưa lưu được email (bảng users thiếu cột email)");
+        }
+        Optional<Credentials> credentials = users.findCredentials(user.getId());
+        if (password == null || !credentials.isPresent() || !passwords.matches(password, credentials.get())) {
+            throw new AuthException(400, "Mật khẩu hiện tại không đúng");
+        }
+        String cleanEmail = normalizeEmail(email);
+        Optional<User> owner = users.findByEmail(cleanEmail);
+        if (owner.isPresent() && !owner.get().getId().equals(user.getId())) {
+            throw new AuthException(409, "Email này đã được dùng cho một tài khoản khác");
+        }
+        // Doc lai tu kho: doi tuong trong bo nho dem cua phien co the da cu.
+        User fresh = users.findById(user.getId()).orElse(user);
+        fresh.setEmail(cleanEmail);
+        users.saveWithCredentials(fresh, credentials.get());
+        userCache.remove(user.getId());
+        return fresh;
+    }
+
+    /**
+     * Tai khoan se nhan thu dat lai mat khau: tim theo ten dang nhap, hoac theo email neu chuoi co "@".
+     * Rong neu khong co, chua khai email, hoac dang bi khoa / cho duyet. Nguoi goi KHONG duoc de lo
+     * ket qua nay ra ngoai (luon tra loi nhu nhau).
+     */
+    public Optional<User> findForReset(String account) {
+        String key = account == null ? "" : account.trim();
+        if (key.isEmpty() || key.length() > MAX_EMAIL) return Optional.empty();
+        Optional<User> found = key.indexOf('@') >= 0 ? users.findByEmail(key) : users.findByUsername(key);
+        if (!found.isPresent() || found.get().getEmail().isEmpty() || !found.get().isApproved()) return Optional.empty();
+        return found;
+    }
+
+    /** Kiem tra mat khau moi co dat yeu cau khong (nem IllegalArgumentException neu khong) ma chua doi gi. */
+    public void checkPassword(String rawPassword) {
+        passwords.validate(rawPassword);
+    }
+
+    /**
+     * Dat mat khau moi sau khi nguoi dung chung minh minh giu email (xem PasswordResetService).
+     * Moi phien dang nhap cu bi huy: ai dang giu token cu khong dung tiep duoc.
+     */
+    public synchronized User resetPassword(String userId, String newPassword) {
+        passwords.validate(newPassword);
+        Optional<User> found = findById(userId);
+        if (!found.isPresent() || !found.get().isApproved()) {
+            throw new AuthException(400, "Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn");
+        }
+        users.saveWithCredentials(found.get(), passwords.hash(newPassword));
+        dropSessions(userId);
+        return found.get();
     }
 
     /** Tao tai khoan cho vai tro bat ky - chi dung tu phia may chu (seed, bootstrap). */
@@ -219,6 +299,7 @@ public class AuthService {
         Optional<Credentials> credentials = users.findCredentials(userId);
         if (!credentials.isPresent()) throw new AuthException(409, "Tài khoản này chưa có mật khẩu, không đổi vai trò được");
         changed.setApproved(target.isApproved());
+        changed.setEmail(target.getEmail());
         users.saveWithCredentials(changed, credentials.get());
         // Phien cu con giu vai tro cu trong bo nho dem: buoc dang nhap lai de nhan vai tro moi.
         dropSessions(userId);

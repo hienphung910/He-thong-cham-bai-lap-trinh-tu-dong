@@ -35,7 +35,8 @@ function JoinCode({ code }: { code: string }) {
 
 /**
  * Module 3 (lop hoc): danh sach lop cua toi. Giang vien tao lop - moi lop
- * co mot ma tham gia de dua cho hoc sinh; hoc sinh nhap ma do de vao lop. Trong lop co bai
+ * co mot ma tham gia de dua cho hoc sinh; hoc sinh nhap ma do de GUI YEU CAU vao lop, giang vien
+ * duyet thi moi thanh thanh vien. Trong lop co bai
  * luyen tap giang vien chon rieng cho lop, danh sach thanh vien va chat rieng cua lop.
  */
 export default function Classrooms() {
@@ -45,6 +46,8 @@ export default function Classrooms() {
   const orgs = useLoad(() => papi.organizations());
   // Loi moi vao lop dang cho minh dong y (giang vien moi bang ten dang nhap).
   const invites = useLoad(() => papi.classroomInvites());
+  // Yeu cau vao lop minh da gui (nhap ma tham gia) va giang vien chua duyet.
+  const requests = useLoad(() => papi.classroomRequests());
   // Lop dang mo nam trong lich su trinh duyet: nut Back quay ve danh sach lop.
   const [openId, setOpenId] = useBackState<string | null>("classroom", null);
   const [error, setError] = useState("");
@@ -56,7 +59,7 @@ export default function Classrooms() {
   /** Chay mot thao tac ghi, bao loi neu co, xong thi tai lai danh sach. */
   async function act(work: () => Promise<unknown>) {
     setError("");
-    try { await work(); list.reload(); invites.reload(); } catch (e) { setError(errorText(e)); }
+    try { await work(); list.reload(); invites.reload(); requests.reload(); } catch (e) { setError(errorText(e)); }
   }
 
   if (openId) return <ClassroomDetail id={openId} onBack={() => { setOpenId(null); list.reload(); }} />;
@@ -105,15 +108,31 @@ export default function Classrooms() {
               <input style={{ ...INPUT, fontFamily: "var(--font-mono)", letterSpacing: "0.1em", textTransform: "uppercase" }}
                 value={joinCode} maxLength={8} onChange={(e) => setJoinCode(e.target.value)} placeholder="VD: 7W4DCU9G" />
             </Field>
-            <Btn disabled={!joinCode.trim()} onClick={() => void act(async () => { await papi.joinClassroom(joinCode.trim()); setJoinCode(""); })}>Tham gia</Btn>
+            <Btn disabled={!joinCode.trim()} onClick={() => void act(async () => { await papi.joinClassroom(joinCode.trim()); setJoinCode(""); })}>Gửi yêu cầu</Btn>
           </Row>
+        </Card>
+      )}
+      {(requests.data ?? []).length > 0 && (
+        <Card title="Yêu cầu vào lớp đang chờ duyệt">
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {(requests.data ?? []).map((r) => (
+              <div key={r.id} style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", fontSize: 13.5 }}>
+                <span style={{ flex: 1, minWidth: 220 }}><b>{r.name}</b> · giảng viên {r.teacherName}</span>
+                <Tag color="orange">Chờ duyệt</Tag>
+                <Btn small kind="ghost" onClick={() => void act(() => papi.cancelJoinRequest(r.id))}>Huỷ yêu cầu</Btn>
+              </div>
+            ))}
+          </div>
         </Card>
       )}
 
       {list.data?.length === 0 && <Muted>Bạn chưa thuộc lớp nào.</Muted>}
       <Grid min={280}>
         {(list.data ?? []).map((c) => (
-          <Card key={c.id} title={c.name} right={<Tag color="gray">{c.id}</Tag>}>
+          <Card key={c.id} title={c.name} right={<span style={{ display: "inline-flex", gap: 6 }}>
+            {c.requestCount > 0 && <Tag color="orange">{c.requestCount} yêu cầu chờ duyệt</Tag>}
+            <Tag color="gray">{c.id}</Tag>
+          </span>}>
             <div style={{ fontSize: 13, color: "#616161", lineHeight: 1.7 }}>
               <div>Giảng viên: <b>{c.teacherName}</b></div>
               <div>Tổ chức: {c.organizationName || "—"}</div>
@@ -169,6 +188,19 @@ function ClassroomDetail({ id, onBack }: { id: string; onBack: () => void }) {
               <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", fontSize: 13.5 }}>
                 <JoinCode code={c.joinCode} />
               </div>
+            </Card>
+          )}
+
+          {c.canManage && (c.requests ?? []).length > 0 && (
+            <Card title={`Yêu cầu vào lớp (${(c.requests ?? []).length})`}>
+              <Table head={["Tên đăng nhập", "Họ tên", "Lớp", ""]}
+                rows={(c.requests ?? []).map((u) => [
+                  <b>{u.username}</b>, u.fullName, u.detail || "—",
+                  <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                    <Btn small onClick={() => void act(() => papi.approveJoinRequest(id, u.id))}>Duyệt</Btn>
+                    <Btn small kind="danger" onClick={() => void act(() => papi.rejectJoinRequest(id, u.id))}>Từ chối</Btn>
+                  </div>,
+                ])} />
             </Card>
           )}
 

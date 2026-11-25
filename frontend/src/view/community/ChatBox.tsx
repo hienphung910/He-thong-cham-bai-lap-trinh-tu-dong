@@ -11,6 +11,9 @@ export default function ChatBox({ channel, height = 300 }: { channel: string; he
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState("");
   const [error, setError] = useState("");
+  // Loi cua lan GUI gan nhat (bi bo loc chan, gui qua nhanh...). Tach khoi `error` vi lan hoi tin moi
+  // 2 giay mot lan se xoa `error`, nguoi dung chua kip doc vi sao tin khong gui duoc.
+  const [sendError, setSendError] = useState("");
   const countRef = useRef(0);        // so thu tu (seq) cua tin cuoi cung da nhan
   const busyRef = useRef(false);     // dang co mot lan hoi chua xong -> bo qua lan nay
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -50,12 +53,13 @@ export default function ChatBox({ channel, height = 300 }: { channel: string; he
 
   async function send() {
     if (!text.trim()) return;
+    setSendError("");
     try {
       await papi.sendChat(channel, text);
       setText("");
       await fetchNew();
     } catch (e) {
-      setError(errorText(e));
+      setSendError(errorText(e));
     }
   }
 
@@ -72,9 +76,9 @@ export default function ChatBox({ channel, height = 300 }: { channel: string; he
         ))}
         <div ref={bottomRef} />
       </div>
-      <ErrorBox text={error} />
+      <ErrorBox text={sendError || error} />
       <div style={{ display: "flex", gap: 8 }}>
-        <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Nhập tin nhắn rồi nhấn Enter..."
+        <input value={text} onChange={(e) => { setText(e.target.value); setSendError(""); }} placeholder="Nhập tin nhắn rồi nhấn Enter..."
           onKeyDown={(e) => { if (e.key === "Enter") void send(); }} style={INPUT} />
         <Btn onClick={() => void send()}>Gửi</Btn>
       </div>

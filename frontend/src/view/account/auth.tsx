@@ -10,6 +10,8 @@ interface AuthCtx {
   /** Tra ve true neu tai khoan vua tao con phai cho quan tri vien duyet (giang vien). */
   register: (body: RegisterRequest) => Promise<boolean>;
   logout: () => void;
+  /** Hoi lai may chu thong tin tai khoan dang dang nhap (sau khi doi email...). */
+  refresh: () => Promise<void>;
 }
 
 const Ctx = createContext<AuthCtx>({
@@ -18,6 +20,7 @@ const Ctx = createContext<AuthCtx>({
   login: async () => {},
   register: async () => false,
   logout: () => {},
+  refresh: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -58,7 +61,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
-  return <Ctx.Provider value={{ user, checking, login, register, logout }}>{children}</Ctx.Provider>;
+  const refresh = useCallback(async () => {
+    setUser(await api.me());
+  }, []);
+
+  return <Ctx.Provider value={{ user, checking, login, register, logout, refresh }}>{children}</Ctx.Provider>;
 }
 
 export function useAuth() {

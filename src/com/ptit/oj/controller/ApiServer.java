@@ -108,6 +108,31 @@ public class ApiServer {
     /** CAPTCHA cho form dang ky; tat neu chua dat khoa (xem TurnstileVerifier). */
     private final TurnstileVerifier turnstile = new TurnstileVerifier();
 
+    /** Gui email qua Resend; tat neu chua cau hinh (xem ResendMailer). Chi dung cho "Quen mat khau". */
+    private final ResendMailer mailer = new ResendMailer();
+    private final PasswordResetService resets = new PasswordResetService();
+    private static final long RESET_WINDOW_MS = 60 * 60_000L;
+    /** Yeu cau "quen mat khau" moi gio tu mot dia chi (moi yeu cau co the lam may chu gui mot thu). */
+    private static final int FORGOT_IP_LIMIT = 10;
+    /** So thu dat lai mat khau gui cho MOT tai khoan moi gio: khong ai dung form nay de doi bom hop thu nguoi khac. */
+    private static final int FORGOT_USER_LIMIT = 3;
+    /** ... va moi ngay. */
+    private static final long FORGOT_DAY_MS = 24 * 60 * 60_000L;
+    private static final int FORGOT_USER_DAY_LIMIT = 6;
+    /**
+     * Khoang cho giua hai lan "gui lai lien ket" (nhu nut "Gui lai sau 60s" o cac nen tang khac).
+     * Ap cho cap (dia chi, chuoi da nhap) - bao 429 de giao dien dem nguoc - va cho tung tai khoan
+     * (lang le bo qua, de nguoi goi tu dia chi khac khong biet tai khoan co that hay khong).
+     */
+    private static final long FORGOT_COOLDOWN_MS = 60_000L;
+    /** So lan gui ma dat lai SAI moi gio tu mot dia chi (chong do ma). */
+    private static final int RESET_IP_LIMIT = 30;
+
+    /** Mot dong ve trang thai gui email, de Main in luc khoi dong. */
+    public String describeMail() {
+        return mailer.describe();
+    }
+
     private static String textSetting(String key) {
         String value = com.ptit.oj.dao.DatabaseConfig.setting(key);
         return value == null ? "" : value.trim();
@@ -352,6 +377,8 @@ public class ApiServer {
         // Cau hinh cong khai ma form dang nhap / dang ky can biet truoc khi co phien dang nhap.
         if ("GET".equals(method) && path.equals("/api/config")) {
             sendJson(ex, 200, Json.obj().put("turnstileSiteKey", turnstile.getSiteKey())
+                    // Co gui duoc email khong: co thi form dang nhap moi hien "Quen mat khau?".
+                    .put("passwordReset", mailer.isEnabled())
                     // De form dang ky bao ngay "dang tam khoa" thay vi de nguoi dung dien het roi moi bi tu choi.
                     .put("allowRegister", platform.getSystem().isRegisterAllowed()).build());
             return;
@@ -366,6 +393,18 @@ public class ApiServer {
         }
         if ("POST".equals(method) && path.equals("/api/auth/logout")) {
             handleLogout(ex);
+            return;
+        }
+        if ("POST".equals(method) && path.equals("/api/auth/forgot")) {
+            handleForgotPassword(ex);
+            return;
+        }
+        if ("POST".equals(method) && path.equals("/api/auth/reset/check")) {
+            handleResetPassword(ex, true);
+            return;
+        }
+        if ("POST".equals(method) && path.equals("/api/auth/reset")) {
+            handleResetPassword(ex, false);
             return;
         }
 
@@ -495,7 +534,8 @@ public class ApiServer {
                 body.getString("fullName"),
                 body.getString("studentCode", ""),
                 body.getString("className", ""),
-                body.getString("department", ""));
+                body.getString("department", ""),
+                body.getString("email", ""));
         if (evidence != null) {
             try {
                 platform.getEvidence().save(created.getId(), evidence);
@@ -598,6 +638,132 @@ public class ApiServer {
                 .build());
     }
 
+    /**
+     * "Quen mat khau": nhan ten dang nhap hoac email, gui link dat lai mat khau vao email cua tai khoan.
+     *
+     * LUON tra loi cung mot cau du tai khoan co ton tai hay khong, co email hay khong, de form nay
+     * khong bi dung de do ten dang nhap / email nao co that. Thu duoc gui o luong nen nen thoi gian
+     * tra loi cung khong tiet lo gi.
+     */
+    private void handleForgotPassword(HttpExchange ex) throws IOException {
+        if (!mailer.isEnabled()) {
+            throw new ApiException(503, "Hệ thống chưa bật gửi email nên chưa đặt lại mật khẩu qua email được");
+        }
+        RateLimiter limiter = platform.getLimiter();
+        String ip = clientIp(ex);
+        long wait = limiter.retryAfterSeconds("forgot-ip:" + ip, RESET_WINDOW_MS, FORGOT_IP_LIMIT);
+        if (wait > 0) {
+            ex.getResponseHeaders().set("Retry-After", String.valueOf(wait));
+            throw new ApiException(429, "Bạn đã yêu cầu đặt lại mật khẩu quá nhiều lần. Hãy thử lại sau " + (wait + 59) / 60 + " phút");
+        }
+        Json.Value body = Json.parseObject(readBody(ex, MAX_BODY_BYTES));
+        String account = body.getString("account", "").trim().toLowerCase(java.util.Locale.ROOT);
+        if (account.length() > 190) account = account.substring(0, 190);
+        // Bam "gui lai" lien tuc: phai doi het khoang cho. Tinh theo CHUOI DA NHAP (khong theo tai khoan
+        // tim duoc) nen cau tra loi nay khong tiet lo tai khoan co ton tai hay khong.
+        String pairKey = "forgot-pair:" + ip + "|" + account;
+        long cooldown = limiter.retryAfterSeconds(pairKey, FORGOT_COOLDOWN_MS, 1);
+        if (cooldown > 0) {
+            ex.getResponseHeaders().set("Retry-After", String.valueOf(cooldown));
+            throw new ApiException(429, "Bạn vừa yêu cầu gửi liên kết. Hãy đợi " + cooldown + " giây rồi gửi lại");
+        }
+        requireCaptcha(body, ip);
+        limiter.hit("forgot-ip:" + ip, RESET_WINDOW_MS);
+        limiter.hit(pairKey, FORGOT_COOLDOWN_MS);
+
+        Optional<User> target = service.getAuth().findForReset(account);
+        if (target.isPresent()) {
+            User user = target.get();
+            String userKey = "forgot-user:" + user.getId();
+            String userDayKey = "forgot-user-day:" + user.getId();
+            String userCoolKey = "forgot-user-cool:" + user.getId();
+            // Qua gioi han cho tai khoan nay (vua gui xong / 3 thu mot gio / 6 thu mot ngay) thi lang le
+            // khong gui nua, van tra loi nhu binh thuong.
+            if (limiter.retryAfterSeconds(userCoolKey, FORGOT_COOLDOWN_MS, 1) == 0
+                    && limiter.retryAfterSeconds(userKey, RESET_WINDOW_MS, FORGOT_USER_LIMIT) == 0
+                    && limiter.retryAfterSeconds(userDayKey, FORGOT_DAY_MS, FORGOT_USER_DAY_LIMIT) == 0) {
+                limiter.hit(userCoolKey, FORGOT_COOLDOWN_MS);
+                limiter.hit(userKey, RESET_WINDOW_MS);
+                limiter.hit(userDayKey, FORGOT_DAY_MS);
+                String token = resets.issue(user.getId());
+                boolean queued = mailer.queue(user.getEmail(), "Đặt lại mật khẩu CodeHub",
+                        resetMailHtml(user, token), resetMailText(user, token),
+                        // Moi ma mot khoa: goi lai Resend cho CUNG ma nay (mang chap chon) khong sinh thu thu hai.
+                        "password-reset/" + PasswordResetService.hash(token));
+                platform.getSystem().log(user.getUsername(), "Yêu cầu đặt lại mật khẩu",
+                        queued ? "Đã xếp thư vào hàng gửi" : "Hàng chờ gửi thư đã đầy", queued);
+            }
+        }
+        sendJson(ex, 200, Json.obj().put("ok", true)
+                // So giay phai doi truoc khi bam "gui lai": giao dien dem nguoc tren nut.
+                .put("retryAfter", FORGOT_COOLDOWN_MS / 1000)
+                .put("message", "Nếu tài khoản tồn tại và đã khai email, thư hướng dẫn đặt lại mật khẩu vừa được gửi tới email đó. "
+                        + "Liên kết trong thư có hiệu lực 30 phút.")
+                .build());
+    }
+
+    private String resetLink(String token) {
+        return mailer.getPublicUrl() + "/reset-password?token=" + token;
+    }
+
+    private String resetMailText(User user, String token) {
+        return "Xin chào " + user.getFullName() + ",\n\n"
+                + "Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản @" + user.getUsername() + " trên CodeHub.\n"
+                + "Mở liên kết sau để đặt mật khẩu mới (có hiệu lực 30 phút, dùng được một lần):\n\n"
+                + resetLink(token) + "\n\n"
+                + "Nếu bạn không yêu cầu, hãy bỏ qua thư này: mật khẩu của bạn không thay đổi.\n";
+    }
+
+    private String resetMailHtml(User user, String token) {
+        String link = ResendMailer.escapeHtml(resetLink(token));
+        return "<div style=\"font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#212121;max-width:520px;margin:0 auto;padding:24px\">"
+                + "<h2 style=\"font-size:20px;margin:0 0 16px\">Đặt lại mật khẩu CodeHub</h2>"
+                + "<p>Xin chào " + ResendMailer.escapeHtml(user.getFullName()) + ",</p>"
+                + "<p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản <b>@" + ResendMailer.escapeHtml(user.getUsername()) + "</b>.</p>"
+                + "<p style=\"margin:24px 0\"><a href=\"" + link + "\" style=\"display:inline-block;padding:12px 22px;background:#F7931E;color:#111111;"
+                + "text-decoration:none;border-radius:8px;font-weight:bold\">Đặt mật khẩu mới</a></p>"
+                + "<p>Liên kết có hiệu lực 30 phút và chỉ dùng được một lần. Nếu nút không bấm được, hãy dán địa chỉ sau vào trình duyệt:</p>"
+                + "<p style=\"word-break:break-all;font-size:13px;color:#616161\">" + link + "</p>"
+                + "<p style=\"font-size:13px;color:#757575\">Nếu bạn không yêu cầu, hãy bỏ qua thư này: mật khẩu của bạn không thay đổi.</p>"
+                + "</div>";
+    }
+
+    /**
+     * Dat mat khau moi bang ma trong link cua thu. checkOnly = true: chi hoi ma con dung duoc khong
+     * (trang dat lai mat khau hoi truoc de bao "link het han" ngay, khong bat nguoi dung go xong moi biet).
+     */
+    private void handleResetPassword(HttpExchange ex, boolean checkOnly) throws IOException {
+        RateLimiter limiter = platform.getLimiter();
+        String ip = clientIp(ex);
+        String ipKey = "reset-ip:" + ip;
+        long wait = limiter.retryAfterSeconds(ipKey, RESET_WINDOW_MS, RESET_IP_LIMIT);
+        if (wait > 0) {
+            ex.getResponseHeaders().set("Retry-After", String.valueOf(wait));
+            throw new ApiException(429, "Bạn đã thử quá nhiều lần. Hãy thử lại sau " + (wait + 59) / 60 + " phút");
+        }
+        Json.Value body = Json.parseObject(readBody(ex, MAX_BODY_BYTES));
+        String token = body.getString("token", "").trim();
+        if (checkOnly) {
+            boolean valid = resets.isValid(token);
+            if (!valid) limiter.hit(ipKey, RESET_WINDOW_MS);
+            sendJson(ex, 200, Json.obj().put("valid", valid).build());
+            return;
+        }
+        String password = body.getString("password", "");
+        // Kiem tra mat khau TRUOC khi dung ma: mat khau qua yeu thi ma van con, nguoi dung sua roi gui lai.
+        service.getAuth().checkPassword(password);
+        Optional<String> userId = resets.consume(token);
+        if (!userId.isPresent()) {
+            limiter.hit(ipKey, RESET_WINDOW_MS);
+            throw ApiException.badRequest("Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn. Hãy yêu cầu liên kết mới");
+        }
+        User user = service.getAuth().resetPassword(userId.get(), password);
+        // Nguoi nay vua chung minh la chu tai khoan: bo dem "dang nhap sai" de dang nhap lai duoc ngay.
+        limiter.reset("login:" + user.getUsername().toLowerCase(java.util.Locale.ROOT) + "|" + ip);
+        platform.getSystem().log(user.getUsername(), "Đặt lại mật khẩu", "Qua email", true);
+        sendJson(ex, 200, Json.obj().put("ok", true).put("username", user.getUsername()).build());
+    }
+
     private void handleLogout(HttpExchange ex) throws IOException {
         String token = SessionService.extractBearerToken(ex.getRequestHeaders().getFirst("Authorization"));
         service.getAuth().logout(token);
@@ -614,6 +780,8 @@ public class ApiServer {
                 .put("role", user.getRoleCode())
                 .put("roleName", user.getRole())
                 .put("canCreateProblem", user.canCreateProblem())
+                // Ham nay chi dung cho CHINH tai khoan dang dang nhap (dang nhap, /api/auth/me, dang ky).
+                .put("email", user.getEmail())
                 .build();
     }
 

@@ -149,6 +149,7 @@ public class Main {
         }
 
         ApiServer server = new ApiServer(platform, port, webRoot);
+        System.out.println("Gửi email (Resend): " + server.describeMail());
         try {
             server.start();
         } catch (IOException e) {

@@ -22,6 +22,8 @@ export const papi = {
   userEvidence: (id: string) => request<{ contentType: string; data: string }>(`/api/admin/users/${enc(id)}/evidence`),
   changePassword: (oldPassword: string, newPassword: string) =>
     postJson<Ok>("/api/auth/password", { oldPassword, newPassword }),
+  /** Doi email khoi phuc cua chinh minh; phai nhap mat khau hien tai. */
+  changeEmail: (password: string, email: string) => putJson<{ email: string }>("/api/auth/email", { password, email }),
 
   // --- to chuc, lop hoc, phu huynh (Module 2, 3, 32) ---
   organizations: () => request<Organization[]>("/api/organizations"),
@@ -38,7 +40,13 @@ export const papi = {
   classroomInvites: () => request<{ id: string; name: string; teacherName: string }[]>("/api/classroom-invites"),
   acceptInvite: (id: string) => postJson<Ok>(`/api/classrooms/${enc(id)}/accept`, {}),
   declineInvite: (id: string) => postJson<Ok>(`/api/classrooms/${enc(id)}/decline`, {}),
-  joinClassroom: (id: string) => postJson<Classroom>(`/api/classrooms/${enc(id)}/join`, {}),
+  /** Xin vao lop bang MA THAM GIA. pending = true: da gui yeu cau, cho giang vien duyet; false: da vao lop (duoc moi san). */
+  joinClassroom: (code: string) => postJson<{ id: string; name: string; pending: boolean }>(`/api/classrooms/${enc(code)}/join`, {}),
+  /** Cac yeu cau vao lop cua minh dang cho duyet. */
+  classroomRequests: () => request<{ id: string; name: string; teacherName: string }[]>("/api/classroom-requests"),
+  cancelJoinRequest: (id: string) => del(`/api/classrooms/${enc(id)}/request`),
+  approveJoinRequest: (id: string, userId: string) => postJson<Ok>(`/api/classrooms/${enc(id)}/requests/${enc(userId)}/approve`, {}),
+  rejectJoinRequest: (id: string, userId: string) => postJson<Ok>(`/api/classrooms/${enc(id)}/requests/${enc(userId)}/reject`, {}),
   addStudent: (id: string, username: string) => postJson<Ok>(`/api/classrooms/${enc(id)}/students`, { username }),
   removeStudent: (id: string, userId: string) => del(`/api/classrooms/${enc(id)}/students/${enc(userId)}`),
   addPracticeProblems: (id: string, problemIds: string[]) =>

@@ -6,6 +6,7 @@ import type { LanguageInfo, Problem, Topic } from "./shared/types";
 import Logo from "./shared/Logo";
 import { AuthProvider, useAuth } from "./view/account/auth";
 import LoginModal from "./view/account/LoginModal";
+import ResetPassword from "./view/account/ResetPassword";
 import MyAccount from "./view/account/MyAccount";
 import StreakBadge, { StreakToast } from "./view/account/StreakBadge";
 import { useStreak } from "./view/account/streak";
@@ -542,10 +543,16 @@ const MENU_ITEM: React.CSSProperties = {
   color: "#424242", fontSize: 13, cursor: "pointer", borderRadius: 6, textAlign: "left",
 };
 
+/**
+ * Tab nay mo tu link "dat lai mat khau" trong thu (/reset-password?token=...): hien rieng trang do,
+ * du dang dang nhap hay chua. Xong thi trang tu tai lai ve "/", nen chi can doc mot lan luc mo tab.
+ */
+const RESETTING_PASSWORD = window.location.pathname === "/reset-password";
+
 export default function App() {
   return (
     <AuthProvider>
-      <AppShell />
+      {RESETTING_PASSWORD ? <ResetPassword /> : <AppShell />}
     </AuthProvider>
   );
 }

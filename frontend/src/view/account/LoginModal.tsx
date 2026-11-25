@@ -5,7 +5,7 @@ import { useAuth } from "./auth";
 import { EVIDENCE_ACCEPT, readEvidence } from "./evidence";
 import Turnstile from "./Turnstile";
 
-type Mode = "login" | "register";
+type Mode = "login" | "register" | "forgot";
 
 /** Dung luong file de doc: "182 KB", "1,0 MB". */
 function formatSize(bytes: number): string {
@@ -27,6 +27,24 @@ export default function LoginModal() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  /** May chu co gui duoc email khong: co thi moi hien "Quen mat khau?". */
+  const [canReset, setCanReset] = useState(false);
+  // Sau moi lan gui lien ket dat lai mat khau phai doi mot luc moi gui lai duoc (may chu cung chan):
+  // resendAt la thoi diem duoc gui lai, resendIn la so giay con lai de hien tren nut.
+  const [resendAt, setResendAt] = useState(0);
+  const [resendIn, setResendIn] = useState(0);
+  useEffect(() => {
+    if (!resendAt) return;
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((resendAt - Date.now()) / 1000));
+      setResendIn(left);
+      if (left === 0) setResendAt(0);
+    };
+    tick();
+    const timer = setInterval(tick, 500);
+    return () => clearInterval(timer);
+  }, [resendAt]);
   const [studentCode, setStudentCode] = useState("");
   const [className, setClassName] = useState("");
   // Vai tro chon khi dang ky: hoc sinh hoac giang vien (quan tri vien khong tu dang ky duoc).
@@ -47,6 +65,7 @@ export default function LoginModal() {
     api.config().then((c) => {
       setSiteKey(c.turnstileSiteKey);
       setAllowRegister(c.allowRegister !== false);
+      setCanReset(c.passwordReset === true);
     }).catch(() => undefined);
   }, []);
   const registerClosed = mode === "register" && !allowRegister;
@@ -87,6 +106,30 @@ export default function LoginModal() {
       finally { setBusy(false); }
       return;
     }
+    if (mode === "forgot") {
+      if (!username.trim()) { setError("Hãy nhập tên đăng nhập hoặc email."); return; }
+      if (siteKey && !captcha) { setError("Hãy hoàn thành bước xác minh CAPTCHA."); return; }
+      setBusy(true);
+      try {
+        const res = await api.forgotPassword(username.trim(), captcha);
+        // O lai form nay: nguoi dung chua nhan duoc thu thi doi het dem nguoc roi bam gui lai.
+        setNotice(res.message);
+        setResendAt(Date.now() + (res.retryAfter || 60) * 1000);
+      } catch (e2) {
+        const message = e2 instanceof Error ? e2.message : String(e2);
+        setError(message);
+        // May chu bao "doi N giay": dem nguoc dung so giay do.
+        const wait = /đợi (\d+) giây/.exec(message);
+        if (wait) setResendAt(Date.now() + Number(wait[1]) * 1000);
+      }
+      finally {
+        setBusy(false);
+        setCaptcha("");
+        setCaptchaReset((n) => n + 1);
+      }
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError("Hãy nhập một địa chỉ email hợp lệ."); return; }
     if (password.length < 8) { setError("Mật khẩu phải có ít nhất 8 ký tự."); return; }
     if (password !== confirm) { setError("Hai lần nhập mật khẩu không khớp."); return; }
     if (role === "TEACHER" && !evidence) { setError("Hãy tải minh chứng lên trước khi đăng ký giảng viên."); return; }
@@ -94,7 +137,7 @@ export default function LoginModal() {
     setBusy(true);
     try {
       const pending = await register({
-        role, username: username.trim(), password, fullName: fullName.trim(),
+        role, username: username.trim(), password, fullName: fullName.trim(), email: email.trim(),
         studentCode: studentCode.trim(), className: className.trim(), department: department.trim(),
         evidence: role === "TEACHER" && evidence ? evidence.data : "",
         captcha,
@@ -113,6 +156,9 @@ export default function LoginModal() {
     }
   }
 
+  /** Dang trong khoang cho giua hai lan gui lien ket dat lai mat khau. */
+  const waiting = mode === "forgot" && resendIn > 0;
+
   const inputBox: React.CSSProperties = {
     width: "100%", height: 44, padding: "0 14px", background: "#fff",
     border: "1px solid #E0E0E0", borderRadius: 8, color: "#212121",
@@ -128,9 +174,10 @@ export default function LoginModal() {
       </div>
       {/* Right panel - inline form */}
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 40 }}>
-        <form onSubmit={handleSubmit} style={{ width: 400, display: "flex", flexDirection: "column", gap: 16 }}>
+        {/* noValidate: loi nhap sai do handleSubmit bao bang tieng Viet, khong dung bong bao cua trinh duyet. */}
+        <form onSubmit={handleSubmit} noValidate style={{ width: 400, display: "flex", flexDirection: "column", gap: 16 }}>
           <h2 style={{ fontSize: 24, fontWeight: 700, color: "#212121", margin: 0 }}>
-            {mode === "login" ? "Đăng nhập" : "Đăng ký tài khoản"}
+            {mode === "login" ? "Đăng nhập" : mode === "register" ? "Đăng ký tài khoản" : "Quên mật khẩu"}
           </h2>
 
           {notice && (
@@ -145,7 +192,7 @@ export default function LoginModal() {
           {/* Username */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, ...inputBox, padding: 0, paddingLeft: 12 }}>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#BDBDBD" strokeWidth="1.4"><circle cx="8" cy="5" r="3" /><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6" /></svg>
-            <input type="text" placeholder="Tên đăng nhập" value={username} onChange={(e) => setUsername(e.target.value)} autoFocus
+            <input type="text" placeholder={mode === "forgot" ? "Tên đăng nhập hoặc email" : "Tên đăng nhập"} value={username} onChange={(e) => setUsername(e.target.value)} autoFocus
               style={{ flex: 1, border: "none", outline: "none", fontSize: 14, height: "100%", background: "transparent" }} />
           </div>
 
@@ -163,6 +210,7 @@ export default function LoginModal() {
                 ))}
               </div>
               <input type="text" placeholder="Họ và tên" value={fullName} onChange={(e) => setFullName(e.target.value)} style={inputBox} />
+              <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" style={inputBox} />
               {role === "STUDENT" ? (
                 <>
                   <input type="text" placeholder="Mã sinh viên" value={studentCode} onChange={(e) => setStudentCode(e.target.value)} style={inputBox} />
@@ -216,7 +264,7 @@ export default function LoginModal() {
           )}
 
           {/* Password */}
-          <div>
+          {mode !== "forgot" && <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, ...inputBox, padding: 0, paddingLeft: 12, paddingRight: 8 }}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#BDBDBD" strokeWidth="1.4"><rect x="3" y="7" width="10" height="7" rx="1.5" /><path d="M5 7V5a3 3 0 0 1 6 0v2" /></svg>
               <input type={showPass ? "text" : "password"} placeholder="Mật khẩu" value={password} onChange={(e) => setPassword(e.target.value)}
@@ -225,8 +273,12 @@ export default function LoginModal() {
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M1 8s3-5 7-5 7 5 7 5-3 5-7 5-7-5-7-5z" /><circle cx="8" cy="8" r="2" />{showPass && <line x1="2" y1="2" x2="14" y2="14" />}</svg>
               </button>
             </div>
-            {mode === "login" && <div style={{ textAlign: "right", marginTop: 6 }}><span style={{ fontSize: 12, color: "var(--color-red)", cursor: "pointer" }}>Quên mật khẩu?</span></div>}
-          </div>
+            {mode === "login" && canReset && (
+              <div style={{ textAlign: "right", marginTop: 6 }}>
+                <button type="button" onClick={() => switchMode("forgot")} style={{ background: "none", border: "none", padding: 0, fontSize: 12, color: "var(--color-red)", cursor: "pointer" }}>Quên mật khẩu?</button>
+              </div>
+            )}
+          </div>}
 
           {mode === "register" && (
             <input type="password" placeholder="Nhập lại mật khẩu" value={confirm} onChange={(e) => setConfirm(e.target.value)} style={inputBox} />
@@ -240,18 +292,19 @@ export default function LoginModal() {
             <div style={{ padding: "10px 14px", background: "#FFEBEE", border: "1px solid #FFCDD2", borderRadius: 6, fontSize: 12.5, color: "#C62828" }}>{error}</div>
           )}
 
-          <button type="submit" disabled={busy || registerClosed} style={{
+          <button type="submit" disabled={busy || registerClosed || waiting} style={{
             height: 44, background: "var(--color-accent)", border: "none", borderRadius: 8,
-            color: "var(--color-on-accent)", fontSize: 15, fontWeight: 700, cursor: busy || registerClosed ? "not-allowed" : "pointer",
-            opacity: busy || registerClosed ? 0.6 : 1,
+            color: "var(--color-on-accent)", fontSize: 15, fontWeight: 700, cursor: busy || registerClosed || waiting ? "not-allowed" : "pointer",
+            opacity: busy || registerClosed || waiting ? 0.6 : 1,
           }}>
-            {busy ? "Đang xử lý..." : mode === "login" ? "Đăng nhập" : "Tạo tài khoản"}
+            {busy ? "Đang xử lý..." : mode === "login" ? "Đăng nhập" : mode === "register" ? "Tạo tài khoản"
+              : waiting ? `Gửi lại sau ${resendIn}s` : notice ? "Gửi lại liên kết" : "Gửi liên kết đặt lại"}
           </button>
 
           <button type="button" onClick={() => switchMode(mode === "login" ? "register" : "login")} style={{
             background: "none", border: "none", color: "#9E9E9E", fontSize: 13, cursor: "pointer", textAlign: "center",
           }}>
-            {mode === "login" ? "Chưa có tài khoản? Đăng ký" : "Đã có tài khoản? Đăng nhập"}
+            {mode === "login" ? "Chưa có tài khoản? Đăng ký" : mode === "register" ? "Đã có tài khoản? Đăng nhập" : "Quay lại đăng nhập"}
           </button>
         </form>
       </div>

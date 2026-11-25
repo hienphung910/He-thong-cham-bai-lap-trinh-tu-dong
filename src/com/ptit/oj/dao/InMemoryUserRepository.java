@@ -35,6 +35,16 @@ public class InMemoryUserRepository extends InMemoryRepository<User> implements 
     }
 
     @Override
+    public synchronized Optional<User> findByEmail(String email) {
+        if (email == null || email.trim().isEmpty()) return Optional.empty();
+        String needle = email.trim();
+        for (User u : findAll()) {
+            if (u.getEmail().equalsIgnoreCase(needle)) return Optional.of(u);
+        }
+        return Optional.empty();
+    }
+
+    @Override
     public synchronized boolean existsByUsername(String username) {
         return findByUsername(username).isPresent();
     }

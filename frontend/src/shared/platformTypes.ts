@@ -36,6 +36,10 @@ export interface Classroom {
   isOwner: boolean;
   /** Hoc sinh da duoc moi nhung chua dong y - chi nguoi quan ly lop nhan duoc, khi lay chi tiet mot lop. */
   invited?: BasicUser[];
+  /** So yeu cau vao lop dang cho duyet; 0 voi nguoi khong quan ly lop. */
+  requestCount: number;
+  /** Hoc sinh da nhap ma tham gia, dang cho duyet - chi nguoi quan ly lop nhan duoc, khi lay chi tiet mot lop. */
+  requests?: BasicUser[];
   /** Ma de hoc sinh tu tham gia lop; "" voi nguoi khong quan ly lop. */
   joinCode: string;
   practiceCount: number;

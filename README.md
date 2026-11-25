@@ -47,12 +47,11 @@ Backend chỉ dùng API chuẩn của JDK. Máy chủ HTTP, bộ đọc/ghi JSON
 - Hai lớp học, mỗi lớp có lộ trình riêng: lớp Nhập môn gồm 10 chủ đề từ nhập/xuất đến mảng, xâu và sắp xếp; lớp Lộ trình nâng cao gồm 26 chặng từ đệ quy, đồ thị đến luồng và quy hoạch động nâng cao. Có theo dõi tiến độ từng chặng, nút *Học tiếp* và *Bài tiếp theo*.
 - Lớp Nhập môn có 300 bài mã `K001` đến `K300`; lớp Lộ trình nâng cao có 300 bài mã `V001` đến `V300`, mỗi chặng từ 6 đến 16 bài, xếp từ dễ đến khó. Mỗi bài có test ví dụ, test ẩn và lời giải mẫu C++ trong `data/submissions/`.
 - Lọc bài theo độ khó, tìm bài theo mã hoặc tên, bảng xếp hạng.
-- Sau mỗi lần nộp, ngay dưới kết quả chấm có thẻ "Phân tích sau khi nộp": các lần đã nộp bài đó, nhận xét cho lần nộp vừa rồi, tiến độ chủ đề của bài, các chủ đề đang yếu và ba bài nên làm tiếp.
 - Trang làm bài có trợ lý dạng pop-up ở góc dưới bên phải. Trợ lý biết đang ở bài nào, đọc mã nguồn trong ô soạn và tự nhận xét sau mỗi lần nộp.
 - Chuỗi ngày luyện tập (streak) hiện bằng biểu tượng ngọn lửa trên thanh tiêu đề. Bấm vào để xem 7 ngày gần nhất, mốc tiếp theo và lịch 16 tuần.
 
 ### Lớp học và giảng dạy
-- Giảng viên tạo lớp, gắn lớp vào một tổ chức và một khóa học. Học sinh tham gia bằng mã tham gia 8 ký tự sinh ngẫu nhiên cho từng lớp (giảng viên xem ở trang chi tiết lớp); giảng viên cũng thêm, xoá được học sinh và trợ giảng. Học sinh đã bị xoá khỏi lớp không tự tham gia lại được.
+- Giảng viên tạo lớp, gắn lớp vào một tổ chức và một khóa học. Học sinh nhập mã tham gia 8 ký tự sinh ngẫu nhiên cho từng lớp (giảng viên xem ở trang chi tiết lớp) để gửi yêu cầu vào lớp; giảng viên duyệt ở mục "Yêu cầu vào lớp" thì học sinh mới thành thành viên, chưa duyệt thì chưa thấy bài, chat hay danh sách lớp. Giảng viên cũng mời được học sinh theo tên đăng nhập và xoá học sinh khỏi lớp. Học sinh đã bị xoá khỏi lớp không tự xin vào lại được.
 - Khóa học có giáo trình là danh sách bài giảng, mỗi bài giảng kèm các bài tập luyện. Tài liệu học tập là văn bản hoặc đường link.
 - Giao bài cho lớp kèm hạn nộp. Tiến độ của từng học sinh tính từ lịch sử nộp bài, giảng viên xem được bảng tiến độ cả lớp.
 - Mỗi giảng viên có một kho bài riêng: tự tạo bài, sửa bộ test, đổi chủ đề và độ khó của bài mình. Bài kho riêng không hiện ở lộ trình chung. Học sinh mở được bài khi giảng viên đưa nó vào kỳ thi, bài tập giao hoặc bài giảng. Giảng viên không sửa được kho bài chung và không dùng được bài trong kho của giảng viên khác. Bài kho riêng tính điểm trong kỳ thi chứa nó, còn bảng xếp hạng chung, điểm thưởng và thống kê kỹ năng chỉ tính kho bài chung.
@@ -140,10 +139,10 @@ Cột "Ở đâu" ghi đường đi trên menu của giao diện.
 | 20 | Attendance Management | Học tập → Phòng học trực tuyến, nút Điểm danh | Chạy thật |
 | 21 | Contest Management | Học tập → Kỳ thi | Chạy thật |
 | 22 | Contest Replay | Trang chi tiết kỳ thi | Chạy thật |
-| 23 | Student Analytics | Cá nhân → Phân tích học tập; trang làm bài sau khi nộp | Chạy thật |
+| 23 | Student Analytics | Cá nhân → Phân tích học tập | Chạy thật |
 | 24 | Skill Assessment | Cá nhân → Phân tích học tập | Chạy thật |
-| 25 | Weakness Detection | Cá nhân → Phân tích học tập; trang làm bài sau khi nộp | Chạy thật |
-| 26 | Learning Recommendation | Cá nhân → Phân tích học tập; trang làm bài sau khi nộp | Chạy thật |
+| 25 | Weakness Detection | Cá nhân → Phân tích học tập | Chạy thật |
+| 26 | Learning Recommendation | Cá nhân → Phân tích học tập | Chạy thật |
 | 27 | AI Teaching Assistant | Giảng dạy → Trợ lý giảng dạy | Mô phỏng |
 | 28 | AI Coding Assistant | Pop-up trong trang làm bài; Công cụ → Trợ lý AI | Mô phỏng |
 | 29 | Notification Management | Chuông trên thanh tiêu đề; Cộng đồng → Thông báo | Chạy thật |
@@ -262,7 +261,7 @@ frontend/src
     ├── problem/         Problems.tsx (lộ trình + danh sách bài), learningPath.ts,
     │                    admin/ AdminPanel.tsx, ProblemEditor.tsx, ProblemMetaEditor.tsx, TestcaseManager.tsx
     ├── judge/           ProblemDetail.tsx (làm bài + kết quả chấm), CodeEditor.tsx, TestTable.tsx,
-    │                    SubmitInsight.tsx (phân tích sau khi nộp), AssistantPopup.tsx (trợ lý pop-up)
+    │                    AssistantPopup.tsx (trợ lý pop-up)
     ├── history/         Submissions.tsx (trạng thái), MySubmissions.tsx (bài nộp của tôi), Leaderboard.tsx
     ├── school/          Classrooms.tsx, Courses.tsx, Assignments.tsx
     ├── contest/         Contests.tsx (danh sách, chi tiết, xem lại)
@@ -295,7 +294,7 @@ Bốn module của báo cáo nằm ở các tệp sau:
 | Bài tập giao (13) | `Assignment` | `AssignmentService` | `AssignmentApi` | `school/Assignments.tsx` |
 | Buổi học, phòng học, điểm danh, bản ghi (14 đến 20, 37) | `Meeting`, `MeetingRoom`, `Stroke`, `Attendance`, `Recording` | `MeetingService` | `MeetingApi` | `meeting/` |
 | Kỳ thi, xem lại (21, 22) | `Contest` | `ContestService` | `ContestApi` | `contest/` |
-| Phân tích, báo cáo, thành tích (23 đến 26, 33, 38) | | `AnalyticsService` | `AnalyticsApi` | `profile/`, `manage/Dashboard.tsx`, `judge/SubmitInsight.tsx` |
+| Phân tích, báo cáo, thành tích (23 đến 26, 33, 38) | | `AnalyticsService` | `AnalyticsApi` | `profile/`, `manage/Dashboard.tsx` |
 | Trợ lý AI (27, 28) | | `AssistantService` | (API đã gỡ) | `judge/AssistantPopup.tsx`, `tools/Assistant.tsx`, `manage/TeachingAssistant.tsx` |
 | Thông báo, chat, diễn đàn (29, 30, 31) | `Notification`, `ChatMessage`, `ForumPost` | `CommunityService` | `CommunityApi` | `community/` |
 | Thanh toán (34) | `Plan`, `Payment` | `BillingService` | (API đã gỡ) | `profile/Billing.tsx` |
@@ -400,6 +399,7 @@ Các biến được đọc từ biến môi trường hoặc file `.env` (biế
 | `OJ_TRUST_PROXY` | Lấy địa chỉ người dùng từ đâu để giới hạn tần suất. `true` (image Docker đặt sẵn): máy chủ đứng sau một lớp proxy, lấy giá trị cuối của `X-Forwarded-For`. `cloudflare`: có Cloudflare đứng trước, lấy `CF-Connecting-IP` (nên đặt kèm `OJ_ORIGIN_SECRET`). Không đặt khi máy chủ nhận kết nối trực tiếp |
 | `OJ_ORIGIN_SECRET` | Chỉ nhận request đi qua Cloudflare: đặt một chuỗi bí mật ở đây, và trên Cloudflare tạo Transform Rule gắn header `X-Origin-Secret` với đúng chuỗi đó vào mọi request. Request thiếu hoặc sai header bị trả về 403 (trừ `/api/health`). Bỏ trống thì không kiểm tra |
 | `OJ_TURNSTILE_SITE_KEY`, `OJ_TURNSTILE_SECRET` | Bật CAPTCHA Cloudflare Turnstile cho form đăng nhập và đăng ký khi đặt cả hai (lấy ở trang Turnstile của Cloudflare). Máy chủ gọi Cloudflare để xác minh token trước khi kiểm tra mật khẩu hoặc tạo tài khoản. Nếu Cloudflare không gọi được thì không ai đăng nhập được: xoá hai biến này để tắt CAPTCHA |
+| `RESEND_API_KEY`, `OJ_MAIL_FROM`, `OJ_PUBLIC_URL` | Bật chức năng quên mật khẩu qua email khi đặt cả ba. Thư gửi bằng REST API của [Resend](https://resend.com) trên HTTPS (Railway chặn SMTP ở các gói dưới Pro). `RESEND_API_KEY`: khoá loại Sending access, giới hạn trong tên miền gửi thư. `OJ_MAIL_FROM`: người gửi, ví dụ `CodeHub <no-reply@mail.example.com>`, tên miền phải đã xác minh ở Resend. `OJ_PUBLIC_URL`: địa chỉ trang web (ví dụ `https://example.com`) để dựng link trong thư; máy chủ không lấy địa chỉ này từ header `Host` của request. Thiếu một trong ba thì form đăng nhập không hiện "Quên mật khẩu?" |
 | `OJ_BIND_ADDRESS` | Địa chỉ lắng nghe. Bỏ trống thì chỉ nghe `127.0.0.1`; trong container đặt `0.0.0.0` (Dockerfile đã đặt sẵn) |
 | `OJ_ALLOW_REGISTER` | `true` / `false`: mở hay khoá tự đăng ký lúc khởi động. Bỏ trống thì mở, trừ khi máy chủ đang mở ra mạng mà việc cô lập bài nộp không bật được (lúc đó mặc định khoá). Quản trị viên vẫn đổi được trong Quản trị → Hệ thống cho tới lần khởi động sau |
 
@@ -432,12 +432,16 @@ Trừ 4 endpoint công khai, mọi request phải gửi header `Authorization: B
 |---|---|---|---|
 | GET | `/api/health` | công khai | Trạng thái máy chủ |
 | GET | `/api/languages` | công khai | Danh sách ngôn ngữ và trạng thái toolchain |
-| GET | `/api/config` | công khai | Cấu hình form đăng nhập / đăng ký cần biết trước khi có phiên: `turnstileSiteKey` (rỗng nếu CAPTCHA tắt) |
-| POST | `/api/auth/register` | công khai | Đăng ký tài khoản. `role` là `STUDENT` (mặc định) hoặc `TEACHER`, giá trị khác bị từ chối. Học sinh dùng được ngay; giảng viên ở trạng thái chờ duyệt (`pending: true`) và chưa đăng nhập được cho tới khi quản trị viên duyệt. Khi bật CAPTCHA phải gửi kèm `captcha` (token Turnstile). Giảng viên bắt buộc gửi kèm `evidence`: file minh chứng dạng base64 (PNG, JPG, WEBP hoặc PDF, tối đa 1 MB), lưu ở `data/evidence/`. Cả hai bị từ chối khi quản trị viên tắt tự đăng ký |
+| GET | `/api/config` | công khai | Cấu hình form đăng nhập / đăng ký cần biết trước khi có phiên: `turnstileSiteKey` (rỗng nếu CAPTCHA tắt), `allowRegister`, `passwordReset` (máy chủ có gửi được email đặt lại mật khẩu không) |
+| POST | `/api/auth/register` | công khai | Đăng ký tài khoản. Bắt buộc có `email` (dùng để lấy lại mật khẩu, mỗi email một tài khoản). `role` là `STUDENT` (mặc định) hoặc `TEACHER`, giá trị khác bị từ chối. Học sinh dùng được ngay; giảng viên ở trạng thái chờ duyệt (`pending: true`) và chưa đăng nhập được cho tới khi quản trị viên duyệt. Khi bật CAPTCHA phải gửi kèm `captcha` (token Turnstile). Giảng viên bắt buộc gửi kèm `evidence`: file minh chứng dạng base64 (PNG, JPG, WEBP hoặc PDF, tối đa 1 MB), lưu ở `data/evidence/`. Cả hai bị từ chối khi quản trị viên tắt tự đăng ký |
 | POST | `/api/auth/login` | công khai | Đăng nhập, trả về token. Khi bật CAPTCHA phải gửi kèm `captcha` (token Turnstile) |
 | POST | `/api/auth/logout` | đăng nhập | Huỷ token |
 | GET | `/api/auth/me` | đăng nhập | Thông tin tài khoản đang đăng nhập |
 | POST | `/api/auth/password` | đăng nhập | Đổi mật khẩu của chính mình |
+| PUT | `/api/auth/email` | đăng nhập | Đổi email khôi phục của chính mình; phải gửi kèm `password` (mật khẩu hiện tại) |
+| POST | `/api/auth/forgot` | công khai | Quên mật khẩu: `account` là tên đăng nhập hoặc email. Luôn trả lời cùng một câu dù tài khoản có tồn tại hay không; nếu có và đã khai email thì gửi thư chứa link `/reset-password?token=...` (hiệu lực 30 phút, dùng một lần). Giới hạn: gửi lại cho cùng một tên phải cách nhau 60 giây (trả 429 kèm số giây phải đợi, giao diện đếm ngược trên nút), 10 yêu cầu / giờ mỗi địa chỉ, mỗi tài khoản tối đa 1 thư / phút, 3 thư / giờ, 6 thư / ngày (quá thì lặng lẽ không gửi). Trả 503 nếu chưa cấu hình gửi email |
+| POST | `/api/auth/reset/check` | công khai | Mã trong link còn dùng được không: `{ valid }` |
+| POST | `/api/auth/reset` | công khai | Đặt mật khẩu mới bằng `token` trong link và `password`. Thành công thì mã bị huỷ và mọi phiên đăng nhập cũ của tài khoản bị đăng xuất |
 | GET | `/api/problems` | đăng nhập | Các bài người gọi mở được, kèm đề, chủ đề, độ khó, chủ bài và test ví dụ. Kho chung ai cũng thấy; bài kho riêng chỉ mở qua lớp của mình (bài luyện tập, bài tập giao, kỳ thi của lớp). Bài của kỳ thi đang diễn ra chỉ mở cho học sinh đang ở trong bài thi; đang thi thì chỉ thấy bài của kỳ thi đó |
 | GET | `/api/topics` | đăng nhập | Lộ trình học theo thứ tự |
 | GET | `/api/submissions` | đăng nhập | Lịch sử nộp: học sinh chỉ thấy của mình; giảng viên thấy của học sinh các lớp mình dạy và bài nộp vào bài thuộc kho của mình; admin thấy tất cả |
@@ -469,7 +473,10 @@ Trừ 4 endpoint công khai, mọi request phải gửi header `Authorization: B
 | POST | `/api/classrooms` | GV / admin | Tạo lớp |
 | GET | `/api/classrooms/{id}` | thành viên lớp | Chi tiết lớp: học sinh, lời mời đang chờ, bài luyện tập |
 | DELETE | `/api/classrooms/{id}` | GV phụ trách / admin | Xoá lớp |
-| POST | `/api/classrooms/{mã tham gia}/join` | học sinh | Tham gia lớp bằng mã tham gia (không phải mã lớp) |
+| POST | `/api/classrooms/{mã tham gia}/join` | học sinh | Xin vào lớp bằng mã tham gia (không phải mã lớp). Chỉ tạo yêu cầu chờ giảng viên duyệt (`pending: true`); học sinh đã được mời sẵn thì vào lớp luôn (`pending: false`) |
+| GET | `/api/classroom-requests` | đăng nhập | Các yêu cầu vào lớp của mình đang chờ duyệt |
+| DELETE | `/api/classrooms/{id}/request` | đăng nhập | Tự huỷ yêu cầu vào lớp của mình |
+| POST | `/api/classrooms/{id}/requests/{userId}/approve`, `.../reject` | quản lý lớp | Duyệt hoặc từ chối một yêu cầu vào lớp; học sinh nhận thông báo |
 | POST | `/api/classrooms/{id}/students` | quản lý lớp | Mời học sinh bằng `username`. Học sinh chỉ vào lớp sau khi tự đồng ý |
 | DELETE | `/api/classrooms/{id}/students/{userId}` | GV phụ trách / admin | Xoá học sinh khỏi lớp, hoặc rút lời mời |
 | GET | `/api/classroom-invites` | đăng nhập | Các lời mời vào lớp đang chờ mình trả lời |
@@ -494,7 +501,7 @@ Trừ 4 endpoint công khai, mọi request phải gửi header `Authorization: B
 | GET | `/api/analytics/users/{username}` | admin; GV với học sinh lớp mình | Hồ sơ học tập của một học sinh |
 | GET | `/api/dashboard` | GV / admin | Số liệu toàn hệ thống |
 | GET, POST | `/api/notifications`, `/api/notifications/read` | đăng nhập | Thông báo của mình; đánh dấu đã đọc |
-| GET, POST | `/api/chat/{kênh}?after=N` | đăng nhập; kênh lớp cần là thành viên lớp | Đọc các tin có số thứ tự (`seq`) lớn hơn N; gửi tin nhắn (tối đa 30 tin mỗi phút). Mỗi kênh giữ 500 tin gần nhất |
+| GET, POST | `/api/chat/{kênh}?after=N` | đăng nhập; kênh lớp cần là thành viên lớp | Đọc các tin có số thứ tự (`seq`) lớn hơn N; gửi tin nhắn (tối đa 30 tin mỗi phút). Tin nhắn qua cùng bộ lọc với bình luận dưới bài (`CommentFilter.java`): từ ngữ không phù hợp bị chặn với mọi người, mã nguồn lời giải bị chặn với học sinh. Mỗi kênh giữ 500 tin gần nhất |
 | GET, POST | `/api/problems/{mã bài}/comments` | đăng nhập, mở được bài | Bình luận dưới một bài; gửi bình luận mới (`text`, tối đa 1000 ký tự). Bình luận hiện ngay nếu qua bộ lọc từ bậy và mã nguồn lời giải, không thì trả về 400 kèm lý do |
 | DELETE | `/api/comments/{id}` | tác giả; admin; GV với bài kho riêng của mình | Xoá bình luận. Người khác xoá thì tác giả nhận thông báo |
 | GET | `/api/admin/comments` | admin; GV với bài kho riêng của mình | Các bình luận mình xoá được, mới nhất trước |

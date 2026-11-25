@@ -86,7 +86,20 @@ public class CommunityApi extends ApiModule {
                 throw new ApiException(429, "Bạn gửi tin quá nhanh. Hãy đợi một chút rồi gửi tiếp");
             }
             platform.getLimiter().hit("chat:" + user.getId(), 60_000L);
-            community.postMessage(channel, user, req.body().getString("text"));
+            // Cung bo loc voi binh luan duoi bai: tu ngu khong phu hop, va hoc sinh khong dang ma nguon loi giai.
+            String text = req.body().getString("text");
+            String badWord = CommentFilter.findProfanity(text, platform.getSystem().bannedWords());
+            if (badWord != null) {
+                throw ApiException.badRequest("Tin nhắn có từ ngữ không phù hợp (\"" + badWord + "\"). Hãy sửa lại rồi gửi");
+            }
+            if (isStudent(user)) {
+                String reason = CommentFilter.findSolutionCode(text);
+                if (reason != null) {
+                    throw ApiException.badRequest("Tin nhắn chứa mã nguồn lời giải: " + reason
+                            + ". Hãy hỏi về ý tưởng, hoặc chỉ trích tối đa " + CommentFilter.MAX_CODE_LINES + " dòng mã cần hỏi");
+                }
+            }
+            community.postMessage(channel, user, text);
             req.sendOk();
             return true;
         }
