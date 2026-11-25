@@ -50,7 +50,7 @@ Trang Phân tích học tập hiện số lượt nộp, tỉ lệ AC, số lư�
 
 ### Bình luận, chat và thông báo
 
-Mỗi bài có phần bình luận ở cuối trang. Bình luận hiện ngay sau khi gửi nhưng phải qua bộ lọc: bộ lọc chặn từ ngữ thô tục và chặn đăng nguyên lời giải (chỉ được trích tối đa 3 dòng mã để hỏi). Thông báo tự gửi tới học sinh khi có bài tập, buổi học hoặc kỳ thi mới.
+Mỗi bài có phần bình luận ở cuối trang. Bình luận và tin nhắn chat hiện ngay sau khi gửi nhưng phải qua bộ kiểm duyệt. Bộ kiểm duyệt chặn từ ngữ thô tục, kể cả khi viết lách (không dấu, teencode, chèn ký tự, số thay chữ). Học sinh không được đăng nguyên lời giải (chỉ được trích tối đa 3 dòng mã để hỏi) và chỉ được gửi link tới các trang tài liệu. Tin nhắn spam bị chặn. Ai vi phạm 3 lần trong 10 phút thì bị khóa chat và bình luận một thời gian. Thông báo tự gửi tới học sinh khi có bài tập, buổi học hoặc kỳ thi mới.
 
 ## Vai trò
 
@@ -62,7 +62,7 @@ Mỗi bài có phần bình luận ở cuối trang. Bình luận hiện ngay sa
 
 ## Bảo mật
 
-Mật khẩu được băm bằng PBKDF2-HMAC-SHA256 với salt riêng cho từng tài khoản. Phiên đăng nhập hết hạn sau 8 giờ, và đổi mật khẩu sẽ đăng xuất các phiên khác. Đăng nhập sai nhiều lần thì bị tạm chặn. Khi cài đặt có thể bật thêm CAPTCHA Cloudflare Turnstile cho form đăng nhập và đăng ký, cùng chức năng quên mật khẩu qua email, bằng các biến trong file `.env`. Image Docker có sẵn một tài khoản hệ thống riêng để chạy bài nộp; khi máy chủ báo `Cô lập bài nộp: Bật`, bài nộp không đọc được thư mục chứa test ẩn.
+Mật khẩu được băm bằng PBKDF2-HMAC-SHA256 với salt riêng cho từng tài khoản. Phiên đăng nhập hết hạn sau 8 giờ, và đổi mật khẩu sẽ đăng xuất các phiên khác. Đăng nhập sai nhiều lần thì bị tạm chặn. Khi cài đặt có thể bật thêm CAPTCHA Cloudflare Turnstile cho form đăng nhập và đăng ký, cùng chức năng quên mật khẩu qua email, bằng các biến trong file `.env`. Image Docker có sẵn một tài khoản hệ thống riêng để chạy bài nộp; khi máy chủ báo `Cô lập bài nộp: Bật`, bài nộp không đọc được thư mục chứa test ẩn. Mỗi ngôn ngữ còn bị giới hạn riêng về số tiến trình, số luồng và bộ nhớ. Bài Java chạy dưới Security Manager, bài JavaScript chạy ở chế độ phân quyền của Node, nên không gọi được chương trình khác hay đọc file ngoài thư mục bài.
 
 ## Công nghệ
 

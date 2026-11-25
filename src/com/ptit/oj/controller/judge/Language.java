@@ -36,6 +36,23 @@ public abstract class Language {
     public long getStartupOverheadMs() { return 0; }
 
     /**
+     * Gioi han sandbox cho buoc bien dich. Mac dinh cho trinh bien dich native (g++): 8 tien trinh (g++ goi
+     * cc1plus, as, collect2, ld), 1 GB bo nho ao, 30 giay CPU.
+     */
+    protected Sandbox.Limits compileLimits() {
+        return Sandbox.Limits.forNative(8, 1024, 30, 128);
+    }
+
+    /**
+     * Gioi han sandbox khi chay chuong trinh cua thi sinh. Mac dinh cho chuong trinh native (C++) va trinh
+     * thong dich Python: MOT tien trinh (khong fork, khong tao luong), bo nho ao = gioi han cua bai + 128 MB.
+     */
+    public Sandbox.Limits runLimits(int memoryLimitMb, long timeLimitMs) {
+        return Sandbox.Limits.forNative(1, Math.max(256, memoryLimitMb + 128),
+                Sandbox.Limits.cpuSecondsFor(timeLimitMs, 1), 32);
+    }
+
+    /**
      * Ten file dung de luu ma nguon thi sinh dan tren web.
      * Mac dinh la "solution" + duoi file; Java ghi de vi ten file phai trung ten class.
      */
@@ -69,7 +86,7 @@ public abstract class Language {
      */
     protected CompileResult runCompiler(Path workDir, String... command) throws IOException, InterruptedException {
         // Trinh bien dich doc ma cua thi sinh (#include, macro...) nen cung chay trong sandbox.
-        ExecutionResult r = runner.run(Arrays.asList(command), workDir, "", COMPILE_TIME_LIMIT_MS, Sandbox.COMPILE_MEMORY_MB);
+        ExecutionResult r = runner.run(Arrays.asList(command), workDir, "", COMPILE_TIME_LIMIT_MS, compileLimits());
         if (r.isTimedOut()) return CompileResult.fail("Biên dịch quá lâu (> 20s)");
         if (r.getExitCode() != 0) {
             String message = r.getStderr().isEmpty() ? r.getStdout() : r.getStderr();

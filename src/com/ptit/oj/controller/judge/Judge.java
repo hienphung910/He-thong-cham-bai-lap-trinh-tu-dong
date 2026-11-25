@@ -90,7 +90,8 @@ public class Judge {
             throws IOException, InterruptedException {
         List<String> command = language.buildRunCommand(source, workDir, problem.getMemoryLimitMb());
         long limit = problem.getTimeLimitMs() + language.getStartupOverheadMs();
-        ExecutionResult exec = runner.run(command, workDir, test.getInput(), limit, problem.getMemoryLimitMb());
+        ExecutionResult exec = runner.run(command, workDir, test.getInput(), limit,
+                language.runLimits(problem.getMemoryLimitMb(), limit));
 
         if (exec.isTimedOut()) {
             return new TestCaseResult(test, Verdict.TLE, exec.getElapsedMs(), 0,
@@ -141,6 +142,7 @@ public class Judge {
                 || s.contains("bad_alloc")               // C++
                 || s.contains("memoryerror")             // Python
                 || s.contains("out of memory")           // JavaScript (Node) va cac runtime khac
+                || s.contains("allocation failed")       // Node: Buffer / ArrayBuffer vuot gioi han bo nho
                 || s.contains("cannot allocate memory");
     }
 

@@ -120,6 +120,7 @@ public class PlaygroundService {
             Path workDir = null;
             try {
                 workDir = Files.createTempDirectory("oj-stress-");
+                Sandbox.prepareWorkDir(workDir);
                 Path solutionSrc = compileInto(language, solution, workDir.resolve("solution"), "lời giải cần kiểm tra");
                 Path bruteSrc = compileInto(language, brute, workDir.resolve("brute"), "lời giải vét cạn");
                 Path generatorSrc = compileInto(language, generator, workDir.resolve("generator"), "chương trình sinh test");
@@ -162,6 +163,7 @@ public class PlaygroundService {
                 Thread.currentThread().interrupt();
                 throw new ApiException(500, "Quá trình stress test bị ngắt");
             } finally {
+                Sandbox.cleanup(workDir);
                 deleteRecursively(workDir);
             }
         }
@@ -187,6 +189,7 @@ public class PlaygroundService {
     private Path compileInto(Language language, String code, Path dir, String label)
             throws IOException, InterruptedException {
         Files.createDirectories(dir);
+        Sandbox.openDir(dir);
         Path source = writeSource(language, code, dir);
         CompileResult compile = language.compile(source, dir);
         if (!compile.isSuccess()) {
@@ -202,8 +205,9 @@ public class PlaygroundService {
 
     private ExecutionResult execute(Language language, Path source, Path dir, String input, long limitMs)
             throws IOException, InterruptedException {
+        long limit = limitMs + language.getStartupOverheadMs();
         return runner.run(language.buildRunCommand(source, dir, MEMORY_MB), dir,
-                input == null ? "" : input, limitMs + language.getStartupOverheadMs(), MEMORY_MB);
+                input == null ? "" : input, limit, language.runLimits(MEMORY_MB, limit));
     }
 
     private void deleteRecursively(Path dir) {

@@ -44,6 +44,12 @@ public class PythonLanguage extends Language {
         return runCompiler(workDir, interpreter, "-m", "py_compile", source.toString());
     }
 
+    /** py_compile chi doc va kiem tra cu phap: mot tien trinh, 512 MB. */
+    @Override
+    protected Sandbox.Limits compileLimits() {
+        return Sandbox.Limits.forNative(1, 512, 30, 64);
+    }
+
     @Override
     public List<String> buildRunCommand(Path source, Path workDir, int memoryLimitMb) {
         return Arrays.asList(interpreter, source.toString());
