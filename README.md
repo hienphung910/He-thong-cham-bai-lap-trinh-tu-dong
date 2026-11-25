@@ -2,6 +2,8 @@
 
 CodeHub là hệ thống dạy và luyện lập trình có chấm bài tự động. Học sinh làm bài ngay trên trình duyệt và xem kết quả từng test sau khi nộp. Giảng viên quản lý lớp, giao bài, tổ chức kỳ thi và theo dõi tiến độ của từng học sinh.
 
+Truy cập tại [ptitcodehub.site](https://ptitcodehub.site).
+
 ![Java](https://img.shields.io/badge/Java-11+-ED8B00?logo=openjdk&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
@@ -62,7 +64,7 @@ Mỗi bài có phần bình luận ở cuối trang. Bình luận và tin nhắn
 
 ## Bảo mật
 
-Mật khẩu được băm bằng PBKDF2-HMAC-SHA256 với salt riêng cho từng tài khoản. Phiên đăng nhập hết hạn sau 8 giờ, và đổi mật khẩu sẽ đăng xuất các phiên khác. Đăng nhập sai nhiều lần thì bị tạm chặn. Khi cài đặt có thể bật thêm CAPTCHA Cloudflare Turnstile cho form đăng nhập và đăng ký, cùng chức năng quên mật khẩu qua email, bằng các biến trong file `.env`. Image Docker có sẵn một tài khoản hệ thống riêng để chạy bài nộp; khi máy chủ báo `Cô lập bài nộp: Bật`, bài nộp không đọc được thư mục chứa test ẩn. Mỗi ngôn ngữ còn bị giới hạn riêng về số tiến trình, số luồng và bộ nhớ. Bài Java chạy dưới Security Manager, bài JavaScript chạy ở chế độ phân quyền của Node, nên không gọi được chương trình khác hay đọc file ngoài thư mục bài.
+Mật khẩu được băm bằng PBKDF2-HMAC-SHA256 với salt riêng cho từng tài khoản. Phiên đăng nhập hết hạn sau 8 giờ, và đổi mật khẩu sẽ đăng xuất các phiên khác. Đăng nhập sai nhiều lần thì bị tạm chặn. Form đăng nhập và đăng ký có CAPTCHA Cloudflare Turnstile, quên mật khẩu thì lấy lại qua email. Bài nộp chạy bằng một tài khoản hệ thống riêng, không đọc được thư mục chứa test ẩn. Mỗi ngôn ngữ còn bị giới hạn riêng về số tiến trình, số luồng và bộ nhớ. Bài Java chạy dưới Security Manager, bài JavaScript chạy ở chế độ phân quyền của Node, nên không gọi được chương trình khác hay đọc file ngoài thư mục bài.
 
 ## Công nghệ
 
@@ -71,61 +73,6 @@ Mật khẩu được băm bằng PBKDF2-HMAC-SHA256 với salt riêng cho từn
 | Máy chủ | Java 11, máy chủ HTTP của JDK, JDBC |
 | Cơ sở dữ liệu | MySQL 8 |
 | Giao diện | React 19, TypeScript 5, Vite 7, Tailwind CSS 4 |
-
-## Cài đặt
-
-Cần JDK 11 trở lên, Node.js 20.19 trở lên và MySQL 8. Muốn chấm C++, Python, JavaScript thì cài thêm g++, Python 3 và Node.js trên máy chủ.
-
-1. Tải mã nguồn:
-
-   ```bash
-   git clone https://github.com/hienphung910/Online-Judge.git
-   cd Online-Judge
-   ```
-
-2. Sửa mật khẩu `THAY_MAT_KHAU_NAY` trong `database/mysql/01_create_database.sql` rồi chạy file này để tạo CSDL `online_judge` và tài khoản `oj_app`:
-
-   ```bash
-   mysql -u root -p < database/mysql/01_create_database.sql
-   ```
-
-3. Chép file cấu hình mẫu thành `.env`. Trong `.env`, đặt `OJ_DB_PASSWORD` trùng mật khẩu vừa đặt ở bước 2, đặt mật khẩu cho tài khoản `admin` ở `OJ_ADMIN_PASSWORD`, và xóa giá trị của `OJ_SEED_PASSWORD` để hệ thống không tạo tài khoản mẫu:
-
-   ```bash
-   cp .env.example .env    # PowerShell: Copy-Item .env.example .env
-   ```
-
-4. Tải MySQL Connector/J 8.4.0 vào thư mục `lib/` (hoặc chép file `mysql-connector-j-8.4.0.jar` từ Maven Central vào đó):
-
-   ```bash
-   mvn -q dependency:copy-dependencies -DoutputDirectory=lib -DincludeScope=runtime
-   ```
-
-5. Biên dịch máy chủ và build giao diện:
-
-   ```bash
-   javac -encoding UTF-8 -d out $(find src -name "*.java")
-   cd frontend
-   npm install
-   npm run build
-   cd ..
-   ```
-
-   Trên PowerShell, lệnh biên dịch là:
-
-   ```powershell
-   javac -encoding UTF-8 -d out (Get-ChildItem -Recurse -Filter *.java src).FullName
-   ```
-
-6. Khởi động từ thư mục gốc của project (Linux, macOS dùng `:` thay cho `;`):
-
-   ```bash
-   java "-Dfile.encoding=UTF-8" -cp "out;lib/*" com.ptit.oj.Main --serve
-   ```
-
-Mở http://localhost:8080 và đăng nhập bằng tài khoản `admin`. Bảng trong CSDL được tạo tự động ở lần chạy đầu. Muốn đổi cổng thì dùng `--serve=9000`. Máy chủ mặc định chỉ nhận kết nối từ chính máy đó; muốn mở cho máy khác thì đặt `OJ_BIND_ADDRESS=0.0.0.0` trong `.env`. Các tùy chọn khác (CAPTCHA, email, từ cấm) có ghi chú sẵn trong `.env.example`.
-
-Project có kèm `Dockerfile` đóng gói máy chủ, giao diện và trình biên dịch các ngôn ngữ vào một image. MySQL đặt ngoài image.
 
 ## Nhóm phát triển
 
