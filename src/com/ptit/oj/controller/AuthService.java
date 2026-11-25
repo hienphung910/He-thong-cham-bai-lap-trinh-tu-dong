@@ -411,14 +411,26 @@ public class AuthService {
         return new BootstrapResult(admin, generated ? password : null, true);
     }
 
+    /** Mat khau ngau nhien du manh - dung cho tai khoan mau cua che do chay thu. */
+    public String newRandomPassword() {
+        return passwords.generateRandomPassword();
+    }
+
     /** Tao tai khoan mau neu CSDL con trong - giu lai bo du lieu demo cua bai tap lon. */
     public synchronized boolean seedSampleUsersIfEmpty(String rawPassword) {
         if (users.count() > 0) return false;
-        createAccount(new Student(newUserId(), "hiennm", "Nguyễn Minh Hiển", "B24DCCN199", "D24CQCN01"), rawPassword);
-        createAccount(new Student(newUserId(), "lananh", "Trần Lan Anh", "B24DCCN042", "D24CQCN01"), rawPassword);
-        createAccount(new Student(newUserId(), "tuanpv", "Phạm Văn Tuấn", "B24DCCN311", "D24CQCN02"), rawPassword);
-        createAccount(new Teacher(newUserId(), "gvthanh", "Lê Minh Thành", "Khoa học máy tính"), rawPassword);
+        // Ma cua tai khoan mau la CO DINH (khong ngau nhien): o che do --no-db tai khoan duoc tao lai moi
+        // lan khoi dong, ma bai kho rieng tren o dia lai ghi chu bai bang ma tai khoan - ma doi thi giang
+        // vien mau mat quyen voi bai minh da tao o lan chay truoc.
+        createAccount(new Student(sampleUserId("hiennm"), "hiennm", "Nguyễn Minh Hiển", "B24DCCN199", "D24CQCN01"), rawPassword);
+        createAccount(new Student(sampleUserId("lananh"), "lananh", "Trần Lan Anh", "B24DCCN042", "D24CQCN01"), rawPassword);
+        createAccount(new Student(sampleUserId("tuanpv"), "tuanpv", "Phạm Văn Tuấn", "B24DCCN311", "D24CQCN02"), rawPassword);
+        createAccount(new Teacher(sampleUserId("gvthanh"), "gvthanh", "Lê Minh Thành", "Khoa học máy tính"), rawPassword);
         return true;
+    }
+
+    private static String sampleUserId(String username) {
+        return "U-SAMPLE-" + username.toUpperCase(Locale.ROOT);
     }
 
     // -------------------------------------------------------------- tien ich

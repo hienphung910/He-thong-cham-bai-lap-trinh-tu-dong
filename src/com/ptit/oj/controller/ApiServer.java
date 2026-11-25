@@ -67,6 +67,67 @@ public class ApiServer {
 
     private static final DateTimeFormatter ISO = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
     private static final int MAX_BODY_BYTES = 512 * 1024;        // 512 KB, du cho mot bai nop
+    // ---- gioi han tan suat (dem theo RateLimiter cua Platform) ----
+    private static final long LOGIN_WINDOW_MS = 10 * 60_000L;
+    /** So lan dang nhap sai trong 10 phut: cung ten + cung dia chi / cung ten tu moi noi / cung dia chi. */
+    private static final int LOGIN_PAIR_LIMIT = 8;
+    private static final int LOGIN_USER_LIMIT = 40;
+    private static final int LOGIN_IP_LIMIT = 100;
+    private static final long REGISTER_WINDOW_MS = 60 * 60_000L;
+    /** Ca mot lop co the dang ky tu cung mot mang (chung dia chi) nen khong dat qua thap. */
+    private static final int REGISTER_IP_LIMIT = 60;
+    /** Don giang vien DA NHAN tu mot dia chi moi gio (moi don chiem mot cho trong hang cho duyet). */
+    private static final int REGISTER_TEACHER_IP_LIMIT = 3;
+    /** So lan THU gui don giang vien moi gio, ke ca lan bi tu choi: chan viec bat may chu giai ma file lien tuc. */
+    private static final int REGISTER_TEACHER_ATTEMPT_LIMIT = 20;
+
+    /**
+     * May chu dung sau reverse proxy (Railway...) thi dia chi ket noi luon la cua proxy; dat
+     * OJ_TRUST_PROXY=true de lay dia chi nguoi dung tu header X-Forwarded-For do proxy gan.
+     * KHONG dat khi may chu nhan ket noi truc tiep, vi nguoi dung tu gui header nay duoc.
+     */
+    private static final String TRUST_PROXY_ENV = "OJ_TRUST_PROXY";
+    private final boolean trustProxy = "true".equalsIgnoreCase(
+            String.valueOf(com.ptit.oj.dao.DatabaseConfig.setting(TRUST_PROXY_ENV)).trim());
+
+    /** CSP cho trang giao dien: chi tai ma tu chinh may chu; style noi tuyen va Google Fonts la do giao dien dang dung. */
+    private static final String CSP_PAGE = "default-src 'self'; script-src 'self'; "
+            + "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            + "font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; "
+            + "connect-src 'self'; frame-src blob:; object-src blob:; base-uri 'self'; form-action 'self'; "
+            + "frame-ancestors 'none'";
+    /** CSP cho phan hoi cua API (JSON / van ban): khong duoc phep tai hay nhung gi ca. */
+    private static final String CSP_API = "default-src 'none'; frame-ancestors 'none'";
+
+    /** Cac header bao mat gan vao MOI phan hoi. */
+    private static void secure(HttpExchange ex, String csp) {
+        com.sun.net.httpserver.Headers h = ex.getResponseHeaders();
+        h.set("X-Content-Type-Options", "nosniff");
+        h.set("X-Frame-Options", "DENY");
+        h.set("Referrer-Policy", "no-referrer");
+        h.set("Content-Security-Policy", csp);
+        // Chi bao trinh duyet "luon dung HTTPS" khi request nay that su di qua HTTPS (proxy bao lai).
+        if ("https".equalsIgnoreCase(ex.getRequestHeaders().getFirst("X-Forwarded-Proto"))) {
+            h.set("Strict-Transport-Security", "max-age=31536000");
+        }
+    }
+
+    /** Dia chi cua nguoi gui request, de gioi han tan suat. */
+    private String clientIp(HttpExchange ex) {
+        String ip = null;
+        if (trustProxy) {
+            // Proxy noi them dia chi no nhin thay vao CUOI X-Forwarded-For; cac gia tri phia truoc do nguoi dung tu gui.
+            String forwarded = ex.getRequestHeaders().getFirst("X-Forwarded-For");
+            if (forwarded != null && !forwarded.trim().isEmpty()) {
+                ip = forwarded.substring(forwarded.lastIndexOf(',') + 1).trim();
+            }
+            if (ip == null || ip.isEmpty()) ip = ex.getRequestHeaders().getFirst("X-Real-IP");
+        }
+        if (ip == null || ip.trim().isEmpty()) ip = ex.getRemoteAddress().getAddress().getHostAddress();
+        ip = ip.trim();
+        return ip.length() > 64 ? ip.substring(0, 64) : ip;
+    }
+
     /** Dang ky giang vien co the kem file minh chung toi da 1 MB (ma hoa base64 thanh ~1,4 MB). */
     private static final int MAX_REGISTER_BODY_BYTES = 1536 * 1024;
     private static final int MAX_ADMIN_BODY_BYTES = 8 * 1024 * 1024;  // de bai + test co the lon hon
@@ -334,6 +395,13 @@ public class ApiServer {
         if (!platform.getSystem().isRegisterAllowed()) {
             throw ApiException.forbidden("Quản trị viên đang tạm khoá chức năng tự đăng ký");
         }
+        // Chan dang ky hang loat tu mot dia chi (lam day bo nho / hang cho duyet giang vien).
+        RateLimiter limiter = platform.getLimiter();
+        String ip = clientIp(ex);
+        long wait = limiter.retryAfterSeconds("register-ip:" + ip, REGISTER_WINDOW_MS, REGISTER_IP_LIMIT);
+        if (wait > 0) {
+            throw new ApiException(429, "Có quá nhiều lượt đăng ký từ mạng của bạn. Hãy thử lại sau " + (wait + 59) / 60 + " phút");
+        }
         Json.Value body = Json.parseObject(readBody(ex, MAX_REGISTER_BODY_BYTES));
         String role = body.getString("role", User.ROLE_STUDENT);
         // Giang vien tu dang ky BAT BUOC gui kem file minh chung de quan tri vien co can cu duyet.
@@ -345,6 +413,14 @@ public class ApiServer {
             if (rawEvidence.trim().isEmpty()) {
                 throw ApiException.badRequest("Giảng viên cần gửi kèm file minh chứng khi đăng ký");
             }
+            // Don giang vien ton tai nguyen hon (giai ma file, cho trong hang cho duyet): moi dia chi chi vai don mot gio.
+            long teacherWait = Math.max(
+                    limiter.retryAfterSeconds("register-teacher-ip:" + ip, REGISTER_WINDOW_MS, REGISTER_TEACHER_IP_LIMIT),
+                    limiter.retryAfterSeconds("register-teacher-try:" + ip, REGISTER_WINDOW_MS, REGISTER_TEACHER_ATTEMPT_LIMIT));
+            if (teacherWait > 0) {
+                throw new ApiException(429, "Bạn đã gửi nhiều đơn đăng ký giảng viên. Hãy thử lại sau " + (teacherWait + 59) / 60 + " phút");
+            }
+            limiter.hit("register-teacher-try:" + ip, REGISTER_WINDOW_MS);
             evidence = EvidenceStore.decode(rawEvidence);
         }
         // role chi duoc la STUDENT hoac TEACHER; gui "ADMIN" thi register() tu choi (400).
@@ -365,6 +441,8 @@ public class ApiServer {
                 throw new ApiException(500, "Không lưu được file minh chứng, hãy thử lại");
             }
         }
+        limiter.hit("register-ip:" + ip, REGISTER_WINDOW_MS);
+        if (User.ROLE_TEACHER.equals(role)) limiter.hit("register-teacher-ip:" + ip, REGISTER_WINDOW_MS);
         // Giang vien tu dang ky phai cho duyet: bao cho moi quan tri vien biet de vao duyet.
         boolean pending = !created.isApproved();
         if (pending) {
@@ -390,13 +468,43 @@ public class ApiServer {
     private void handleLogin(HttpExchange ex) throws IOException {
         Json.Value body = Json.parseObject(readBody(ex, MAX_BODY_BYTES));
         String username = body.getString("username", "");
+
+        // Chong do mat khau: dem so lan SAI gan day theo (ten + dia chi), theo ten, theo dia chi.
+        // Kiem tra TRUOC khi bam mat khau, nen lan bi chan khong ton CPU cua may chu.
+        RateLimiter limiter = platform.getLimiter();
+        String ip = clientIp(ex);
+        String name = username.trim().toLowerCase(java.util.Locale.ROOT);
+        if (name.length() > 64) name = name.substring(0, 64);
+        String pairKey = "login:" + name + "|" + ip;
+        String userKey = "login-user:" + name;
+        String ipKey = "login-ip:" + ip;
+        long wait = Math.max(limiter.retryAfterSeconds(pairKey, LOGIN_WINDOW_MS, LOGIN_PAIR_LIMIT),
+                Math.max(limiter.retryAfterSeconds(userKey, LOGIN_WINDOW_MS, LOGIN_USER_LIMIT),
+                        limiter.retryAfterSeconds(ipKey, LOGIN_WINDOW_MS, LOGIN_IP_LIMIT)));
+        if (wait > 0) {
+            ex.getResponseHeaders().set("Retry-After", String.valueOf(wait));
+            throw new ApiException(429, "Đăng nhập sai quá nhiều lần. Hãy thử lại sau "
+                    + (wait >= 120 ? (wait + 59) / 60 + " phút" : wait + " giây"));
+        }
+
         AuthService.LoginResult result;
         try {
             result = service.getAuth().login(username, body.getString("password"));
         } catch (AuthService.AuthException e) {
             platform.getSystem().log(username, "Đăng nhập thất bại", e.getMessage(), false);
+            if (e.getHttpStatus() == 401) {
+                int failures = limiter.hit(pairKey, LOGIN_WINDOW_MS);
+                limiter.hit(userKey, LOGIN_WINDOW_MS);
+                limiter.hit(ipKey, LOGIN_WINDOW_MS);
+                // Cac lan bi chan sau do KHONG ghi nhat ky nua, de mot loat dang nhap sai khong lam ngap nhat ky.
+                if (failures == LOGIN_PAIR_LIMIT) {
+                    platform.getSystem().log(username, "Tạm khoá đăng nhập",
+                            "Sai " + failures + " lần trong 10 phút từ " + ip, false);
+                }
+            }
             throw e;
         }
+        limiter.reset(pairKey);
         platform.getSystem().log(result.getUser().getUsername(), "Đăng nhập", "", true);
         sendJson(ex, 200, Json.obj()
                 .put("token", result.getToken())
@@ -663,12 +771,16 @@ public class ApiServer {
         }
 
         JudgeResult result;
+        // Moi nguoi mot bai mot luc, ca he thong co tran so bai dang cho: xem SubmissionGate.
+        platform.getGate().enter(author.getId());
         try {
             result = service.submitCode(problem, author, language, code);
         } catch (RuntimeException e) {
             // Vi du khong luu duoc vao CSDL: ghi log de sua, chi bao cho nguoi dung mot cau chung.
             System.err.println("Lỗi khi chấm bài: " + e);
             throw new ApiException(500, "Lỗi máy chủ khi chấm bài");
+        } finally {
+            platform.getGate().leave(author.getId());
         }
         sendJson(ex, 200, submissionJson(result.getSubmission(), true));
     }
@@ -821,6 +933,7 @@ public class ApiServer {
         }
         byte[] data = Files.readAllBytes(file);
         ex.getResponseHeaders().set("Content-Type", contentType(file.getFileName().toString()));
+        secure(ex, CSP_PAGE);
         ex.sendResponseHeaders(200, data.length);
         try (OutputStream os = ex.getResponseBody()) {
             os.write(data);
@@ -859,6 +972,7 @@ public class ApiServer {
         byte[] data = json.getBytes(StandardCharsets.UTF_8);
         ex.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
         ex.getResponseHeaders().set("Cache-Control", "no-store");
+        secure(ex, CSP_API);
         ex.sendResponseHeaders(status, data.length);
         try (OutputStream os = ex.getResponseBody()) {
             os.write(data);
@@ -873,6 +987,7 @@ public class ApiServer {
     private void sendText(HttpExchange ex, int status, String text) throws IOException {
         byte[] data = text.getBytes(StandardCharsets.UTF_8);
         ex.getResponseHeaders().set("Content-Type", "text/plain; charset=utf-8");
+        secure(ex, CSP_API);
         ex.sendResponseHeaders(status, data.length);
         try (OutputStream os = ex.getResponseBody()) {
             os.write(data);

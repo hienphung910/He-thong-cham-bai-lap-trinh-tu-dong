@@ -95,7 +95,7 @@ public class ContestService {
         if (problemIds.isEmpty()) throw ApiException.badRequest("Cuộc thi phải có ít nhất một bài");
         Contest contest = new Contest(IdGenerator.next("CON"), Check.text(title, "Tên cuộc thi", 150),
                 Check.optional(description, "Mô tả", 2000), startAt, durationMin, problemIds,
-                owner.getUsername(), owner.getFullName(), classroomId);
+                owner.getId(), owner.getFullName(), classroomId);
         contest.setProctored(proctored);
         contests.save(contest);
         return contest;
@@ -149,7 +149,7 @@ public class ContestService {
     public boolean canManage(User user, Contest contest) {
         if (User.ROLE_ADMIN.equals(user.getRoleCode())) return true;
         Classroom classroom = classroomOf(contest);
-        boolean owner = contest.getOwnerUsername().equals(user.getUsername());
+        boolean owner = contest.getOwnerId().equals(user.getId());
         if (classroom == null) return owner;          // lop khong con: chi nguoi tao don dep duoc
         if (classroom.getTeacherId().equals(user.getId())) return true;
         return owner && classroom.isTaughtBy(user.getId());

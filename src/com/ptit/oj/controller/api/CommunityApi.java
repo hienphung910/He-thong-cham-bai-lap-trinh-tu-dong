@@ -70,7 +70,7 @@ public class CommunityApi extends ApiModule {
             int after = req.queryInt("after", 0);
             List<String> items = new ArrayList<>();
             for (ChatMessage m : community.messages(channel, after)) {
-                items.add(Json.obj().put("id", m.getId()).put("senderName", m.getSenderName())
+                items.add(Json.obj().put("id", m.getId()).put("seq", m.getSeq()).put("senderName", m.getSenderName())
                         .put("senderRole", m.getSenderRole()).put("text", m.getText())
                         .put("sentAt", time(m.getSentAt())).build());
             }
@@ -80,6 +80,11 @@ public class CommunityApi extends ApiModule {
         if (req.is("POST", "chat", "*")) {
             User user = req.user();
             String channel = checkChannel(req.arg(0), user);
+            // Moi nguoi toi da 30 tin mot phut: du de tro chuyen, khong du de lam ngap kenh.
+            if (platform.getLimiter().retryAfterSeconds("chat:" + user.getId(), 60_000L, 30) > 0) {
+                throw new ApiException(429, "Bạn gửi tin quá nhanh. Hãy đợi một chút rồi gửi tiếp");
+            }
+            platform.getLimiter().hit("chat:" + user.getId(), 60_000L);
             community.postMessage(channel, user, req.body().getString("text"));
             req.sendOk();
             return true;

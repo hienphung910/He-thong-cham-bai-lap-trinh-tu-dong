@@ -25,8 +25,14 @@ public class CommunityService {
     private static final int MAX_NOTIFICATIONS_SHOWN = 50;
 
     private final List<Notification> notifications = new ArrayList<>();
-    /** Ten kenh -> danh sach tin nhan theo thu tu gui. */
+    /** Tran so thong bao va so tin nhan moi kenh giu trong RAM; qua tran thi bo cai cu nhat. */
+    private static final int MAX_NOTIFICATIONS = 20_000;
+    private static final int MAX_MESSAGES_PER_CHANNEL = 500;
+
+    /** Ten kenh -> cac tin nhan gan nhat theo thu tu gui (toi da MAX_MESSAGES_PER_CHANNEL). */
     private final Map<String, List<ChatMessage>> channels = new HashMap<>();
+    /** Ten kenh -> so thu tu cua tin nhan cuoi cung da gui (tang dan, khong giam khi tin cu bi bo). */
+    private final Map<String, Long> lastSeq = new HashMap<>();
     private final Repository<ForumPost> posts = new InMemoryRepository<>();
     private final Repository<ProblemComment> comments = new InMemoryRepository<>();
     /** Moi nguoi chi duoc co toi da chung nay binh luan dang cho duyet, de khong lam ngap hang cho cua quan tri vien. */
@@ -41,6 +47,9 @@ public class CommunityService {
     /** link: trang mo ra khi bam vao thong bao (xem Notification.link); "" neu khong co. */
     public synchronized void notifyUser(String userId, String title, String body, String link) {
         notifications.add(new Notification(IdGenerator.next("NTF"), userId, title, body, link));
+        if (notifications.size() > MAX_NOTIFICATIONS) {
+            notifications.subList(0, notifications.size() - MAX_NOTIFICATIONS).clear();
+        }
     }
 
     public synchronized void notifyMany(Collection<String> userIds, String title, String body) {
@@ -79,18 +88,24 @@ public class CommunityService {
     public synchronized ChatMessage postMessage(String channel, User sender, String text) {
         ChatMessage message = new ChatMessage(IdGenerator.next("MSG"), channel,
                 sender.getFullName(), sender.getRole(), Check.text(text, "Tin nhắn", 2000));
-        channels.computeIfAbsent(channel, k -> new ArrayList<>()).add(message);
+        long seq = lastSeq.merge(channel, 1L, Long::sum);
+        message.setSeq(seq);
+        List<ChatMessage> list = channels.computeIfAbsent(channel, k -> new ArrayList<>());
+        list.add(message);
+        if (list.size() > MAX_MESSAGES_PER_CHANNEL) list.subList(0, list.size() - MAX_MESSAGES_PER_CHANNEL).clear();
         return message;
     }
 
     /**
-     * Tin nhan cua mot kenh, bo qua "after" tin dau tien.
-     * Trinh duyet gui after = so tin da co de chi nhan ve phan moi.
+     * Cac tin nhan cua mot kenh co so thu tu LON HON "after". Trinh duyet gui after = so thu tu
+     * (seq) cua tin cuoi cung no da nhan, lan dau gui 0 de lay cac tin gan nhat.
      */
-    public synchronized List<ChatMessage> messages(String channel, int after) {
-        List<ChatMessage> all = channels.getOrDefault(channel, Collections.<ChatMessage>emptyList());
-        int from = Math.max(0, Math.min(after, all.size()));
-        return new ArrayList<>(all.subList(from, all.size()));
+    public synchronized List<ChatMessage> messages(String channel, long after) {
+        List<ChatMessage> result = new ArrayList<>();
+        for (ChatMessage m : channels.getOrDefault(channel, Collections.<ChatMessage>emptyList())) {
+            if (m.getSeq() > after) result.add(m);
+        }
+        return result;
     }
 
     // ------------------------------------------------- binh luan duoi bai tap

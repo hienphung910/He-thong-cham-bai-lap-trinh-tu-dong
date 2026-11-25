@@ -186,7 +186,8 @@ export interface NotificationList {
   items: { id: string; title: string; body: string; createdAt: string; read: boolean; link: string }[];
 }
 export type NotificationItem = NotificationList["items"][number];
-export interface ChatMessage { id: string; senderName: string; senderRole: string; text: string; sentAt: string }
+/** seq: so thu tu cua tin trong kenh; trinh duyet gui lai seq cua tin cuoi de chi nhan cac tin moi hon. */
+export interface ChatMessage { id: string; seq: number; senderName: string; senderRole: string; text: string; sentAt: string }
 export interface ForumPost {
   id: string; title: string; authorId: string; authorName: string; problemId: string;
   createdAt: string; replyCount: number;

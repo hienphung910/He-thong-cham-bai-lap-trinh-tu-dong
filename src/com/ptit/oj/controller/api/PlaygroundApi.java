@@ -27,10 +27,16 @@ public class PlaygroundApi extends ApiModule {
     @Override
     public boolean handle(Request req) throws IOException {
         if (req.is("POST", "run")) {
-            req.user();
+            com.ptit.oj.model.User user = req.user();
             Json.Value body = req.body();
-            PlaygroundService.RunResult result = playground.run(
-                    language(body), body.getString("code"), body.getString("input"));
+            // Chay thu dung chung bo cham voi nop bai nen cung qua cong gioi han.
+            platform.getGate().enter(user.getId());
+            PlaygroundService.RunResult result;
+            try {
+                result = playground.run(language(body), body.getString("code"), body.getString("input"));
+            } finally {
+                platform.getGate().leave(user.getId());
+            }
 
             Json.Obj o = Json.obj().put("compileError", result.getCompileError());
             ExecutionResult exec = result.getExecution();

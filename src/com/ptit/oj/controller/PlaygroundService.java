@@ -4,6 +4,7 @@ import com.ptit.oj.controller.judge.CompileResult;
 import com.ptit.oj.controller.judge.ExecutionResult;
 import com.ptit.oj.controller.judge.Language;
 import com.ptit.oj.controller.judge.ProcessRunner;
+import com.ptit.oj.controller.judge.Sandbox;
 import com.ptit.oj.controller.judge.TokenComparator;
 
 import java.io.IOException;
@@ -84,6 +85,7 @@ public class PlaygroundService {
             Path workDir = null;
             try {
                 workDir = Files.createTempDirectory("oj-run-");
+                Sandbox.prepareWorkDir(workDir);
                 Path source = writeSource(language, code, workDir);
                 CompileResult compile = language.compile(source, workDir);
                 if (!compile.isSuccess()) return new RunResult(hidePath(compile.getMessage(), workDir), null);
@@ -94,6 +96,7 @@ public class PlaygroundService {
                 Thread.currentThread().interrupt();
                 throw new ApiException(500, "Quá trình chạy bị ngắt");
             } finally {
+                Sandbox.cleanup(workDir);
                 deleteRecursively(workDir);
             }
         }
@@ -200,7 +203,7 @@ public class PlaygroundService {
     private ExecutionResult execute(Language language, Path source, Path dir, String input, long limitMs)
             throws IOException, InterruptedException {
         return runner.run(language.buildRunCommand(source, dir, MEMORY_MB), dir,
-                input == null ? "" : input, limitMs + language.getStartupOverheadMs());
+                input == null ? "" : input, limitMs + language.getStartupOverheadMs(), MEMORY_MB);
     }
 
     private void deleteRecursively(Path dir) {

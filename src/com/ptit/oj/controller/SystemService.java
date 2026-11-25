@@ -23,9 +23,18 @@ public class SystemService {
     /** Chi giu so dong nhat ky gan nhat nay de bo nho khong tang mai. */
     private static final int MAX_AUDIT_LOGS = 2000;
 
+    /** File nhat ky lon hon muc nay thi doi ten thanh .1 (ghi de ban .1 cu) va mo file moi. */
+    private static final long MAX_AUDIT_FILE_BYTES = 5L * 1024 * 1024;
+
     private final long startedAt = System.currentTimeMillis();
     private final Map<String, String> settings = new LinkedHashMap<>();
     private final List<AuditLog> auditLogs = new ArrayList<>();
+    /**
+     * Nhat ky con duoc ghi noi tiep ra file nay (moi dong mot JSON), de khoi dong lai khong mat va de
+     * mot loat dang nhap sai khong day het lich su cu ra khoi 2000 dong trong RAM. null = chi giu trong RAM.
+     */
+    private final java.nio.file.Path auditFile;
+    private boolean auditFileWarned;
 
     /**
      * Gia tri khoi dau cua "cho tu dang ky". Cau hinh nam trong RAM nen moi lan khoi
@@ -35,9 +44,35 @@ public class SystemService {
     public static final String ALLOW_REGISTER_ENV = "OJ_ALLOW_REGISTER";
 
     public SystemService() {
-        boolean closed = "false".equalsIgnoreCase(String.valueOf(com.ptit.oj.dao.DatabaseConfig.setting(ALLOW_REGISTER_ENV)).trim());
-        settings.put(ALLOW_REGISTER, closed ? "false" : "true");
+        this(null);
+    }
+
+    public SystemService(java.nio.file.Path auditFile) {
+        this.auditFile = auditFile;
+        settings.put(ALLOW_REGISTER, defaultAllowRegister() ? "true" : "false");
         settings.put(ANNOUNCEMENT, "");
+        loadAuditFile();
+    }
+
+    /**
+     * Co dat OJ_ALLOW_REGISTER thi theo dung gia tri do. Khong dat: mo, TRU KHI may chu dang mo ra
+     * mang ma bai nop khong duoc co lap (Sandbox tat) - luc do ai dang ky duoc cung chay duoc ma tuy y
+     * bang quyen cua may chu, nen mac dinh phai dong va nguoi van hanh tu quyet dinh mo.
+     */
+    static boolean defaultAllowRegister() {
+        String configured = com.ptit.oj.dao.DatabaseConfig.setting(ALLOW_REGISTER_ENV);
+        if (configured != null && !configured.trim().isEmpty()) {
+            return !"false".equalsIgnoreCase(configured.trim());
+        }
+        return !(exposedToNetwork() && !com.ptit.oj.controller.judge.Sandbox.isActive());
+    }
+
+    /** May chu co nghe tren dia chi ngoai loopback khong (OJ_BIND_ADDRESS; image Docker dat 0.0.0.0). */
+    public static boolean exposedToNetwork() {
+        String bind = com.ptit.oj.dao.DatabaseConfig.setting("OJ_BIND_ADDRESS");
+        if (bind == null || bind.trim().isEmpty()) return false;
+        String b = bind.trim();
+        return !(b.equals("127.0.0.1") || b.equalsIgnoreCase("localhost") || b.equals("::1"));
     }
 
     // ------------------------------------------------------------- cau hinh
@@ -74,6 +109,7 @@ public class SystemService {
         info.put("Số nhân CPU", String.valueOf(runtime.availableProcessors()));
         info.put("Bộ nhớ đang dùng", usedMb + " MB / " + runtime.maxMemory() / (1024 * 1024) + " MB");
         info.put("Thời gian đã chạy", uptimeMin / 60 + " giờ " + uptimeMin % 60 + " phút");
+        info.put("Cô lập bài nộp", com.ptit.oj.controller.judge.Sandbox.describe());
         return info;
     }
 
@@ -82,9 +118,53 @@ public class SystemService {
     public synchronized void log(String username, String action, String detail, boolean success) {
         // Ten dang nhap sai lay thang tu body cua request chua dang nhap: cat ngan de mot nguoi la
         // khong the nhoi day bo nho bang cac lan dang nhap voi ten dai hang tram KB.
-        auditLogs.add(new AuditLog(IdGenerator.next("LOG"), clip(username, 64), clip(action, 200),
-                clip(detail, 500), success));
+        AuditLog entry = new AuditLog(IdGenerator.next("LOG"), clip(username, 64), clip(action, 200),
+                clip(detail, 500), success);
+        auditLogs.add(entry);
         if (auditLogs.size() > MAX_AUDIT_LOGS) auditLogs.remove(0);
+        appendToFile(entry);
+    }
+
+    private void appendToFile(AuditLog entry) {
+        if (auditFile == null) return;
+        try {
+            java.nio.file.Files.createDirectories(auditFile.getParent());
+            if (java.nio.file.Files.exists(auditFile) && java.nio.file.Files.size(auditFile) > MAX_AUDIT_FILE_BYTES) {
+                java.nio.file.Files.move(auditFile, auditFile.resolveSibling(auditFile.getFileName() + ".1"),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
+            String line = Json.obj().put("time", entry.getTime().toString()).put("username", entry.getUsername())
+                    .put("action", entry.getAction()).put("detail", entry.getDetail())
+                    .put("success", entry.isSuccess()).build() + "\n";
+            java.nio.file.Files.write(auditFile, line.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                    java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+        } catch (java.io.IOException | RuntimeException e) {
+            if (!auditFileWarned) {
+                auditFileWarned = true;
+                System.err.println("Không ghi được nhật ký ra " + auditFile + ": " + e.getMessage()
+                        + " (nhật ký vẫn được giữ trong bộ nhớ)");
+            }
+        }
+    }
+
+    /** Luc khoi dong: nap lai cac dong gan nhat tu file de trang Nhat ky khong trong sau moi lan khoi dong lai. */
+    private void loadAuditFile() {
+        if (auditFile == null || !java.nio.file.Files.isRegularFile(auditFile)) return;
+        try {
+            List<String> lines = java.nio.file.Files.readAllLines(auditFile, java.nio.charset.StandardCharsets.UTF_8);
+            for (String line : lines.subList(Math.max(0, lines.size() - MAX_AUDIT_LOGS), lines.size())) {
+                try {
+                    Json.Value v = Json.parseObject(line);
+                    auditLogs.add(new AuditLog(IdGenerator.next("LOG"),
+                            java.time.LocalDateTime.parse(v.getString("time", "")), v.getString("username", ""),
+                            v.getString("action", ""), v.getString("detail", ""), v.getBoolean("success", false)));
+                } catch (RuntimeException ignored) {
+                    // dong hong (may tat giua luc ghi): bo qua dong do
+                }
+            }
+        } catch (java.io.IOException e) {
+            System.err.println("Không đọc được nhật ký cũ ở " + auditFile + ": " + e.getMessage());
+        }
     }
 
     private static String clip(String text, int max) {

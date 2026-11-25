@@ -153,6 +153,11 @@ public class JudgeService {
         return problemAdmin.createProblem(actor, draft);
     }
 
+    /** Chuyen chu bai kho rieng tu ten dang nhap (ban cu) sang ma tai khoan; goi mot lan luc khoi dong. */
+    public int migrateProblemOwners() {
+        return problemAdmin.migrateOwners(users);
+    }
+
     /** Sua ten, de bai, gioi han cua bai da co - quan tri vien, hoac giang vien voi bai cua minh. */
     public Problem updateProblem(User actor, String problemId, String title, String statement,
                                  long timeLimitMs, int memoryLimitMb) {

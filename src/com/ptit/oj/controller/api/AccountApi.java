@@ -14,7 +14,7 @@ import java.util.List;
 
 /**
  * Module 1 (tai khoan) va 35 (giang vien):
- *   GET  /api/users            - danh sach tai khoan (giang vien, quan tri)
+ *   GET  /api/users            - danh sach tai khoan (chi quan tri vien)
  *   POST /api/admin/users      - quan tri vien tao tai khoan voi vai tro bat ky
  *   POST /api/admin/users/{id}/approve - duyet giang vien tu dang ky
  *   POST /api/admin/users/{id}/reject  - tu choi: xoa tai khoan dang cho duyet
@@ -33,7 +33,8 @@ public class AccountApi extends ApiModule {
     @Override
     public boolean handle(Request req) throws IOException {
         if (req.is("GET", "users")) {
-            req.staff();
+            // Danh sach moi tai khoan (ca quan tri vien, ca trang thai khoa / cho duyet): chi quan tri vien.
+            req.admin();
             List<String> items = new ArrayList<>();
             for (User u : judge.getUsers()) {
                 Json.Obj item = userJson(u).put("detail", detailOf(u)).put("approved", u.isApproved());

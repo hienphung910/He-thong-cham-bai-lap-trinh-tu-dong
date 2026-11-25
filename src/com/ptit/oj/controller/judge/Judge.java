@@ -51,6 +51,7 @@ public class Judge {
             }
 
             workDir = Files.createTempDirectory("oj-judge-");
+            Sandbox.prepareWorkDir(workDir);
             Path source = workDir.resolve(submission.getFileName());
             Files.write(source, submission.getSourceCode().getBytes(StandardCharsets.UTF_8));
 
@@ -75,6 +76,7 @@ public class Judge {
             result.markGlobal(Verdict.IE, "Bài " + problem.getId() + " cấu hình sai: " + e.getMessage());
         } finally {
             // Chay ca khi da return o tren: don dep roi gan ket qua vao bai nop.
+            Sandbox.cleanup(workDir);      // diet tien trinh con sot, xoa file tai khoan sandbox da tao
             deleteRecursively(workDir);
             result.setJudgeTimeMs(System.currentTimeMillis() - startedAt);
             submission.setResult(result);
@@ -88,7 +90,7 @@ public class Judge {
             throws IOException, InterruptedException {
         List<String> command = language.buildRunCommand(source, workDir, problem.getMemoryLimitMb());
         long limit = problem.getTimeLimitMs() + language.getStartupOverheadMs();
-        ExecutionResult exec = runner.run(command, workDir, test.getInput(), limit);
+        ExecutionResult exec = runner.run(command, workDir, test.getInput(), limit, problem.getMemoryLimitMb());
 
         if (exec.isTimedOut()) {
             return new TestCaseResult(test, Verdict.TLE, exec.getElapsedMs(), 0,

@@ -24,7 +24,9 @@ public class Platform {
     private final CommunityService community = new CommunityService();
     private final MeetingService meetings = new MeetingService(community);
     private final BillingService billing = new BillingService();
-    private final SystemService system = new SystemService();
+    private final SystemService system;
+    private final RateLimiter limiter = new RateLimiter();
+    private final SubmissionGate gate = new SubmissionGate();
     private final EvidenceStore evidence;
     private final ContestService contests;
     private final AnalyticsService analytics;
@@ -34,6 +36,7 @@ public class Platform {
     public Platform(JudgeService judge) {
         this.judge = judge;
         this.evidence = new EvidenceStore(judge.getDataDir().resolve("evidence"));
+        this.system = new SystemService(judge.getDataDir().resolve("audit").resolve("audit.log"));
         this.contests = new ContestService(judge, school);
         this.analytics = new AnalyticsService(judge);
         this.assistant = new AssistantService(judge, analytics);
@@ -54,6 +57,10 @@ public class Platform {
     public BillingService getBilling() { return billing; }
     public SystemService getSystem() { return system; }
     public EvidenceStore getEvidence() { return evidence; }
+    /** Dem tan suat (dang nhap sai, dang ky, chat...) dung chung cho moi module. */
+    public RateLimiter getLimiter() { return limiter; }
+    /** Cong vao cua bo cham: moi nguoi mot bai mot luc, ca he thong co tran so bai dang cho. */
+    public SubmissionGate getGate() { return gate; }
     public ContestService getContests() { return contests; }
     public AnalyticsService getAnalytics() { return analytics; }
     public AssistantService getAssistant() { return assistant; }

@@ -83,7 +83,7 @@ public class ProblemAdminService {
         }
         // Chu bai lay tu tai khoan dang dang nhap, khong bao gio lay tu du lieu client gui len.
         boolean admin = User.ROLE_ADMIN.equals(actor.getRoleCode());
-        draft.setOwner(admin ? "" : actor.getUsername());
+        draft.setOwner(admin ? "" : actor.getId());
         validate(draft);
 
         Path dir;
@@ -122,6 +122,32 @@ public class ProblemAdminService {
         } catch (IOException e) {
             throw new ProblemAdminException(500, "Không ghi được bài tập ra ổ đĩa: " + e.getMessage());
         }
+    }
+
+    /**
+     * Ban cu ghi chu bai bang TEN DANG NHAP trong problem.properties. Chuyen mot lan sang MA TAI KHOAN:
+     * bai nao co "owner" khong phai ma cua mot tai khoan dang ton tai ma trung ten dang nhap cua mot
+     * tai khoan thi ghi lai bang ma cua tai khoan do. Chu bai khong con ton tai thi de nguyen - bai do
+     * chi quan tri vien sua duoc.
+     * @return so bai da chuyen
+     */
+    public synchronized int migrateOwners(com.ptit.oj.dao.UserRepository users) {
+        int changed = 0;
+        for (Problem p : problems.findAll()) {
+            String owner = p.getOwner();
+            if (owner.isEmpty() || users.findById(owner).isPresent()) continue;
+            java.util.Optional<User> byName = users.findByUsername(owner);
+            if (!byName.isPresent()) continue;
+            Map<String, String> changes = new LinkedHashMap<>();
+            changes.put("owner", byName.get().getId());
+            try {
+                problems.save(loader.load(writer.updateProperties(p.getId(), changes)));
+                changed++;
+            } catch (IOException | RuntimeException e) {
+                System.err.println("Không chuyển được chủ của bài " + p.getId() + ": " + e.getMessage());
+            }
+        }
+        return changed;
     }
 
     /** Sua ten, de bai va gioi han thoi gian / bo nho cua mot bai DA CO. Test, chu de, chu bai giu nguyen. */

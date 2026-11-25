@@ -22,6 +22,9 @@ __pycache__/
 
 # File minh chung giang vien gui kem khi dang ky (du lieu ca nhan, may chu tu luu)
 data/evidence/
+# Nhat ky hoat dong va mat khau admin sinh tu dong: may chu tu ghi, khong dua len git
+data/audit/
+data/admin-password.txt
 
 # Frontend
 frontend/node_modules/

@@ -56,7 +56,8 @@ public abstract class Language {
     /** Chay thu mot lenh cua toolchain; tra ve null neu may khong co lenh do. */
     protected ExecutionResult probe(List<String> command) {
         try {
-            return runner.run(command, Paths.get(System.getProperty("user.dir")), "", 10_000);
+            // Lenh cua chinh he thong ("javac -version"...), khong chua ma cua thi sinh: khong qua sandbox.
+            return runner.runTrusted(command, Paths.get(System.getProperty("user.dir")), "", 10_000);
         } catch (IOException | InterruptedException e) {
             return null;
         }
@@ -67,7 +68,8 @@ public abstract class Language {
      * ma thoat khac 0 thi coi la loi, thong bao lay tu stderr cua trinh bien dich.
      */
     protected CompileResult runCompiler(Path workDir, String... command) throws IOException, InterruptedException {
-        ExecutionResult r = runner.run(Arrays.asList(command), workDir, "", COMPILE_TIME_LIMIT_MS);
+        // Trinh bien dich doc ma cua thi sinh (#include, macro...) nen cung chay trong sandbox.
+        ExecutionResult r = runner.run(Arrays.asList(command), workDir, "", COMPILE_TIME_LIMIT_MS, Sandbox.COMPILE_MEMORY_MB);
         if (r.isTimedOut()) return CompileResult.fail("Biên dịch quá lâu (> 20s)");
         if (r.getExitCode() != 0) {
             String message = r.getStderr().isEmpty() ? r.getStdout() : r.getStderr();

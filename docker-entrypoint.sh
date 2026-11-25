@@ -4,8 +4,9 @@
 # 1. Chep de bai goc vao /app/data. Neu /app/data la mot volume (Railway Volume)
 #    thi lan dau no trong; "cp -n" khong ghi de nen bai tao tren web va cac chinh
 #    sua bo test tu nhung lan chay truoc duoc giu nguyen.
-# 2. Chay may chu bang tai khoan thuong "codehub" thay vi root, de code thi sinh
-#    nop len khong co quyen root trong container.
+# 2. Chay may chu bang tai khoan thuong "codehub" thay vi root. Bai thi sinh nop len
+#    con chay bang mot tai khoan khac nua ("ojrunner", xem Sandbox.java), nen /app/data
+#    (test an, file minh chung, nhat ky) chi cho codehub vao.
 # 3. Nghe tren cong $PORT do nen tang cap (Railway), mac dinh 8080.
 #
 # Tham so them vao lenh "docker run" duoc chuyen cho chuong trinh, vi du --no-db.
@@ -18,6 +19,8 @@ cp -rn /app/data-seed/. /app/data/
 # trong repo khong bao gio hien len.
 cp -f /app/data-seed/topics.txt /app/data/topics.txt
 chown -R codehub:codehub /app/data
+# Chi chu so huu (va nhom cua no) vao duoc thu muc du lieu: tai khoan chay bai nop khong doc duoc test an.
+chmod 750 /app/data
 
 export HOME=/home/codehub
 cd /app

@@ -37,7 +37,6 @@ public class Main {
 
     /** Mat khau cua cac tai khoan mau, chi dung lan dau khi chua co tai khoan nao. */
     private static final String SEED_PASSWORD_ENV = "OJ_SEED_PASSWORD";
-    private static final String DEFAULT_SEED_PASSWORD = "ptit@2026";
 
     public static void main(String[] args) {
         forceUtf8Output();
@@ -109,14 +108,28 @@ public class Main {
     /** Nap du lieu roi mo may chu HTTP, chay den khi bi dung (Ctrl+C). */
     private static void runServer(JudgeService service, Path webRoot, int port, boolean noDatabase) {
         service.loadData();
-        prepareAccounts(service);
+        prepareAccounts(service, noDatabase);
+        int migrated = service.migrateProblemOwners();
+        if (migrated > 0) System.out.println("Đã chuyển chủ của " + migrated + " bài kho riêng từ tên đăng nhập sang mã tài khoản.");
         System.out.printf("Đã nạp %d bài tập, %d tài khoản.%n",
                 service.getProblems().size(), service.getUsers().size());
 
-        // Cac module mo rong (lop hoc, khoa hoc, phong hoc, cuoc thi...) luu trong RAM,
-        // nen moi lan khoi dong deu tao lai mot bo du lieu mau de co cai ma xem.
+        // Phai goi TRUOC khi tao Platform: gia tri mac dinh cua "cho tu dang ky" phu thuoc vao viec sandbox co bat khong.
+        com.ptit.oj.controller.judge.Sandbox.init();
+        System.out.println("Cô lập bài nộp: " + com.ptit.oj.controller.judge.Sandbox.describe());
+
         Platform platform = new Platform(service);
-        new DemoData(platform).seed(noDatabase);
+        // Du lieu mau (lop, ky thi, bai giao mau) chi danh cho che do chay thu --no-db. Khi chay voi
+        // CSDL that thi KHONG tao: neu khong, moi lan khoi dong lai tu dua hoc sinh that vao mot lop mau.
+        if (noDatabase) new DemoData(platform).seed(true);
+        if (!platform.getSystem().isRegisterAllowed()) {
+            System.out.println("Tự đăng ký: ĐANG TẮT (đặt " + com.ptit.oj.controller.SystemService.ALLOW_REGISTER_ENV
+                    + "=true hoặc bật ở Quản trị → Hệ thống để mở).");
+        } else if (com.ptit.oj.controller.SystemService.exposedToNetwork()
+                && !com.ptit.oj.controller.judge.Sandbox.isActive()) {
+            System.out.println("CẢNH BÁO: đang mở tự đăng ký trên mạng trong khi bài nộp KHÔNG được cô lập - "
+                    + "ai đăng ký được cũng chạy được mã tuỳ ý bằng quyền của máy chủ.");
+        }
 
         ApiServer server = new ApiServer(platform, port, webRoot);
         try {
@@ -144,15 +157,34 @@ public class Main {
      *   - tao tai khoan ADMIN va in mat khau DUNG MOT LAN neu phai sinh ngau nhien.
      * Cac lan chay sau khong dat lai mat khau cua ai ca.
      */
-    private static void prepareAccounts(JudgeService service) {
-        String seedPassword = DatabaseConfig.setting(SEED_PASSWORD_ENV);
-        if (seedPassword == null || seedPassword.trim().isEmpty()) {
-            seedPassword = DEFAULT_SEED_PASSWORD;
+    /** Ghi mot bi mat ra file chi chu so huu doc duoc (tren he thong ho tro quyen POSIX). */
+    private static boolean writeSecret(Path file, String secret) {
+        try {
+            Files.write(file, (secret + System.lineSeparator()).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            try {
+                Files.setPosixFilePermissions(file, java.nio.file.attribute.PosixFilePermissions.fromString("rw-------"));
+            } catch (UnsupportedOperationException ignored) {
+                // Windows: khong co quyen POSIX, file nam trong thu muc data cua chinh nguoi chay
+            }
+            return true;
+        } catch (IOException e) {
+            return false;
         }
-        if (service.getAuth().seedSampleUsersIfEmpty(seedPassword)) {
+    }
+
+    private static void prepareAccounts(JudgeService service, boolean noDatabase) {
+        // KHONG co mat khau mac dinh: mat khau ai cung biet tren mot tai khoan giang vien la mot cua hau.
+        //  - Dat OJ_SEED_PASSWORD: tao 4 tai khoan mau voi mat khau do (khong in ra).
+        //  - Khong dat, che do --no-db (chay thu tren may ca nhan, du lieu trong RAM): sinh mat khau ngau nhien va in ra.
+        //  - Khong dat, chay voi CSDL that: KHONG tao tai khoan mau.
+        String seedPassword = DatabaseConfig.setting(SEED_PASSWORD_ENV);
+        boolean configured = seedPassword != null && !seedPassword.trim().isEmpty();
+        if (!configured && noDatabase) seedPassword = service.getAuth().newRandomPassword();
+        if ((configured || noDatabase) && service.getAuth().seedSampleUsersIfEmpty(seedPassword)) {
             System.out.println("Đã tạo 4 tài khoản mẫu (hiennm, lananh, tuanpv, gvthanh).");
-            System.out.println("  Mật khẩu mẫu: " + seedPassword
-                    + "   (đặt biến môi trường " + SEED_PASSWORD_ENV + " để dùng mật khẩu khác)");
+            System.out.println(configured
+                    ? "  Mật khẩu mẫu: lấy từ biến môi trường " + SEED_PASSWORD_ENV
+                    : "  Mật khẩu mẫu (sinh ngẫu nhiên cho lần chạy thử này): " + seedPassword);
         }
 
         AuthService.BootstrapResult admin = service.getAuth().bootstrapAdmin();
@@ -162,10 +194,21 @@ public class Main {
         System.out.println("==================================================");
         System.out.println(" ĐÃ TẠO TÀI KHOẢN QUẢN TRỊ");
         System.out.println("   Tên đăng nhập: " + admin.getAdmin().getUsername());
-        if (admin.getGeneratedPassword() != null) {
+        if (admin.getGeneratedPassword() != null && noDatabase) {
             System.out.println("   Mật khẩu     : " + admin.getGeneratedPassword());
-            System.out.println("   (chỉ hiện DUY NHẤT lần này - hãy chép lại ngay;");
-            System.out.println("    cơ sở dữ liệu chỉ lưu chuỗi băm, không lưu mật khẩu)");
+            System.out.println("   (chỉ hiện DUY NHẤT lần này - hãy chép lại ngay)");
+        } else if (admin.getGeneratedPassword() != null) {
+            // Chay voi CSDL that: KHONG in mat khau ra man hinh, vi log cua nen tang hosting thuong
+            // duoc luu lau va nhieu nguoi xem duoc. Ghi ra mot file chi tai khoan may chu doc duoc.
+            Path file = service.getDataDir().resolve("admin-password.txt");
+            if (writeSecret(file, admin.getGeneratedPassword())) {
+                System.out.println("   Mật khẩu     : đã ghi vào " + file.toAbsolutePath());
+                System.out.println("   (đọc xong hãy XOÁ file này; lần sau nên đặt biến môi trường "
+                        + AuthService.ADMIN_PASSWORD_ENV + " trước lần chạy đầu)");
+            } else {
+                System.out.println("   Mật khẩu     : " + admin.getGeneratedPassword());
+                System.out.println("   (không ghi được ra file nên in ra đây DUY NHẤT lần này - hãy chép lại ngay)");
+            }
         } else {
             System.out.println("   Mật khẩu     : lấy từ biến môi trường "
                     + AuthService.ADMIN_PASSWORD_ENV);

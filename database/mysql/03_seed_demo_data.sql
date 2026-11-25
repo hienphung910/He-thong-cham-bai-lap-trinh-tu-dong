@@ -13,6 +13,11 @@
 --  nen khong tao ban ghi trung.
 --
 --  Mat khau moi tai khoan mau: ptit@2026
+--
+--  CANH BAO: mat khau nay CONG KHAI (nam trong repo) va trong 14 tai khoan co 2 giang vien.
+--  CHI nap file nay vao CSDL tren may ca nhan de thuc hanh. KHONG nap vao CSDL cua ban trien
+--  khai tren mang. Neu da lo nap: vao Quan tri -> Tai khoan de xoa / khoa cac tai khoan mau,
+--  hoac doi mat khau tung tai khoan.
 -- =====================================================================
 
 -- BAT BUOC: file nay chua ten tieng Viet co dau (UTF-8).

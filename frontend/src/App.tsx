@@ -222,7 +222,7 @@ function AppShell() {
 
   // Hai kho bai: kho chung (owner rong) hien o lo trinh hoc; kho rieng la bai giang vien tu tao.
   const sharedProblems = useMemo(() => problems.filter((p) => !p.owner), [problems]);
-  const myProblems = useMemo(() => problems.filter((p) => !!p.owner && p.owner === user?.username), [problems, user]);
+  const myProblems = useMemo(() => problems.filter((p) => !!p.owner && p.owner === user?.id), [problems, user]);
 
   const loadProblems = useCallback(async () => {
     // Lo trinh la tuy chon: loi khi tai chu de khong duoc lam hong ca trang bai tap.

@@ -30,6 +30,7 @@ Backend chỉ dùng API chuẩn của JDK. Máy chủ HTTP, bộ đọc/ghi JSON
 > - **Tài khoản quản trị** không có các mục Lớp của tôi, Bài tập được giao, Lịch học, nhóm Cá nhân và nhóm Giảng dạy; đổi mật khẩu vẫn mở được từ menu ở ảnh đại diện.
 > - **Đã bỏ**: Khóa học và tài liệu, Thành tích, Gói dịch vụ, Stress test, Trợ lý AI (cả pop-up ở trang làm bài), Diễn đàn, Trợ lý giảng dạy, Phụ huynh, phòng học trực tuyến, phần xem lại diễn biến của kỳ thi, và phần điểm yếu trong Phân tích học tập. API của các phần này cũng đã gỡ khỏi máy chủ; các mục mô tả chúng ở phần dưới của tài liệu này là của phiên bản cũ.
 > - **Phân quyền**: giảng viên chỉ xem được bài nộp (kèm mã nguồn) của học sinh lớp mình dạy. Trợ giảng làm được việc hằng ngày của lớp (bài luyện tập, bài giao, lịch học, mời học sinh, tạo kỳ thi) nhưng không xoá lớp, không quản lý trợ giảng, không xoá học sinh. Giảng viên mời học sinh bằng tên đăng nhập thì học sinh phải tự đồng ý mới vào lớp. Kỳ thi do giảng viên phụ trách lớp, người tạo (khi còn dạy lớp đó) và quản trị viên quản lý; đề chỉ sửa được trước khi thi, đang thi chỉ gia hạn được. Quản trị viên khoá, xoá, đổi vai trò tài khoản ở Quản trị → Tài khoản.
+> - **Bảo mật**: đăng nhập sai nhiều lần bị tạm khoá (8 lần / 10 phút cho một tên từ một địa chỉ), đăng ký bị giới hạn theo địa chỉ; mỗi người chỉ có một bài đang chấm và cả hệ thống tối đa 16 bài chờ; nhật ký hoạt động được ghi nối tiếp ra `data/audit/audit.log`; mọi phản hồi có header bảo mật (CSP, `X-Frame-Options`, `nosniff`); chủ bài kho riêng và chủ kỳ thi được ghi bằng mã tài khoản thay cho tên đăng nhập.
 > - **Bài tập giao**: một bài chỉ tính là đã làm khi AC trong khoảng từ lúc giao tới hạn nộp. AC sau hạn hiện là *Nộp muộn*, AC từ trước khi giao hiện là *Đã giải từ trước*; cả hai không tính vào tiến độ.
 > - **Ô soạn mã** (trang làm bài, IDE trực tuyến, xem lại bài nộp) dùng CodeMirror, tô màu cú pháp theo bảng màu Dark+ của Visual Studio Code.
 >
@@ -391,10 +392,12 @@ Các biến được đọc từ biến môi trường hoặc file `.env` (biế
 | Biến | Ý nghĩa |
 |---|---|
 | `OJ_DB_URL`, `OJ_DB_USER`, `OJ_DB_PASSWORD` | Kết nối tới CSDL |
-| `OJ_ADMIN_PASSWORD` | Mật khẩu admin lần đầu; bỏ trống thì hệ thống tự sinh và in ra một lần |
-| `OJ_SEED_PASSWORD` | Mật khẩu của 4 tài khoản mẫu |
+| `OJ_ADMIN_PASSWORD` | Mật khẩu admin lần đầu. Bỏ trống thì hệ thống tự sinh: chế độ `--no-db` in ra màn hình một lần; chạy với CSDL thật thì ghi vào `data/admin-password.txt` (không in ra log), đọc xong hãy xoá file |
+| `OJ_SEED_PASSWORD` | Mật khẩu của 4 tài khoản mẫu. Không có mật khẩu mặc định: bỏ trống thì chế độ `--no-db` sinh ngẫu nhiên và in ra, còn chạy với CSDL thật thì không tạo tài khoản mẫu |
+| `OJ_SANDBOX_USER` | Tên tài khoản hệ thống dùng để chạy bài nộp (image Docker đặt sẵn `ojrunner`). Máy chủ tự kiểm tra lúc khởi động và in dòng `Cô lập bài nộp: Bật / Tắt`; cũng hiện ở Quản trị → Hệ thống. Bỏ trống, hoặc máy không chạy được `sudo`, thì bài nộp chạy bằng chính tài khoản của máy chủ |
+| `OJ_TRUST_PROXY` | Đặt `true` khi máy chủ đứng sau reverse proxy (image Docker đặt sẵn) để lấy địa chỉ người dùng từ `X-Forwarded-For` cho việc giới hạn tần suất. Không đặt khi máy chủ nhận kết nối trực tiếp |
 | `OJ_BIND_ADDRESS` | Địa chỉ lắng nghe. Bỏ trống thì chỉ nghe `127.0.0.1`; trong container đặt `0.0.0.0` (Dockerfile đã đặt sẵn) |
-| `OJ_ALLOW_REGISTER` | Đặt `false` để khoá tự đăng ký ngay từ lúc khởi động. Quản trị viên vẫn bật lại được trong Quản trị → Hệ thống cho tới lần khởi động sau |
+| `OJ_ALLOW_REGISTER` | `true` / `false`: mở hay khoá tự đăng ký lúc khởi động. Bỏ trống thì mở, trừ khi máy chủ đang mở ra mạng mà việc cô lập bài nộp không bật được (lúc đó mặc định khoá). Quản trị viên vẫn đổi được trong Quản trị → Hệ thống cho tới lần khởi động sau |
 
 Mọi biến ở bảng trên đều đọc được từ biến môi trường hoặc từ file `.env`.
 
@@ -404,7 +407,9 @@ Mọi biến ở bảng trên đều đọc được từ biến môi trường 
 
 - Railway: tạo service từ repo GitHub, Railway tự nhận `Dockerfile` và cấp cổng qua biến `PORT`. Gắn một Volume vào `/app/data` để đề bài tạo trên web không mất khi deploy lại; lúc khởi động, đề bài gốc trong repo được chép vào volume mà không ghi đè bài đã có.
 - Aiven MySQL bắt buộc SSL: trong `OJ_DB_URL` dùng `sslMode=REQUIRED` thay cho `useSSL=false`, tên CSDL là `defaultdb`. Không cần chạy `01_create_database.sql`; bảng được tạo khi khởi động.
-- Đặt `OJ_ADMIN_PASSWORD`, `OJ_SEED_PASSWORD` và `OJ_ALLOW_REGISTER=false` trước lần chạy đầu. Bộ chấm chưa có sandbox, nên ai có tài khoản đều chạy được mã tuỳ ý trong container.
+- Đặt `OJ_ADMIN_PASSWORD` trước lần chạy đầu. Sau khi deploy, xem log có dòng `Cô lập bài nộp: Bật` không. Nếu là `Tắt` (nền tảng không cho chạy `sudo`), bài nộp chạy bằng quyền của máy chủ và tự đăng ký mặc định bị khoá; chỉ đặt `OJ_ALLOW_REGISTER=true` khi chấp nhận rủi ro đó.
+- Khi cô lập bật, bài nộp chạy bằng tài khoản `ojrunner`: không đọc được `data/` (test ẩn, file minh chứng), không đọc được mật khẩu trong biến môi trường của máy chủ, không dừng được máy chủ, bị giới hạn số tiến trình, kích thước file và bộ nhớ (C++, Python). Việc cô lập này KHÔNG chặn kết nối mạng ra ngoài.
+- Dữ liệu mẫu (lớp, kỳ thi mẫu) chỉ được tạo ở chế độ `--no-db`. `database/mysql/03_seed_demo_data.sql` dùng mật khẩu công khai, chỉ nạp trên máy cá nhân.
 
 Chạy thử image trên máy, không cần MySQL:
 
@@ -446,7 +451,7 @@ Trừ 4 endpoint công khai, mọi request phải gửi header `Authorization: B
 
 | Method | Endpoint | Quyền | Mô tả |
 |---|---|---|---|
-| GET | `/api/users` | GV / admin | Danh sách tài khoản |
+| GET | `/api/users` | admin | Danh sách tài khoản |
 | POST | `/api/admin/users` | admin | Tạo tài khoản với vai trò bất kỳ (dùng được ngay, không cần duyệt) |
 | POST | `/api/admin/users/{id}/approve` | admin | Duyệt giảng viên tự đăng ký; file minh chứng bị xoá |
 | POST | `/api/admin/users/{id}/reject` | admin | Từ chối: xoá tài khoản đang chờ duyệt và file minh chứng |
@@ -486,7 +491,7 @@ Trừ 4 endpoint công khai, mọi request phải gửi header `Authorization: B
 | GET | `/api/analytics/users/{username}` | admin; GV với học sinh lớp mình | Hồ sơ học tập của một học sinh |
 | GET | `/api/dashboard` | GV / admin | Số liệu toàn hệ thống |
 | GET, POST | `/api/notifications`, `/api/notifications/read` | đăng nhập | Thông báo của mình; đánh dấu đã đọc |
-| GET, POST | `/api/chat/{kênh}?after=N` | đăng nhập; kênh lớp cần là thành viên lớp | Đọc tin nhắn mới, gửi tin nhắn |
+| GET, POST | `/api/chat/{kênh}?after=N` | đăng nhập; kênh lớp cần là thành viên lớp | Đọc các tin có số thứ tự (`seq`) lớn hơn N; gửi tin nhắn (tối đa 30 tin mỗi phút). Mỗi kênh giữ 500 tin gần nhất |
 | GET, POST | `/api/problems/{mã bài}/comments` | đăng nhập, mở được bài | Bình luận dưới một bài: đã duyệt, cộng với bình luận chờ duyệt của chính mình; gửi bình luận mới (`text`, tối đa 1000 ký tự). Bình luận của quản trị viên hiện ngay |
 | DELETE | `/api/comments/{id}` | tác giả / người duyệt | Xoá bình luận; người duyệt xoá bình luận đang chờ duyệt tức là từ chối |
 | GET | `/api/admin/comments` | admin; GV với bài kho riêng của mình | Bình luận mình duyệt được, chờ duyệt đứng trước |
@@ -547,7 +552,7 @@ Các module mở rộng mới được thử ở chế độ `--no-db`, bằng c
 
 ## Hạn chế và hướng phát triển
 
-- Chưa có sandbox: code thí sinh chạy bằng quyền người dùng hiện tại, nên máy chủ chỉ mở trên localhost. Hướng phát triển: chạy trong container hoặc dùng cgroups / Job Object.
+- Cô lập bài nộp mới ở mức "tài khoản hệ thống riêng + giới hạn tài nguyên" và chỉ có trong image Docker (xem `Sandbox.java`); chạy trực tiếp trên máy cá nhân thì code thí sinh vẫn chạy bằng quyền người dùng hiện tại. Chưa chặn được kết nối mạng của bài nộp. Hướng phát triển: container hoặc namespace riêng cho từng lần chạy (nsjail, isolate), cgroups.
 - Giới hạn bộ nhớ chỉ áp chính xác cho Java (`-Xmx`) và JavaScript; các ngôn ngữ còn lại chỉ phát hiện MLE khi runtime báo hết bộ nhớ.
 - Bài được chấm tuần tự để số đo thời gian ổn định, và người nộp phải chờ chấm xong mới thấy kết quả; có thể chuyển sang hàng đợi, nhiều worker và đẩy kết quả từng test theo thời gian thực. Một lần stress test cũng giữ bộ chấm tối đa 25 giây.
 - Chưa sửa được nội dung đề và chưa xoá được bài qua giao diện; lộ trình (`topics.txt`) và thứ tự bài trong chủ đề (`order`) vẫn sửa tay.

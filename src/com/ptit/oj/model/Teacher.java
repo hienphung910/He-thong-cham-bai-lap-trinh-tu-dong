@@ -21,9 +21,13 @@ public class Teacher extends User {
     @Override
     public boolean canCreateProblem() { return true; }
 
-    /** Giang vien chi sua duoc bai do chinh minh tao; bai kho chung va bai cua nguoi khac thi khong. */
+    /**
+     * Giang vien chi sua duoc bai do chinh minh tao; bai kho chung va bai cua nguoi khac thi khong.
+     * Chu bai duoc ghi bang MA TAI KHOAN (khong phai ten dang nhap): tai khoan bi xoa roi co nguoi dang
+     * ky lai dung ten do cung khong thua huong bai va test an cua nguoi cu.
+     */
     @Override
     public boolean canEditProblem(Problem problem) {
-        return getUsername().equals(problem.getOwner());
+        return getId().equals(problem.getOwner());
     }
 }

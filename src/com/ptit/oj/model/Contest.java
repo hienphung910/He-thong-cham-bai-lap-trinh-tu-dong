@@ -20,7 +20,7 @@ public class Contest extends Entity {
     private volatile LocalDateTime startAt;
     private volatile int durationMin;
     private final List<String> problemIds;
-    private final String ownerUsername;     // ten dang nhap cua nguoi tao
+    private final String ownerId;           // ma tai khoan cua nguoi tao (khong dung ten dang nhap: ten co the bi dang ky lai)
     private final String ownerName;         // ho ten nguoi tao, de hien thi
     private final String classroomId;       // lop duoc thi
     /** Nguoi tao ky thi bat / tat duoc: co ghi lai viec roi tab, sao chep, dan... cua thi sinh hay khong. */
@@ -34,7 +34,7 @@ public class Contest extends Entity {
     private final Map<String, LocalDateTime> finishedAt = new ConcurrentHashMap<>();
 
     public Contest(String id, String title, String description, LocalDateTime startAt,
-                   int durationMin, List<String> problemIds, String ownerUsername, String ownerName,
+                   int durationMin, List<String> problemIds, String ownerId, String ownerName,
                    String classroomId) {
         super(id);
         this.title = title;
@@ -43,7 +43,7 @@ public class Contest extends Entity {
         this.durationMin = durationMin;
         // Ban sao rieng de them / bot bai ve sau; CopyOnWrite de request khac doc duoc trong luc sua.
         this.problemIds = new CopyOnWriteArrayList<>(problemIds);
-        this.ownerUsername = ownerUsername;
+        this.ownerId = ownerId;
         this.ownerName = ownerName;
         this.classroomId = classroomId;
     }
@@ -55,7 +55,7 @@ public class Contest extends Entity {
     public void setStartAt(LocalDateTime startAt) { this.startAt = startAt; }
     public void setDurationMin(int durationMin) { this.durationMin = durationMin; }
     public List<String> getProblemIds() { return problemIds; }
-    public String getOwnerUsername() { return ownerUsername; }
+    public String getOwnerId() { return ownerId; }
     public String getOwnerName() { return ownerName; }
     public String getClassroomId() { return classroomId; }
 

@@ -191,7 +191,7 @@ public class ContestApi extends ApiModule {
         // Bao cho nguoi tao ky thi va giang vien phu trach lop (neu la hai nguoi khac nhau).
         java.util.Set<String> receivers = new java.util.LinkedHashSet<>();
         for (User u : judge.getUsers()) {
-            if (u.getUsername().equals(c.getOwnerUsername()) && contests.canManage(u, c)) receivers.add(u.getId());
+            if (u.getId().equals(c.getOwnerId()) && contests.canManage(u, c)) receivers.add(u.getId());
         }
         receivers.add(classroomOf(c).getTeacherId());
         platform.getCommunity().notifyMany(receivers, "Giám sát kỳ thi: " + student.getFullName(),

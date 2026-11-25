@@ -11,7 +11,7 @@ export default function ChatBox({ channel, height = 300 }: { channel: string; he
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState("");
   const [error, setError] = useState("");
-  const countRef = useRef(0);        // so tin da nhan ve
+  const countRef = useRef(0);        // so thu tu (seq) cua tin cuoi cung da nhan
   const busyRef = useRef(false);     // dang co mot lan hoi chua xong -> bo qua lan nay
   const bottomRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef(channel);   // kenh dang hien; tra loi cua kenh cu se bi bo qua
@@ -24,7 +24,7 @@ export default function ChatBox({ channel, height = 300 }: { channel: string; he
       // Trong luc cho, nguoi dung da chuyen sang kenh khac: khong tron tin cua kenh cu vao.
       if (channelRef.current !== channel) return;
       if (more.length > 0) {
-        countRef.current += more.length;
+        countRef.current = more[more.length - 1].seq;
         setMessages((old) => [...old, ...more]);
       }
       setError("");
