@@ -135,26 +135,43 @@ interface Route { page: PageKey; problemId: string | null }
 
 const PAGE_KEYS = new Set<string>(NAV_GROUPS.flatMap((group) => group.items.map((item) => item.key)));
 
-/** Doc trang tu phan sau dau # cua URL: "#Problems/K001", "#Classrooms"... Sai thi ve trang bai tap. */
-function routeFromHash(): Route {
-  const [page = "", problemId = ""] = window.location.hash.replace(/^#\/?/, "").split("/");
-  if (!PAGE_KEYS.has(page)) return { page: "Problems", problemId: null };
-  return { page: page as PageKey, problemId: page === "Problems" && problemId ? decodeURIComponent(problemId) : null };
+/** Phan duong dan cua mot trang: "Problems" -> "problems", "MyProblems" -> "my-problems". */
+function slugOf(page: string): string {
+  return page.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
 }
 
-function hashOf(route: Route): string {
-  return "#" + route.page + (route.problemId ? "/" + encodeURIComponent(route.problemId) : "");
+const PAGE_BY_SLUG = new Map<string, PageKey>([...PAGE_KEYS].map((key) => [slugOf(key), key as PageKey]));
+
+/**
+ * Doc trang tu duong dan cua URL: "/problems/K001", "/classrooms", "/my-problems"...
+ * Link kieu cu dung dau # ("#Problems/K001") van doc duoc va duoc doi sang dang moi. Sai thi ve trang bai tap.
+ */
+function routeFromLocation(): Route {
+  const legacy = window.location.hash.replace(/^#\/?/, "");
+  const [first = "", second = ""] = (legacy || window.location.pathname.replace(/^\/+/, "")).split("/");
+  const page = PAGE_BY_SLUG.get(first.toLowerCase()) ?? (PAGE_KEYS.has(first) ? (first as PageKey) : null);
+  if (!page) return { page: "Problems", problemId: null };
+  let problemId: string | null = null;
+  if (page === "Problems" && second) {
+    try { problemId = decodeURIComponent(second); } catch { problemId = null; }
+  }
+  return { page, problemId };
+}
+
+/** Dia chi cua mot trang: "/problems", "/problems/K001". May chu tra ve giao dien cho moi duong dan nhu vay. */
+function pathOf(route: Route): string {
+  return "/" + slugOf(route.page) + (route.problemId ? "/" + encodeURIComponent(route.problemId) : "");
 }
 
 function AppShell() {
   const { user, checking, logout } = useAuth();
-  const [route, setRoute] = useState<Route>(routeFromHash);
+  const [route, setRoute] = useState<Route>(routeFromLocation);
   const routeRef = useRef(route);
   const page = route.page;
 
-  // Dia chi chi mang ten trang (#Problems, #Contests...) khi DA DANG NHAP. O man hinh dang nhap thi
-  // dia chi de tron: neu khong, vao thang ten mien cung thay "#Problems" du chua mo trang nao.
-  // Trang trong link ban dau (vi du mo link "#Contests" luc chua dang nhap) van duoc nho trong
+  // Dia chi chi mang ten trang (/problems, /contests...) khi DA DANG NHAP. O man hinh dang nhap thi
+  // dia chi chi con ten mien: neu khong, vao thang ten mien cung thay "/problems" du chua mo trang nao.
+  // Trang trong link ban dau (vi du mo link "/contests" luc chua dang nhap) van duoc nho trong
   // routeRef, dang nhap xong la mo dung trang do.
   const wasLoggedIn = useRef(false);
   useEffect(() => {
@@ -162,8 +179,9 @@ function AppShell() {
     const state = (window.history.state ?? {}) as { route?: Route };
     if (user) {
       wasLoggedIn.current = true;
-      if (!state.route || !window.location.hash) {
-        window.history.replaceState({ ...state, route: routeRef.current }, "", hashOf(routeRef.current));
+      const wanted = pathOf(routeRef.current);
+      if (!state.route || window.location.pathname !== wanted || window.location.hash) {
+        window.history.replaceState({ ...state, route: routeRef.current }, "", wanted);
       }
       return;
     }
@@ -174,15 +192,15 @@ function AppShell() {
       routeRef.current = home;
       setRoute(home);
     }
-    if (window.location.hash) {
-      window.history.replaceState({}, "", window.location.pathname + window.location.search);
+    if (window.location.pathname !== "/" || window.location.hash) {
+      window.history.replaceState({}, "", "/");
     }
   }, [user, checking]);
 
   // Nghe nut Back / Forward cua trinh duyet.
   useEffect(() => {
     const onPop = () => {
-      const next = (window.history.state as { route?: Route } | null)?.route ?? routeFromHash();
+      const next = (window.history.state as { route?: Route } | null)?.route ?? routeFromLocation();
       routeRef.current = next;
       setRoute(next);
     };
@@ -197,7 +215,7 @@ function AppShell() {
     const inSubView = sub !== undefined && Object.keys(sub).length > 0;
     // Bam lai dung trang dang mo thi khong ghi them, tru khi dang o trang con (chi tiet lop...) can dong lai.
     if (current.page === next.page && current.problemId === next.problemId && !inSubView) return;
-    window.history.pushState({ route: next }, "", hashOf(next));
+    window.history.pushState({ route: next }, "", pathOf(next));
     routeRef.current = next;
     setRoute(next);
     window.dispatchEvent(new Event(NAV_EVENT));

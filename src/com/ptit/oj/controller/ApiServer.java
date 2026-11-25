@@ -1012,8 +1012,15 @@ public class ApiServer {
         if (urlPath.endsWith("/")) urlPath += "index.html";
 
         Path file = safeResolve(urlPath);
-        // SPA: duong dan khong co duoi file va khong ton tai -> tra ve index.html
+        // SPA: duong dan cua mot trang (/problems, /problems/K001...) khong ung voi file nao -> tra ve
+        // index.html de giao dien tu mo dung trang. Duong dan CO duoi file ma khong ton tai (vi du mot
+        // file .js cua ban build cu) thi tra 404, khong tra trang HTML gia lam file do.
         if (file == null || !Files.isRegularFile(file)) {
+            String lastSegment = urlPath.substring(urlPath.lastIndexOf('/') + 1);
+            if (lastSegment.contains(".") && !lastSegment.equals("index.html")) {
+                sendError(ex, 404, "Không có file này");
+                return;
+            }
             Path index = webRoot.resolve("index.html");
             if (!Files.isRegularFile(index)) {
                 sendText(ex, 404, "Chưa build frontend. Chạy: cd frontend && npm install && npm run build");

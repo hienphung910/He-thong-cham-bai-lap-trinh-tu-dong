@@ -27,7 +27,7 @@ export function useNav() {
  * Ung dung la mot trang duy nhat (SPA): doi trang chi la doi state cua React, nen neu khong ghi
  * vao lich su trinh duyet thi nut Back se roi han khoi CodeHub. Moi lan chuyen trang, App.tsx
  * ghi mot muc vao lich su (history.pushState) dang { route, sub }:
- *   - route: trang dang mo va ma bai dang lam (App.tsx quan ly, co mat tren URL sau dau #),
+ *   - route: trang dang mo va ma bai dang lam (App.tsx quan ly, co mat tren duong dan cua URL, vi du /problems/K001),
  *   - sub  : trang con ben trong mot trang (dang xem lop nao, ky thi nao...) - do hook duoi day ghi.
  * Su kien nay duoc phat khi App.tsx vua chuyen trang, de cac trang con dang mo doc lai trang thai.
  */
