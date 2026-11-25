@@ -34,6 +34,8 @@ public class Platform {
     /** Email khoi phuc dang cho nguoi dung xac minh. */
     private final EmailVerificationService verifications = new EmailVerificationService();
     private final AccountMailer accountMailer = new AccountMailer(mailer, verifications, limiter);
+    /** Kiem duyet chat va binh luan: tu bay, link, ma nguon, spam, tam khoa khi vi pham nhieu lan. */
+    private final ContentGuard guard;
     /** Noi luu du lieu cac module mo rong xuong o dia; null neu khong bat (che do --no-db). */
     private volatile StateStore stateStore;
     private final SubmissionGate gate = new SubmissionGate();
@@ -47,6 +49,7 @@ public class Platform {
         this.judge = judge;
         this.evidence = new EvidenceStore(judge.getDataDir().resolve("evidence"));
         this.system = new SystemService(judge.getDataDir().resolve("audit").resolve("audit.log"));
+        this.guard = new ContentGuard(system);
         this.contests = new ContestService(judge, school);
         this.analytics = new AnalyticsService(judge);
         this.assistant = new AssistantService(judge, analytics);
@@ -81,6 +84,7 @@ public class Platform {
     public PasswordResetService getResets() { return resets; }
     public EmailVerificationService getVerifications() { return verifications; }
     public AccountMailer getAccountMailer() { return accountMailer; }
+    public ContentGuard getGuard() { return guard; }
 
     /** Tai khoan vua doi mat khau / email, bi khoa hoac bi xoa: moi lien ket gui qua thu truoc do mat hieu luc. */
     public void revokeMailLinks(String userId) {
