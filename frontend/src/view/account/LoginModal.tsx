@@ -1,7 +1,9 @@
 import Logo from "../../shared/Logo";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { api } from "../../shared/api";
 import { useAuth } from "./auth";
 import { EVIDENCE_ACCEPT, readEvidence } from "./evidence";
+import Turnstile from "./Turnstile";
 
 type Mode = "login" | "register";
 
@@ -26,6 +28,14 @@ export default function LoginModal() {
   // Minh chung giang vien gui kem de quan tri vien xem khi duyet: ten file va noi dung base64.
   const [evidence, setEvidence] = useState<{ name: string; data: string } | null>(null);
   const evidenceInput = useRef<HTMLInputElement>(null);
+  // CAPTCHA cho ca dang nhap va dang ky: may chu cho biet co bat khong (siteKey khac ""). Token dung
+  // duoc mot lan nen sau moi lan gui form tang captchaReset de widget cap token moi.
+  const [siteKey, setSiteKey] = useState("");
+  const [captcha, setCaptcha] = useState("");
+  const [captchaReset, setCaptchaReset] = useState(0);
+  useEffect(() => {
+    api.config().then((c) => setSiteKey(c.turnstileSiteKey)).catch(() => undefined);
+  }, []);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
@@ -46,21 +56,29 @@ export default function LoginModal() {
     e.preventDefault(); setError(""); setNotice("");
     if (mode === "login") {
       if (!username || !password) { setError("Hãy nhập tên đăng nhập và mật khẩu."); return; }
+      if (siteKey && !captcha) { setError("Hãy hoàn thành bước xác minh CAPTCHA."); return; }
       setBusy(true);
-      try { await login(username.trim(), password); }
-      catch (e2) { setError(e2 instanceof Error ? e2.message : String(e2)); }
+      try { await login(username.trim(), password, captcha); }
+      catch (e2) {
+        setError(e2 instanceof Error ? e2.message : String(e2));
+        // Token vua gui da bi dung: lay token moi cho lan thu sau. (Dang nhap thanh cong thi form nay dong luon.)
+        setCaptcha("");
+        setCaptchaReset((n) => n + 1);
+      }
       finally { setBusy(false); }
       return;
     }
     if (password.length < 8) { setError("Mật khẩu phải có ít nhất 8 ký tự."); return; }
     if (password !== confirm) { setError("Hai lần nhập mật khẩu không khớp."); return; }
     if (role === "TEACHER" && !evidence) { setError("Hãy tải minh chứng lên trước khi đăng ký giảng viên."); return; }
+    if (siteKey && !captcha) { setError("Hãy hoàn thành bước xác minh CAPTCHA."); return; }
     setBusy(true);
     try {
       const pending = await register({
         role, username: username.trim(), password, fullName: fullName.trim(),
         studentCode: studentCode.trim(), className: className.trim(), department: department.trim(),
         evidence: role === "TEACHER" && evidence ? evidence.data : "",
+        captcha,
       });
       setEvidence(null);
       switchMode("login");
@@ -68,7 +86,12 @@ export default function LoginModal() {
         ? `Đã gửi đăng ký giảng viên @${username.trim()}. Tài khoản cần quản trị viên duyệt rồi mới đăng nhập được.`
         : `Đã tạo tài khoản học sinh @${username.trim()}. Mời bạn đăng nhập.`);
     } catch (e2) { setError(e2 instanceof Error ? e2.message : String(e2)); }
-    finally { setBusy(false); }
+    finally {
+      setBusy(false);
+      // Token vua gui da bi dung (du dang ky thanh cong hay khong): lay token moi cho lan gui sau.
+      setCaptcha("");
+      setCaptchaReset((n) => n + 1);
+    }
   }
 
   const inputBox: React.CSSProperties = {
@@ -163,6 +186,10 @@ export default function LoginModal() {
 
           {mode === "register" && (
             <input type="password" placeholder="Nhập lại mật khẩu" value={confirm} onChange={(e) => setConfirm(e.target.value)} style={inputBox} />
+          )}
+
+          {siteKey && (
+            <Turnstile siteKey={siteKey} resetKey={captchaReset} onToken={setCaptcha} onError={setError} />
           )}
 
           {error && (

@@ -41,6 +41,8 @@ export interface RegisterRequest {
   className: string;
   /** File minh chung dang base64 (PNG / JPG / WEBP / PDF, toi da 1 MB). Giang vien bat buoc co; hoc sinh de "". */
   evidence: string;
+  /** Token CAPTCHA (Cloudflare Turnstile); chi can khi may chu bat CAPTCHA. */
+  captcha?: string;
 }
 
 export interface LanguageInfo {

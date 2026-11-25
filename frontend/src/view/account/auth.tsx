@@ -6,7 +6,7 @@ interface AuthCtx {
   user: AuthUser | null;
   /** true trong luc dang hoi may chu xem token cu con hieu luc khong. */
   checking: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  login: (username: string, password: string, captcha?: string) => Promise<void>;
   /** Tra ve true neu tai khoan vua tao con phai cho quan tri vien duyet (giang vien). */
   register: (body: RegisterRequest) => Promise<boolean>;
   logout: () => void;
@@ -42,8 +42,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => { alive = false; };
   }, []);
 
-  const login = useCallback(async (username: string, password: string) => {
-    const res = await api.login(username, password);
+  const login = useCallback(async (username: string, password: string, captcha = "") => {
+    const res = await api.login(username, password, captcha);
     setToken(res.token);
     setUser(res.user);
   }, []);

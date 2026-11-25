@@ -92,10 +92,13 @@ export function putJson<T>(path: string, body: unknown): Promise<T> {
 
 export const api = {
   // --- xac thuc ---
+  /** Cau hinh cong khai cho form dang nhap / dang ky: turnstileSiteKey khac "" thi phai lam CAPTCHA truoc khi gui. */
+  config: () => request<{ turnstileSiteKey: string }>("/api/config"),
   /** pending = true: tai khoan giang vien vua tao con phai cho quan tri vien duyet. */
   register: (body: RegisterRequest) => postJson<{ message: string; pending: boolean }>("/api/auth/register", body),
-  login: (username: string, password: string) =>
-    postJson<LoginResponse>("/api/auth/login", { username, password }),
+  /** captcha: token Turnstile, chi can khi may chu bat CAPTCHA (xem config()). */
+  login: (username: string, password: string, captcha = "") =>
+    postJson<LoginResponse>("/api/auth/login", { username, password, captcha }),
   me: () => request<AuthUser>("/api/auth/me"),
   logout: () => postJson<{ ok: boolean }>("/api/auth/logout", {}),
 

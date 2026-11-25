@@ -396,7 +396,9 @@ Các biến được đọc từ biến môi trường hoặc file `.env` (biế
 | `OJ_SEED_PASSWORD` | Mật khẩu của 4 tài khoản mẫu. Không có mật khẩu mặc định: bỏ trống thì chế độ `--no-db` sinh ngẫu nhiên và in ra, còn chạy với CSDL thật thì không tạo tài khoản mẫu |
 | `OJ_SANDBOX_USER` | Tên tài khoản hệ thống dùng để chạy bài nộp (image Docker đặt sẵn `ojrunner`). Máy chủ tự kiểm tra lúc khởi động và in dòng `Cô lập bài nộp: Bật / Tắt`; cũng hiện ở Quản trị → Hệ thống. Bỏ trống, hoặc máy không chạy được `sudo`, thì bài nộp chạy bằng chính tài khoản của máy chủ |
 | `OJ_BANNED_WORDS` | Từ cấm bổ sung cho bộ lọc bình luận, cách nhau dấu phẩy. Quản trị viên sửa được trong Quản trị → Hệ thống, nhưng cấu hình nằm trong RAM nên khởi động lại là quay về giá trị của biến này |
-| `OJ_TRUST_PROXY` | Đặt `true` khi máy chủ đứng sau reverse proxy (image Docker đặt sẵn) để lấy địa chỉ người dùng từ `X-Forwarded-For` cho việc giới hạn tần suất. Không đặt khi máy chủ nhận kết nối trực tiếp |
+| `OJ_TRUST_PROXY` | Lấy địa chỉ người dùng từ đâu để giới hạn tần suất. `true` (image Docker đặt sẵn): máy chủ đứng sau một lớp proxy, lấy giá trị cuối của `X-Forwarded-For`. `cloudflare`: có Cloudflare đứng trước, lấy `CF-Connecting-IP` (nên đặt kèm `OJ_ORIGIN_SECRET`). Không đặt khi máy chủ nhận kết nối trực tiếp |
+| `OJ_ORIGIN_SECRET` | Chỉ nhận request đi qua Cloudflare: đặt một chuỗi bí mật ở đây, và trên Cloudflare tạo Transform Rule gắn header `X-Origin-Secret` với đúng chuỗi đó vào mọi request. Request thiếu hoặc sai header bị trả về 403 (trừ `/api/health`). Bỏ trống thì không kiểm tra |
+| `OJ_TURNSTILE_SITE_KEY`, `OJ_TURNSTILE_SECRET` | Bật CAPTCHA Cloudflare Turnstile cho form đăng nhập và đăng ký khi đặt cả hai (lấy ở trang Turnstile của Cloudflare). Máy chủ gọi Cloudflare để xác minh token trước khi kiểm tra mật khẩu hoặc tạo tài khoản. Nếu Cloudflare không gọi được thì không ai đăng nhập được: xoá hai biến này để tắt CAPTCHA |
 | `OJ_BIND_ADDRESS` | Địa chỉ lắng nghe. Bỏ trống thì chỉ nghe `127.0.0.1`; trong container đặt `0.0.0.0` (Dockerfile đã đặt sẵn) |
 | `OJ_ALLOW_REGISTER` | `true` / `false`: mở hay khoá tự đăng ký lúc khởi động. Bỏ trống thì mở, trừ khi máy chủ đang mở ra mạng mà việc cô lập bài nộp không bật được (lúc đó mặc định khoá). Quản trị viên vẫn đổi được trong Quản trị → Hệ thống cho tới lần khởi động sau |
 
@@ -429,8 +431,9 @@ Trừ 4 endpoint công khai, mọi request phải gửi header `Authorization: B
 |---|---|---|---|
 | GET | `/api/health` | công khai | Trạng thái máy chủ |
 | GET | `/api/languages` | công khai | Danh sách ngôn ngữ và trạng thái toolchain |
-| POST | `/api/auth/register` | công khai | Đăng ký tài khoản. `role` là `STUDENT` (mặc định) hoặc `TEACHER`, giá trị khác bị từ chối. Học sinh dùng được ngay; giảng viên ở trạng thái chờ duyệt (`pending: true`) và chưa đăng nhập được cho tới khi quản trị viên duyệt. Giảng viên bắt buộc gửi kèm `evidence`: file minh chứng dạng base64 (PNG, JPG, WEBP hoặc PDF, tối đa 1 MB), lưu ở `data/evidence/`. Cả hai bị từ chối khi quản trị viên tắt tự đăng ký |
-| POST | `/api/auth/login` | công khai | Đăng nhập, trả về token |
+| GET | `/api/config` | công khai | Cấu hình form đăng nhập / đăng ký cần biết trước khi có phiên: `turnstileSiteKey` (rỗng nếu CAPTCHA tắt) |
+| POST | `/api/auth/register` | công khai | Đăng ký tài khoản. `role` là `STUDENT` (mặc định) hoặc `TEACHER`, giá trị khác bị từ chối. Học sinh dùng được ngay; giảng viên ở trạng thái chờ duyệt (`pending: true`) và chưa đăng nhập được cho tới khi quản trị viên duyệt. Khi bật CAPTCHA phải gửi kèm `captcha` (token Turnstile). Giảng viên bắt buộc gửi kèm `evidence`: file minh chứng dạng base64 (PNG, JPG, WEBP hoặc PDF, tối đa 1 MB), lưu ở `data/evidence/`. Cả hai bị từ chối khi quản trị viên tắt tự đăng ký |
+| POST | `/api/auth/login` | công khai | Đăng nhập, trả về token. Khi bật CAPTCHA phải gửi kèm `captcha` (token Turnstile) |
 | POST | `/api/auth/logout` | đăng nhập | Huỷ token |
 | GET | `/api/auth/me` | đăng nhập | Thông tin tài khoản đang đăng nhập |
 | POST | `/api/auth/password` | đăng nhập | Đổi mật khẩu của chính mình |

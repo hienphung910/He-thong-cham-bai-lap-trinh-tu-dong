@@ -82,19 +82,58 @@ public class ApiServer {
     private static final int REGISTER_TEACHER_ATTEMPT_LIMIT = 20;
 
     /**
-     * May chu dung sau reverse proxy (Railway...) thi dia chi ket noi luon la cua proxy; dat
-     * OJ_TRUST_PROXY=true de lay dia chi nguoi dung tu header X-Forwarded-For do proxy gan.
-     * KHONG dat khi may chu nhan ket noi truc tiep, vi nguoi dung tu gui header nay duoc.
+     * May chu dung sau reverse proxy thi dia chi ket noi luon la cua proxy. OJ_TRUST_PROXY cho biet
+     * lay dia chi nguoi dung tu dau:
+     *   true       - mot lop proxy (Railway...): gia tri CUOI cua X-Forwarded-For, do proxy gan.
+     *   cloudflare - co Cloudflare dung truoc: header CF-Connecting-IP do Cloudflare gan. Nen dat kem
+     *                OJ_ORIGIN_SECRET, vi request di vong khong qua Cloudflare tu gui header nay duoc.
+     * KHONG dat khi may chu nhan ket noi truc tiep, vi nguoi dung tu gui cac header nay duoc.
      */
     private static final String TRUST_PROXY_ENV = "OJ_TRUST_PROXY";
-    private final boolean trustProxy = "true".equalsIgnoreCase(
-            String.valueOf(com.ptit.oj.dao.DatabaseConfig.setting(TRUST_PROXY_ENV)).trim());
+    private final String proxyMode = String.valueOf(com.ptit.oj.dao.DatabaseConfig.setting(TRUST_PROXY_ENV))
+            .trim().toLowerCase(java.util.Locale.ROOT);
+    private final boolean trustProxy = proxyMode.equals("true") || proxyMode.equals("cloudflare");
+    private final boolean behindCloudflare = proxyMode.equals("cloudflare");
 
-    /** CSP cho trang giao dien: chi tai ma tu chinh may chu; style noi tuyen va Google Fonts la do giao dien dang dung. */
-    private static final String CSP_PAGE = "default-src 'self'; script-src 'self'; "
+    /**
+     * Chi nhan request di qua Cloudflare. Tren Cloudflare tao mot Transform Rule gan header
+     * X-Origin-Secret = gia tri bi mat vao moi request; dat cung gia tri do vao OJ_ORIGIN_SECRET.
+     * Request khong co dung header (goi thang ten mien goc cua nen tang hosting, bo qua Cloudflare)
+     * bi tu choi. Bo trong thi khong kiem tra.
+     */
+    private static final String ORIGIN_SECRET_ENV = "OJ_ORIGIN_SECRET";
+    private static final String ORIGIN_SECRET_HEADER = "X-Origin-Secret";
+    private final String originSecret = textSetting(ORIGIN_SECRET_ENV);
+
+    /** CAPTCHA cho form dang ky; tat neu chua dat khoa (xem TurnstileVerifier). */
+    private final TurnstileVerifier turnstile = new TurnstileVerifier();
+
+    private static String textSetting(String key) {
+        String value = com.ptit.oj.dao.DatabaseConfig.setting(key);
+        return value == null ? "" : value.trim();
+    }
+
+    /** Request nay co di qua Cloudflare khong (khi OJ_ORIGIN_SECRET duoc dat). So sanh khong lo thoi gian. */
+    private boolean fromTrustedOrigin(HttpExchange ex) {
+        if (originSecret.isEmpty()) return true;
+        // Kiem tra suc khoe cua nen tang hosting goi thang vao container, khong qua Cloudflare.
+        if (ex.getRequestURI().getPath().equals("/api/health")) return true;
+        String given = ex.getRequestHeaders().getFirst(ORIGIN_SECRET_HEADER);
+        return given != null && java.security.MessageDigest.isEqual(
+                given.getBytes(StandardCharsets.UTF_8), originSecret.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static final String TURNSTILE_HOST = "https://challenges.cloudflare.com";
+
+    /**
+     * CSP cho trang giao dien: chi tai ma tu chinh may chu; style noi tuyen va Google Fonts la do giao
+     * dien dang dung. Khi bat CAPTCHA thi cho them script va khung cua Turnstile.
+     */
+    private final String cspPage = "default-src 'self'; script-src 'self'" + (turnstile.isEnabled() ? " " + TURNSTILE_HOST : "") + "; "
             + "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             + "font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; "
-            + "connect-src 'self'; frame-src blob:; object-src blob:; base-uri 'self'; form-action 'self'; "
+            + "connect-src 'self'; frame-src blob:" + (turnstile.isEnabled() ? " " + TURNSTILE_HOST : "") + "; "
+            + "object-src blob:; base-uri 'self'; form-action 'self'; "
             + "frame-ancestors 'none'";
     /** CSP cho phan hoi cua API (JSON / van ban): khong duoc phep tai hay nhung gi ca. */
     private static final String CSP_API = "default-src 'none'; frame-ancestors 'none'";
@@ -115,7 +154,10 @@ public class ApiServer {
     /** Dia chi cua nguoi gui request, de gioi han tan suat. */
     private String clientIp(HttpExchange ex) {
         String ip = null;
-        if (trustProxy) {
+        // Co Cloudflare dung truoc: X-Forwarded-For ket thuc bang dia chi cua may chu Cloudflare (nhieu
+        // nguoi dung chung), dia chi that cua nguoi dung nam o CF-Connecting-IP.
+        if (behindCloudflare) ip = ex.getRequestHeaders().getFirst("CF-Connecting-IP");
+        if (trustProxy && (ip == null || ip.trim().isEmpty())) {
             // Proxy noi them dia chi no nhin thay vao CUOI X-Forwarded-For; cac gia tri phia truoc do nguoi dung tu gui.
             String forwarded = ex.getRequestHeaders().getFirst("X-Forwarded-For");
             if (forwarded != null && !forwarded.trim().isEmpty()) {
@@ -169,6 +211,13 @@ public class ApiServer {
         server.createContext("/api/", this::handleApi);
         server.createContext("/", this::handleStatic);
         server.start();
+        if (!originSecret.isEmpty()) {
+            System.out.println("Chỉ nhận request có header " + ORIGIN_SECRET_HEADER + " đúng (" + ORIGIN_SECRET_ENV + ").");
+        } else if (behindCloudflare) {
+            System.out.println("CẢNH BÁO: " + TRUST_PROXY_ENV + "=cloudflare nhưng chưa đặt " + ORIGIN_SECRET_ENV
+                    + " - request không đi qua Cloudflare tự gửi được CF-Connecting-IP để né giới hạn tần suất.");
+        }
+        System.out.println("CAPTCHA khi đăng ký: " + (turnstile.isEnabled() ? "bật (Cloudflare Turnstile)" : "tắt"));
 
         if (address.isLoopbackAddress()) {
             System.out.println("Máy chủ web đã chạy: http://localhost:" + port);
@@ -207,6 +256,10 @@ public class ApiServer {
         String method = ex.getRequestMethod();
         int status = 200;          // ma HTTP cua request nay, de ghi vao nhat ky
         String error = null;
+        if (!fromTrustedOrigin(ex)) {
+            sendError(ex, 403, "Hãy truy cập bằng địa chỉ chính thức của hệ thống");
+            return;
+        }
         try {
             enforceExamMode(ex, method, path);
             route(ex, method, path);
@@ -292,6 +345,11 @@ public class ApiServer {
         }
         if ("GET".equals(method) && path.equals("/api/languages")) {
             sendJson(ex, 200, languagesJson());
+            return;
+        }
+        // Cau hinh cong khai ma form dang nhap / dang ky can biet truoc khi co phien dang nhap.
+        if ("GET".equals(method) && path.equals("/api/config")) {
+            sendJson(ex, 200, Json.obj().put("turnstileSiteKey", turnstile.getSiteKey()).build());
             return;
         }
         if ("POST".equals(method) && path.equals("/api/auth/register")) {
@@ -403,6 +461,8 @@ public class ApiServer {
             throw new ApiException(429, "Có quá nhiều lượt đăng ký từ mạng của bạn. Hãy thử lại sau " + (wait + 59) / 60 + " phút");
         }
         Json.Value body = Json.parseObject(readBody(ex, MAX_REGISTER_BODY_BYTES));
+        // CAPTCHA (neu bat): kiem tra TRUOC moi viec ton tai nguyen khac.
+        requireCaptcha(body, ip);
         String role = body.getString("role", User.ROLE_STUDENT);
         // Giang vien tu dang ky BAT BUOC gui kem file minh chung de quan tri vien co can cu duyet.
         // Kiem tra file TRUOC khi tao tai khoan: thieu hoac hong thi khong tao gi ca, nguoi dung sua
@@ -465,6 +525,25 @@ public class ApiServer {
                 .build());
     }
 
+    /**
+     * Khi bat CAPTCHA (TurnstileVerifier): body phai co "captcha" la token trinh duyet vua nhan tu
+     * widget, va Cloudflare xac nhan token do hop le. Token chi dung duoc MOT LAN, nen sau moi lan
+     * gui form (du thanh cong hay khong) trinh duyet phai lay token moi. CAPTCHA tat thi khong lam gi.
+     */
+    private void requireCaptcha(Json.Value body, String ip) {
+        if (!turnstile.isEnabled()) return;
+        String token = body.getString("captcha", "");
+        if (token.trim().isEmpty()) throw ApiException.badRequest("Hãy hoàn thành bước xác minh CAPTCHA");
+        boolean human;
+        try {
+            human = turnstile.verify(token, ip);
+        } catch (IOException e) {
+            System.err.println("Không gọi được Cloudflare Turnstile: " + e.getMessage());
+            throw new ApiException(503, "Không xác minh được CAPTCHA lúc này. Hãy thử lại sau ít phút");
+        }
+        if (!human) throw ApiException.badRequest("Xác minh CAPTCHA không hợp lệ hoặc đã hết hạn. Hãy thử lại");
+    }
+
     private void handleLogin(HttpExchange ex) throws IOException {
         Json.Value body = Json.parseObject(readBody(ex, MAX_BODY_BYTES));
         String username = body.getString("username", "");
@@ -486,6 +565,9 @@ public class ApiServer {
             throw new ApiException(429, "Đăng nhập sai quá nhiều lần. Hãy thử lại sau "
                     + (wait >= 120 ? (wait + 59) / 60 + " phút" : wait + " giây"));
         }
+        // CAPTCHA (neu bat): sau buoc gioi han tan suat de lan bi chan khong ton mot lan goi Cloudflare,
+        // truoc buoc kiem tra mat khau de may tu dong khong thu duoc mat khau nao.
+        requireCaptcha(body, ip);
 
         AuthService.LoginResult result;
         try {
@@ -914,6 +996,10 @@ public class ApiServer {
     // ------------------------------------------------------------ file tinh
 
     private void handleStatic(HttpExchange ex) throws IOException {
+        if (!fromTrustedOrigin(ex)) {
+            sendError(ex, 403, "Hãy truy cập bằng địa chỉ chính thức của hệ thống");
+            return;
+        }
         if (!"GET".equals(ex.getRequestMethod())) {
             sendError(ex, 405, "Chỉ hỗ trợ GET cho file tĩnh");
             return;
@@ -933,7 +1019,7 @@ public class ApiServer {
         }
         byte[] data = Files.readAllBytes(file);
         ex.getResponseHeaders().set("Content-Type", contentType(file.getFileName().toString()));
-        secure(ex, CSP_PAGE);
+        secure(ex, cspPage);
         ex.sendResponseHeaders(200, data.length);
         try (OutputStream os = ex.getResponseBody()) {
             os.write(data);
