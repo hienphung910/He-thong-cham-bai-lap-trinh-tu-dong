@@ -9,14 +9,16 @@ import java.util.concurrent.CopyOnWriteArrayList;
 /**
  * Cuoc thi lap trinh (Module 21): mot khoang thoi gian + danh sach bai, to chuc cho MOT lop.
  * Chi thanh vien cua lop do (va quan tri vien) thay ky thi; chi hoc sinh cua lop vao thi duoc.
- * Moi cuoc thi co mot nguoi tao; chi nguoi do (hoac quan tri vien) duoc them / bot bai va xoa cuoc thi.
+ * Ky thi thuoc ve mot LOP: giang vien phu trach lop, nguoi tao ky thi (khi con day lop do) va quan
+ * tri vien quan ly duoc - xem ContestService.canManage.
  */
 public class Contest extends Entity {
 
     private final String title;
     private final String description;
-    private final LocalDateTime startAt;
-    private final int durationMin;
+    /** Gio bat dau va thoi luong sua duoc truoc khi thi; dang thi thi chi gia han duoc (ContestService.reschedule). */
+    private volatile LocalDateTime startAt;
+    private volatile int durationMin;
     private final List<String> problemIds;
     private final String ownerUsername;     // ten dang nhap cua nguoi tao
     private final String ownerName;         // ho ten nguoi tao, de hien thi
@@ -50,6 +52,8 @@ public class Contest extends Entity {
     public String getDescription() { return description; }
     public LocalDateTime getStartAt() { return startAt; }
     public int getDurationMin() { return durationMin; }
+    public void setStartAt(LocalDateTime startAt) { this.startAt = startAt; }
+    public void setDurationMin(int durationMin) { this.durationMin = durationMin; }
     public List<String> getProblemIds() { return problemIds; }
     public String getOwnerUsername() { return ownerUsername; }
     public String getOwnerName() { return ownerName; }

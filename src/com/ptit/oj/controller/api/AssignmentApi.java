@@ -38,10 +38,11 @@ public class AssignmentApi extends ApiModule {
     public boolean handle(Request req) throws IOException {
         if (req.is("GET", "assignments")) {
             User user = req.user();
-            Set<String> solved = platform.getAnalytics().solvedIds(judge.getSubmissionsOf(user));
+            Map<String, List<java.time.LocalDateTime>> accepted = platform.getAnalytics()
+                    .acceptedTimesByUser().getOrDefault(user.getId(), Collections.<String, List<java.time.LocalDateTime>>emptyMap());
             List<String> items = new ArrayList<>();
             for (Assignment a : assignments.ofClassrooms(school.classroomsOf(user))) {
-                items.add(assignmentJson(a, user, solved));
+                items.add(assignmentJson(a, user, accepted));
             }
             req.send(Json.array(items));
             return true;
@@ -81,16 +82,18 @@ public class AssignmentApi extends ApiModule {
     }
 
     /** Mot bai tap giao kem trang thai tung bai doi voi nguoi dang xem. */
-    private String assignmentJson(Assignment a, User viewer, Set<String> solved) {
+    private String assignmentJson(Assignment a, User viewer, Map<String, List<java.time.LocalDateTime>> accepted) {
         Classroom classroom = school.findClassroom(a.getClassroomId());
         List<String> problems = new ArrayList<>();
         int solvedCount = 0;
         for (String id : a.getProblemIds()) {
-            boolean done = solved.contains(id);
+            // Chi lan AC tu luc giao toi han nop moi tinh la da lam bai tap nay (xem Assignment.statusOf).
+            String status = a.statusOf(accepted.get(id));
+            boolean done = "DONE".equals(status);
             if (done) solvedCount++;
             problems.add(Json.obj().put("id", id)
                     .put("title", judge.findProblem(id).map(Problem::getTitle).orElse(id))
-                    .put("solved", done).build());
+                    .put("solved", done).put("status", status).build());
         }
         return Json.obj()
                 .put("id", a.getId())
@@ -111,21 +114,26 @@ public class AssignmentApi extends ApiModule {
     /** Bang tien do: moi hoc sinh mot dong, moi bai mot o da lam / chua lam. */
     private String progressJson(Assignment a, Classroom classroom) {
         Map<String, User> users = usersById();
-        Map<String, Set<String>> solvedByUser = platform.getAnalytics().solvedByUser();
+        Map<String, Map<String, List<java.time.LocalDateTime>>> acceptedByUser = platform.getAnalytics().acceptedTimesByUser();
         List<String> rows = new ArrayList<>();
         for (String studentId : classroom.getStudentIds()) {
             User student = users.get(studentId);
             if (student == null) continue;
-            Set<String> solved = solvedByUser.getOrDefault(studentId, Collections.<String>emptySet());
+            Map<String, List<java.time.LocalDateTime>> accepted = acceptedByUser.getOrDefault(studentId,
+                    Collections.<String, List<java.time.LocalDateTime>>emptyMap());
             List<String> cells = new ArrayList<>();
+            List<String> statuses = new ArrayList<>();
             int solvedCount = 0;
             for (String problemId : a.getProblemIds()) {
-                boolean done = solved.contains(problemId);
+                String status = a.statusOf(accepted.get(problemId));
+                boolean done = "DONE".equals(status);
                 if (done) solvedCount++;
                 cells.add(String.valueOf(done));
+                statuses.add(status);
             }
             rows.add(Json.obj().put("username", student.getUsername()).put("fullName", student.getFullName())
-                    .put("solvedCount", solvedCount).putRaw("solved", Json.array(cells)).build());
+                    .put("solvedCount", solvedCount).putRaw("solved", Json.array(cells))
+                    .putRaw("statuses", stringArray(statuses)).build());
         }
         return Json.obj().put("title", a.getTitle())
                 .putRaw("problemIds", stringArray(a.getProblemIds()))

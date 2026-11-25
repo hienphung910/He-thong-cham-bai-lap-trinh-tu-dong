@@ -124,6 +124,47 @@ public class ProblemAdminService {
         }
     }
 
+    /** Sua ten, de bai va gioi han thoi gian / bo nho cua mot bai DA CO. Test, chu de, chu bai giu nguyen. */
+    public synchronized Problem updateProblem(User actor, String rawId, String title, String statement,
+                                              long timeLimitMs, int memoryLimitMb) {
+        Problem current = findForEdit(actor, rawId);
+        String id = current.getId();
+        String cleanTitle = requireText(title, "Tên bài", MAX_TITLE);
+        String cleanStatement = requireText(statement, "Nội dung đề", MAX_STATEMENT);
+        if (timeLimitMs < MIN_TIME_LIMIT_MS || timeLimitMs > MAX_TIME_LIMIT_MS) {
+            throw new ProblemAdminException(400,
+                    "Giới hạn thời gian phải từ " + MIN_TIME_LIMIT_MS + " đến " + MAX_TIME_LIMIT_MS + " ms");
+        }
+        if (memoryLimitMb < MIN_MEMORY_MB || memoryLimitMb > MAX_MEMORY_MB) {
+            throw new ProblemAdminException(400,
+                    "Giới hạn bộ nhớ phải từ " + MIN_MEMORY_MB + " đến " + MAX_MEMORY_MB + " MB");
+        }
+        Map<String, String> changes = new LinkedHashMap<>();
+        changes.put("title", cleanTitle);
+        changes.put("timeLimitMs", String.valueOf(timeLimitMs));
+        changes.put("memoryLimitMb", String.valueOf(memoryLimitMb));
+        try {
+            writer.writeStatement(id, cleanStatement);
+            Problem problem = loader.load(writer.updateProperties(id, changes));
+            problems.save(problem);
+            return problem;
+        } catch (IOException e) {
+            throw new ProblemAdminException(500, "Không ghi được bài tập ra ổ đĩa: " + e.getMessage());
+        }
+    }
+
+    /** Xoa han mot bai (thu muc tren o dia va ban trong bo nho). Nguoi goi da kiem tra bai khong con duoc dung o dau. */
+    public synchronized Problem deleteProblem(User actor, String rawId) {
+        Problem current = findForEdit(actor, rawId);
+        try {
+            writer.delete(current.getId());
+        } catch (IOException e) {
+            throw new ProblemAdminException(500, "Không xoá được bài tập trên ổ đĩa: " + e.getMessage());
+        }
+        problems.deleteById(current.getId());
+        return current;
+    }
+
     // ------------------------------------------------- quan ly bo test (Module 7)
 
     /** Them mot test vao bai DA CO. Diem moi test duoc chia deu lai khi nap lai bai. */

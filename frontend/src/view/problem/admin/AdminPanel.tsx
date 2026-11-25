@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { api } from "../../../shared/api";
 import { DIFFICULTY_META, OTHER_TOPIC, orderByPath, topicKey } from "../learningPath";
 import type { Problem, Topic } from "../../../shared/types";
 import ProblemEditor from "./ProblemEditor";
@@ -20,6 +21,17 @@ export default function AdminPanel({ problems, topics, onProblemsChanged, mine =
   const [testProblem, setTestProblem] = useState<Problem | null>(null);
   /** "" = moi chu de, ma chu de, hoac OTHER_TOPIC. */
   const [topicFilter, setTopicFilter] = useState("");
+
+  /** Xoa han mot bai. May chu tu choi neu bai da co nguoi nop hoac dang nam trong ky thi / bai giao / lop. */
+  async function removeProblem(p: Problem) {
+    if (!window.confirm(`Xoá bài ${p.id} — ${p.title}?\n\nĐề bài và toàn bộ test sẽ bị xoá, không khôi phục được.`)) return;
+    try {
+      await api.deleteProblem(p.id);
+      await onProblemsChanged();
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : String(e));
+    }
+  }
 
   const known = useMemo(() => new Set(topics.map((t) => t.id)), [topics]);
   const ordered = useMemo(() => orderByPath(problems, topics), [problems, topics]);
@@ -108,6 +120,7 @@ export default function AdminPanel({ problems, topics, onProblemsChanged, mine =
                         <div style={{ display: "flex", justifyContent: "flex-end", gap: 6 }}>
                           <button onClick={() => setTestProblem(p)} style={ROW_BTN}>Test</button>
                           <button onClick={() => setEditProblem(p)} style={ROW_BTN}>Sửa</button>
+                          <button onClick={() => void removeProblem(p)} style={{ ...ROW_BTN, color: "#C62828", borderColor: "#FFCDD2" }}>Xoá</button>
                         </div>
                       </td>
                     </tr>

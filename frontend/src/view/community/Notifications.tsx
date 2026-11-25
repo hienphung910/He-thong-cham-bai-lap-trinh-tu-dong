@@ -10,6 +10,7 @@ const PAGE_LABEL: Partial<Record<PageKey, string>> = {
   Assignments: "Bài tập được giao",
   Classrooms: "Lớp của tôi",
   Contests: "Kỳ thi",
+  Accounts: "Tài khoản",
 };
 
 /** Doi truong link cua thong bao thanh nhan hien thi va viec can lam khi bam; null = khong bam duoc. */

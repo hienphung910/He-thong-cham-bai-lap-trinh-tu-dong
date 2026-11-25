@@ -1,6 +1,7 @@
 import Logo from "../../shared/Logo";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useAuth } from "./auth";
+import { EVIDENCE_ACCEPT, readEvidence } from "./evidence";
 
 type Mode = "login" | "register";
 
@@ -22,12 +23,24 @@ export default function LoginModal() {
   // Vai tro chon khi dang ky: hoc sinh hoac giang vien (quan tri vien khong tu dang ky duoc).
   const [role, setRole] = useState<"STUDENT" | "TEACHER">("STUDENT");
   const [department, setDepartment] = useState("");
+  // Minh chung giang vien gui kem de quan tri vien xem khi duyet: ten file va noi dung base64.
+  const [evidence, setEvidence] = useState<{ name: string; data: string } | null>(null);
+  const evidenceInput = useRef<HTMLInputElement>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [showPass, setShowPass] = useState(false);
 
   function switchMode(next: Mode) { setMode(next); setError(""); setNotice(""); setPassword(""); setConfirm(""); }
+
+  async function pickEvidence(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";      // de chon lai dung file do van nhan duoc su kien
+    if (!file) return;
+    setError("");
+    try { setEvidence({ name: file.name, data: await readEvidence(file) }); }
+    catch (e2) { setEvidence(null); setError(e2 instanceof Error ? e2.message : String(e2)); }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault(); setError(""); setNotice("");
@@ -41,14 +54,19 @@ export default function LoginModal() {
     }
     if (password.length < 8) { setError("Mật khẩu phải có ít nhất 8 ký tự."); return; }
     if (password !== confirm) { setError("Hai lần nhập mật khẩu không khớp."); return; }
+    if (role === "TEACHER" && !evidence) { setError("Hãy tải minh chứng lên trước khi đăng ký giảng viên."); return; }
     setBusy(true);
     try {
-      await register({
+      const pending = await register({
         role, username: username.trim(), password, fullName: fullName.trim(),
         studentCode: studentCode.trim(), className: className.trim(), department: department.trim(),
+        evidence: role === "TEACHER" && evidence ? evidence.data : "",
       });
+      setEvidence(null);
       switchMode("login");
-      setNotice(`Đã tạo tài khoản ${role === "TEACHER" ? "giảng viên" : "học sinh"} @${username.trim()}. Mời bạn đăng nhập.`);
+      setNotice(pending
+        ? `Đã gửi đăng ký giảng viên @${username.trim()}. Tài khoản cần quản trị viên duyệt rồi mới đăng nhập được.`
+        : `Đã tạo tài khoản học sinh @${username.trim()}. Mời bạn đăng nhập.`);
     } catch (e2) { setError(e2 instanceof Error ? e2.message : String(e2)); }
     finally { setBusy(false); }
   }
@@ -104,7 +122,28 @@ export default function LoginModal() {
                   <input type="text" placeholder="Lớp" value={className} onChange={(e) => setClassName(e.target.value)} style={inputBox} />
                 </>
               ) : (
-                <input type="text" placeholder="Bộ môn" value={department} onChange={(e) => setDepartment(e.target.value)} style={inputBox} />
+                <>
+                  <input type="text" placeholder="Bộ môn" value={department} onChange={(e) => setDepartment(e.target.value)} style={inputBox} />
+                  {/* Minh chung la giang vien: quan tri vien xem file nay khi duyet tai khoan. */}
+                  <input ref={evidenceInput} type="file" accept={EVIDENCE_ACCEPT} style={{ display: "none" }} onChange={(e) => void pickEvidence(e)} />
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <button type="button" onClick={() => evidenceInput.current?.click()} title="Ảnh PNG, JPG, WEBP hoặc file PDF, tối đa 1 MB" style={{
+                      display: "inline-flex", alignItems: "center", gap: 8, height: 40, padding: "0 14px", borderRadius: 8, cursor: "pointer",
+                      border: "1px dashed var(--color-accent-dark)", background: evidence ? "var(--color-red-light)" : "#fff",
+                      color: "#424242", fontSize: 13.5, fontWeight: 600, flexShrink: 0,
+                    }}>
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M8 10.5V2.5M4.8 5.5 8 2.3l3.2 3.2M2.5 10.5v2a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-2" /></svg>
+                      {evidence ? "Đổi minh chứng" : "Tải minh chứng lên"}
+                    </button>
+                    {evidence && (
+                      <>
+                        <span title={evidence.name} style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: "#2E7D32", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>✓ {evidence.name}</span>
+                        <button type="button" onClick={() => setEvidence(null)} title="Gỡ minh chứng"
+                          style={{ border: "none", background: "none", color: "#9E9E9E", cursor: "pointer", fontSize: 18, lineHeight: 1, padding: "0 4px" }}>×</button>
+                      </>
+                    )}
+                  </div>
+                </>
               )}
             </>
           )}

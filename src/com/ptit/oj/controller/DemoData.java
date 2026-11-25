@@ -78,12 +78,12 @@ public class DemoData {
 
         // --- cuoc thi: mot cuoc da xong (de xem lai) va mot cuoc dang dien ra ---
         LocalDateTime lastNight = LocalDate.now().minusDays(1).atTime(19, 0);
-        com.ptit.oj.model.Contest past = platform.getContests().create(teacher, "Kỳ thi thử số 1",
+        com.ptit.oj.model.Contest past = platform.getContests().createUnchecked(teacher, "Kỳ thi thử số 1",
                 "Kỳ thi đã kết thúc, dùng để xem lại bảng xếp hạng.",
                 lastNight, 120, ids(path, 0, 4), false, classroom.getId());
         // Ky thi mau da ket thuc: coi nhu ca lop da vao thi tu dau, de bai nop mau len bang xep hang.
         for (User s : students) past.getJoinedAt().put(s.getId(), lastNight);
-        platform.getContests().create(teacher, "Kỳ thi luyện tập tuần này", "Mở trong 7 ngày; nộp bài trong khung giờ này sẽ được tính điểm.",
+        platform.getContests().createUnchecked(teacher, "Kỳ thi luyện tập tuần này", "Mở trong 7 ngày; nộp bài trong khung giờ này sẽ được tính điểm.",
                 LocalDateTime.now().minusMinutes(30).withSecond(0).withNano(0), 7 * 24 * 60, ids(path, 4, 8), false, classroom.getId());
 
         // --- cong dong ---

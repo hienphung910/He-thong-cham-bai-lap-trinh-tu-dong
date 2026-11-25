@@ -17,8 +17,8 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Module 2 (to chuc), 3 (lop hoc), 32 (phu huynh), 35 (tro giang):
- *   /api/organizations, /api/classrooms, /api/parents
+ * Module 2 (to chuc), 3 (lop hoc), 35 (tro giang):
+ *   /api/organizations, /api/classrooms
  */
 public class SchoolApi extends ApiModule {
 
@@ -31,7 +31,7 @@ public class SchoolApi extends ApiModule {
 
     @Override
     public boolean handle(Request req) throws IOException {
-        return handleOrganizations(req) || handleClassrooms(req) || handleMembers(req) || handleParents(req);
+        return handleOrganizations(req) || handleClassrooms(req) || handleMembers(req);
     }
 
     // ------------------------------------------------------------ to chuc
@@ -99,13 +99,37 @@ public class SchoolApi extends ApiModule {
         if (req.is("DELETE", "classrooms", "*")) {
             User user = req.staff();
             Classroom c = school.findClassroom(req.arg(0));
-            school.requireManager(user, c);
+            school.requireOwner(user, c);          // tro giang khong xoa duoc lop
             school.deleteClassroom(c.getId());
             // Xoa luon bai tap giao, buoi hoc va ban ghi cua lop: neu de lai thi khong ai xoa duoc
             // nua (moi thao tac deu can tim thay lop) va bai kho rieng trong do van bi coi la da cong bo.
             platform.getAssignments().deleteByClassroom(c.getId());
             platform.getMeetings().deleteByClassroom(c.getId());
             platform.getContests().deleteByClassroom(c.getId());
+            req.sendOk();
+            return true;
+        }
+        // Loi moi vao lop cua nguoi dang dang nhap, va viec dong y / tu choi.
+        if (req.is("GET", "classroom-invites")) {
+            User user = req.user();
+            Map<String, User> users = usersById();
+            List<String> items = new ArrayList<>();
+            for (Classroom c : school.invitesOf(user)) {
+                items.add(Json.obj().put("id", c.getId()).put("name", c.getName())
+                        .put("teacherName", nameOf(users, c.getTeacherId())).build());
+            }
+            req.send(Json.array(items));
+            return true;
+        }
+        if (req.is("POST", "classrooms", "*", "accept")) {
+            User user = req.user();
+            school.acceptInvite(school.findClassroom(req.arg(0)), user);
+            req.sendOk();
+            return true;
+        }
+        if (req.is("POST", "classrooms", "*", "decline")) {
+            User user = req.user();
+            school.declineInvite(school.findClassroom(req.arg(0)), user);
             req.sendOk();
             return true;
         }
@@ -124,20 +148,18 @@ public class SchoolApi extends ApiModule {
         if (req.is("POST", "classrooms", "*", "students")) {
             Classroom c = managedClassroom(req);
             User student = requireUsername(req.body().getString("username"));
-            boolean alreadyIn = c.getStudentIds().contains(student.getId());
-            school.addStudent(c, student);
-            // Bao cho hoc sinh biet minh vua duoc dua vao lop (them lai nguoi da o trong lop thi khong bao).
-            if (!alreadyIn) {
-                platform.getCommunity().notifyUser(student.getId(), "Bạn được thêm vào lớp " + c.getName(),
-                        req.user().getFullName() + " đã thêm bạn vào lớp " + c.getName()
-                                + ". Vào Lớp của tôi để xem bài luyện tập và lịch học của lớp.",
+            // Chi MOI: hoc sinh phai tu dong y moi vao lop (moi lai nguoi da moi / da trong lop thi khong bao nua).
+            if (school.invite(c, student)) {
+                platform.getCommunity().notifyUser(student.getId(), "Bạn được mời vào lớp " + c.getName(),
+                        req.user().getFullName() + " mời bạn vào lớp " + c.getName()
+                                + ". Vào Lớp của tôi để đồng ý hoặc từ chối.",
                         "Classrooms");
             }
             req.sendOk();
             return true;
         }
         if (req.is("DELETE", "classrooms", "*", "students", "*")) {
-            Classroom c = managedClassroom(req);
+            Classroom c = ownedClassroom(req);
             school.removeStudent(c, req.arg(1));
             req.sendOk();
             return true;
@@ -163,7 +185,7 @@ public class SchoolApi extends ApiModule {
             return true;
         }
         if (req.is("POST", "classrooms", "*", "assistants")) {
-            Classroom c = managedClassroom(req);
+            Classroom c = ownedClassroom(req);
             User assistant = requireUsername(req.body().getString("username"));
             boolean alreadyIn = c.getAssistantIds().contains(assistant.getId());
             school.addAssistant(c, assistant);
@@ -177,7 +199,7 @@ public class SchoolApi extends ApiModule {
             return true;
         }
         if (req.is("DELETE", "classrooms", "*", "assistants", "*")) {
-            Classroom c = managedClassroom(req);
+            Classroom c = ownedClassroom(req);
             school.removeAssistant(c, req.arg(1));
             req.sendOk();
             return true;
@@ -193,6 +215,14 @@ public class SchoolApi extends ApiModule {
         return c;
     }
 
+    /** Lop trong duong dan, kem kiem tra nguoi goi la giang vien phu trach (hoac quan tri vien). */
+    private Classroom ownedClassroom(Request req) {
+        User user = req.staff();
+        Classroom c = school.findClassroom(req.arg(0));
+        school.requireOwner(user, c);
+        return c;
+    }
+
     private Json.Obj classroomJson(Classroom c, User viewer, Map<String, User> users) {
         return Json.obj()
                 .put("id", c.getId())
@@ -205,6 +235,8 @@ public class SchoolApi extends ApiModule {
                 .put("studentCount", c.getStudentIds().size())
                 .put("practiceCount", c.getPracticeProblemIds().size())
                 .put("canManage", school.canManage(viewer, c))
+                // isOwner: giang vien phu trach (hoac quan tri vien) - xoa lop, quan ly tro giang, xoa hoc sinh.
+                .put("isOwner", school.isOwner(viewer, c))
                 // Ma tham gia chi nguoi quan ly lop thay, de dua cho hoc sinh.
                 .put("joinCode", school.canManage(viewer, c) ? c.getJoinCode() : "");
     }
@@ -225,6 +257,14 @@ public class SchoolApi extends ApiModule {
             User u = users.get(id);
             if (u != null) assistants.add(userJson(u).build());
         }
+        // Hoc sinh da duoc moi nhung chua dong y: chi nguoi quan ly lop thay.
+        List<String> invited = new ArrayList<>();
+        if (school.canManage(viewer, c)) {
+            for (String id : c.getInvitedIds()) {
+                User u = users.get(id);
+                if (u != null) invited.add(userJson(u).build());
+            }
+        }
         // Bai luyen tap cua lop, kem viec nguoi dang xem da giai chua.
         Set<String> mySolved = platform.getAnalytics().solvedByUser().get(viewer.getId());
         List<String> practice = new ArrayList<>();
@@ -238,54 +278,9 @@ public class SchoolApi extends ApiModule {
         return classroomJson(c, viewer, users)
                 .putRaw("practice", Json.array(practice))
                 .putRaw("students", Json.array(students))
+                .putRaw("invited", Json.array(invited))
                 .putRaw("assistants", Json.array(assistants))
                 .build();
     }
 
-    // ----------------------------------------------------------- phu huynh
-
-    private boolean handleParents(Request req) throws IOException {
-        if (req.is("GET", "parents")) {
-            req.staff();
-            Map<String, User> users = usersById();
-            List<String> items = new ArrayList<>();
-            for (ParentContact p : school.getParents()) {
-                User student = users.get(p.getStudentId());
-                items.add(Json.obj().put("id", p.getId()).put("fullName", p.getFullName())
-                        .put("phone", p.getPhone()).put("email", p.getEmail())
-                        .put("studentName", nameOf(users, p.getStudentId()))
-                        .put("studentUsername", student == null ? "" : student.getUsername())
-                        .build());
-            }
-            req.send(Json.array(items));
-            return true;
-        }
-        if (req.is("POST", "parents")) {
-            req.staff();
-            Json.Value body = req.body();
-            User student = requireUsername(body.getString("studentUsername"));
-            school.addParent(student, body.getString("fullName"), body.getString("phone"), body.getString("email"));
-            req.sendOk();
-            return true;
-        }
-        if (req.is("DELETE", "parents", "*")) {
-            req.staff();
-            school.deleteParent(req.arg(0));
-            req.sendOk();
-            return true;
-        }
-        // Bao cao hoc tap cua con gui cho phu huynh (noi dung do AssistantService soan).
-        if (req.is("GET", "parents", "*", "report")) {
-            req.staff();
-            ParentContact parent = school.findParent(req.arg(0));
-            User student = usersById().get(parent.getStudentId());
-            List<String> lines = new ArrayList<>();
-            if (student != null) lines = platform.getAssistant().studentComment(student);
-            req.send(Json.obj().put("parentName", parent.getFullName())
-                    .put("studentName", student == null ? "(đã xoá)" : student.getFullName())
-                    .putRaw("lines", stringArray(lines)).build());
-            return true;
-        }
-        return false;
-    }
 }

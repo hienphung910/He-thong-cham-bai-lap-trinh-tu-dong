@@ -7,6 +7,8 @@ import com.ptit.oj.model.Student;
 import com.ptit.oj.model.Teacher;
 import com.ptit.oj.model.User;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -19,6 +21,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * Nguyen tac:
  *  - Khi tu dang ky, client chi duoc chon STUDENT hoac TEACHER. Tai khoan ADMIN
  *    khong bao gio tao duoc qua register(), chi quan tri vien tao (createByAdmin).
+ *  - Hoc sinh tu dang ky la dung duoc ngay. Giang vien tu dang ky thi tai khoan o trang thai
+ *    cho duyet: khong dang nhap duoc cho toi khi quan tri vien duyet (approve) hoac tu choi (reject).
  *  - Sai username va sai mat khau tra ve cung mot thong bao, de khong lo
  *    tai khoan nao dang ton tai (user enumeration).
  *  - Khong ham nao trong lop nay tra ve hash hoac salt ra ngoai.
@@ -31,6 +35,11 @@ public class AuthService {
 
     private static final int MAX_FULL_NAME = 100;
     private static final int MAX_CODE = 40;
+    /**
+     * So tai khoan giang vien cho duyet toi da cung luc. Dang ky la cong khai va moi don co the kem
+     * mot file minh chung, nen can mot tran de khong ai lam day o dia bang cach dang ky hang loat.
+     */
+    private static final int MAX_PENDING = 100;
     /** Khop voi cot users.student_code VARCHAR(30). */
     private static final int MAX_STUDENT_CODE = 30;
 
@@ -76,6 +85,7 @@ public class AuthService {
      * Tu dang ky tai khoan. role chi nhan STUDENT hoac TEACHER (de trong thi coi la STUDENT);
      * gui ADMIN hay gia tri la deu bi tu choi.
      * Hoc sinh dung studentCode + className, giang vien dung department.
+     * Tai khoan giang vien tra ve o trang thai cho duyet (isApproved() == false).
      */
     public synchronized User register(String role, String username, String rawPassword, String fullName,
                                       String studentCode, String className, String department) {
@@ -90,8 +100,15 @@ public class AuthService {
             String cleanClass = optionalText(className, "Lớp", MAX_CODE);
             user = new Student(newUserId(), cleanUsername, cleanFullName, cleanCode, cleanClass);
         } else if (User.ROLE_TEACHER.equals(role)) {
+            if (!users.supportsApproval()) {
+                throw new AuthException(503, "Hệ thống chưa nhận được giảng viên tự đăng ký. Hãy liên hệ quản trị viên để được tạo tài khoản");
+            }
+            if (pendingUsers().size() >= MAX_PENDING) {
+                throw new AuthException(503, "Đang có quá nhiều đăng ký giảng viên chờ duyệt. Hãy thử lại sau");
+            }
             String cleanDepartment = optionalText(department, "Bộ môn", MAX_CODE);
             user = new Teacher(newUserId(), cleanUsername, cleanFullName, cleanDepartment);
+            user.setApproved(false);
         } else {
             throw new AuthException(400, "Chỉ được tự đăng ký vai trò Học sinh hoặc Giảng viên");
         }
@@ -136,6 +153,129 @@ public class AuthService {
         return createAccount(user, rawPassword);
     }
 
+    // ------------------------------------------- duyet giang vien tu dang ky
+
+    /** Cac tai khoan dang cho quan tri vien duyet, cu nhat truoc. */
+    public List<User> pendingUsers() {
+        List<User> pending = new ArrayList<>();
+        for (User u : users.findAll()) {
+            if (!u.isApproved()) pending.add(u);
+        }
+        return pending;
+    }
+
+    /** Quan tri vien duyet: tu luc nay tai khoan dang nhap duoc. */
+    public synchronized User approve(String userId) {
+        User user = requirePending(userId);
+        user.setApproved(true);
+        users.save(user);
+        userCache.remove(userId);
+        return user;
+    }
+
+    /** Quan tri vien tu choi: xoa han tai khoan dang cho duyet, ten dang nhap dung lai duoc. */
+    public synchronized User reject(String userId) {
+        User user = requirePending(userId);
+        users.deleteById(userId);
+        sessions.invalidateUser(userId, null);
+        userCache.remove(userId);
+        return user;
+    }
+
+    /** Chi tai khoan DANG CHO DUYET moi duyet / tu choi duoc: hai ham tren khong xoa duoc tai khoan dang dung. */
+    private User requirePending(String userId) {
+        Optional<User> found = userId == null ? Optional.<User>empty() : users.findById(userId);
+        if (!found.isPresent()) throw new AuthException(404, "Không có tài khoản này");
+        if (found.get().isApproved()) {
+            throw new AuthException(409, "Tài khoản @" + found.get().getUsername() + " không ở trạng thái chờ duyệt");
+        }
+        return found.get();
+    }
+
+    // ------------------------------------------ quan tri vien quan ly tai khoan
+
+    /**
+     * Khoa tai khoan: bi dang xuat ngay va khong dang nhap lai duoc. Tai khoan quay ve trang thai
+     * "chua duoc phep" giong luc cho duyet; mo khoa bang approve().
+     */
+    public synchronized User lock(User actor, String userId) {
+        User target = requireOther(actor, userId);
+        if (!target.isApproved()) {
+            throw new AuthException(409, "Tài khoản @" + target.getUsername() + " đã bị khoá hoặc đang chờ duyệt");
+        }
+        if (!users.supportsApproval()) {
+            throw new AuthException(503, "Hệ thống chưa khoá được tài khoản (bảng users thiếu cột approved)");
+        }
+        requireNotLastAdmin(target);
+        target.setApproved(false);
+        users.save(target);
+        dropSessions(userId);
+        return target;
+    }
+
+    /** Xoa han tai khoan dang dung. Trong MySQL, bai nop cua ho bi xoa theo (ON DELETE CASCADE). */
+    public synchronized User delete(User actor, String userId) {
+        User target = requireOther(actor, userId);
+        requireNotLastAdmin(target);
+        users.deleteById(userId);
+        dropSessions(userId);
+        return target;
+    }
+
+    /** Doi vai tro (STUDENT / TEACHER / ADMIN), giu nguyen ten dang nhap va mat khau. */
+    public synchronized User changeRole(User actor, String userId, String role) {
+        User target = requireOther(actor, userId);
+        if (target.getRoleCode().equals(role)) return target;
+        User changed;
+        if (User.ROLE_STUDENT.equals(role)) {
+            changed = new Student(target.getId(), target.getUsername(), target.getFullName(), "", "");
+        } else if (User.ROLE_TEACHER.equals(role)) {
+            changed = new Teacher(target.getId(), target.getUsername(), target.getFullName(), "");
+        } else if (User.ROLE_ADMIN.equals(role)) {
+            changed = new Admin(target.getId(), target.getUsername(), target.getFullName());
+        } else {
+            throw new AuthException(400, "Vai trò phải là STUDENT, TEACHER hoặc ADMIN");
+        }
+        requireNotLastAdmin(target);
+        Optional<Credentials> credentials = users.findCredentials(userId);
+        if (!credentials.isPresent()) throw new AuthException(409, "Tài khoản này chưa có mật khẩu, không đổi vai trò được");
+        changed.setApproved(target.isApproved());
+        users.saveWithCredentials(changed, credentials.get());
+        // Phien cu con giu vai tro cu trong bo nho dem: buoc dang nhap lai de nhan vai tro moi.
+        dropSessions(userId);
+        return changed;
+    }
+
+    /** Tim tai khoan theo ma; rong neu khong co. */
+    public Optional<User> findById(String userId) {
+        return userId == null ? Optional.<User>empty() : users.findById(userId);
+    }
+
+    /** Tai khoan dich cua mot thao tac quan tri: phai ton tai va khong phai chinh nguoi dang thao tac. */
+    private User requireOther(User actor, String userId) {
+        Optional<User> found = findById(userId);
+        if (!found.isPresent()) throw new AuthException(404, "Không có tài khoản này");
+        if (found.get().getId().equals(actor.getId())) {
+            throw new AuthException(400, "Không tự khoá, xoá hay đổi vai trò tài khoản của chính mình được");
+        }
+        return found.get();
+    }
+
+    /** He thong luon phai con it nhat mot quan tri vien dang dung duoc. */
+    private void requireNotLastAdmin(User target) {
+        if (!User.ROLE_ADMIN.equals(target.getRoleCode()) || !target.isApproved()) return;
+        int admins = 0;
+        for (User u : users.findAll()) {
+            if (User.ROLE_ADMIN.equals(u.getRoleCode()) && u.isApproved()) admins++;
+        }
+        if (admins <= 1) throw new AuthException(409, "Đây là quản trị viên duy nhất còn dùng được, không khoá, xoá hay hạ quyền được");
+    }
+
+    private void dropSessions(String userId) {
+        sessions.invalidateUser(userId, null);
+        userCache.remove(userId);
+    }
+
     /** Doi mat khau cua chinh minh: phai nhap dung mat khau hien tai. */
     public synchronized void changePassword(User user, String oldPassword, String newPassword, String currentToken) {
         Optional<Credentials> credentials = users.findCredentials(user.getId());
@@ -174,6 +314,10 @@ public class AuthService {
         if (!credentials.isPresent() || !passwords.matches(rawPassword, credentials.get())) {
             throw new AuthException(401, "Sai tên đăng nhập hoặc mật khẩu");
         }
+        // Kiem tra SAU mat khau: chi nguoi biet dung mat khau moi duoc biet tai khoan dang cho duyet.
+        if (!user.isApproved()) {
+            throw new AuthException(403, "Tài khoản giảng viên của bạn đang chờ quản trị viên duyệt");
+        }
         return new LoginResult(sessions.createToken(user.getId()), user);
     }
 
@@ -185,6 +329,7 @@ public class AuthService {
         CachedUser cached = userCache.get(userId.get());
         if (cached != null && cached.until > now) return Optional.of(cached.user);
         Optional<User> found = users.findById(userId.get());
+        if (found.isPresent() && !found.get().isApproved()) return Optional.empty();
         if (found.isPresent()) userCache.put(userId.get(), new CachedUser(found.get(), now + USER_CACHE_MS));
         else userCache.remove(userId.get());
         return found;

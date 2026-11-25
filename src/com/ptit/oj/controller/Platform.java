@@ -25,6 +25,7 @@ public class Platform {
     private final MeetingService meetings = new MeetingService(community);
     private final BillingService billing = new BillingService();
     private final SystemService system = new SystemService();
+    private final EvidenceStore evidence;
     private final ContestService contests;
     private final AnalyticsService analytics;
     private final AssistantService assistant;
@@ -32,29 +33,16 @@ public class Platform {
 
     public Platform(JudgeService judge) {
         this.judge = judge;
-        this.contests = new ContestService(judge);
+        this.evidence = new EvidenceStore(judge.getDataDir().resolve("evidence"));
+        this.contests = new ContestService(judge, school);
         this.analytics = new AnalyticsService(judge);
         this.assistant = new AssistantService(judge, analytics);
         this.playground = new PlaygroundService(judge);
     }
 
-    /**
-     * Ma cac bai da duoc dua vao mot ky thi, bai tap giao hoac bai hoc.
-     * Bai kho rieng binh thuong chi chu bai thay; da nam trong danh sach nay thi moi nguoi mo duoc de lam.
-     */
-    public Set<String> publishedProblemIds() {
-        Set<String> ids = new HashSet<>();
-        // Ky thi CHUA bat dau thi chua cong bo bai: neu khong, thi sinh xem duoc de truoc gio thi.
-        for (Contest c : contests.getContests()) {
-            if (!"UPCOMING".equals(c.getStatus())) ids.addAll(c.getProblemIds());
-        }
-        for (Assignment a : assignments.getAll()) ids.addAll(a.getProblemIds());
-        // Bai luyen tap giang vien them rieng cho lop cung coi la da cong bo de hoc sinh mo duoc.
-        for (com.ptit.oj.model.Classroom c : school.getClassrooms()) ids.addAll(c.getPracticeProblemIds());
-        for (Course c : courses.getCourses()) {
-            for (Lesson l : c.getLessons()) ids.addAll(l.getProblemIds());
-        }
-        return ids;
+    /** Nguoi nay mo duoc nhung bai nao - xem quy tac o ProblemAccess. */
+    public ProblemAccess accessFor(com.ptit.oj.model.User viewer) {
+        return ProblemAccess.of(this, viewer);
     }
 
     public JudgeService getJudge() { return judge; }
@@ -65,6 +53,7 @@ public class Platform {
     public MeetingService getMeetings() { return meetings; }
     public BillingService getBilling() { return billing; }
     public SystemService getSystem() { return system; }
+    public EvidenceStore getEvidence() { return evidence; }
     public ContestService getContests() { return contests; }
     public AnalyticsService getAnalytics() { return analytics; }
     public AssistantService getAssistant() { return assistant; }

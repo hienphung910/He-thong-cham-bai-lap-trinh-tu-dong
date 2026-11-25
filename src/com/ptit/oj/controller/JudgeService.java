@@ -112,6 +112,9 @@ public class JudgeService {
 
     public AuthService getAuth() { return auth; }
 
+    /** Thu muc du lieu (data/): de bai, chu de, va cac file may chu tu luu nhu minh chung dang ky. */
+    public Path getDataDir() { return dataDir; }
+
     public List<User> getUsers() { return users.findAll(); }
 
     public Optional<User> findUserByUsername(String username) {
@@ -148,6 +151,26 @@ public class JudgeService {
     /** Tao bai tap moi: quan tri vien tao vao kho chung, giang vien tao vao kho rieng (kiem tra trong ProblemAdminService). */
     public Problem createProblem(User actor, ProblemDraft draft) {
         return problemAdmin.createProblem(actor, draft);
+    }
+
+    /** Sua ten, de bai, gioi han cua bai da co - quan tri vien, hoac giang vien voi bai cua minh. */
+    public Problem updateProblem(User actor, String problemId, String title, String statement,
+                                 long timeLimitMs, int memoryLimitMb) {
+        return problemAdmin.updateProblem(actor, problemId, title, statement, timeLimitMs, memoryLimitMb);
+    }
+
+    /**
+     * Xoa bai. Bai da co nguoi nop thi KHONG xoa: lich su nop bai va bang xep hang dang tro toi no.
+     */
+    public Problem deleteProblem(User actor, String problemId) {
+        Problem problem = problemAdmin.findForEdit(actor, problemId);
+        for (Submission s : submissions.findAllNewestFirst()) {
+            if (s.getProblem().getId().equals(problem.getId())) {
+                throw new ProblemAdminService.ProblemAdminException(409,
+                        "Bài " + problem.getId() + " đã có bài nộp nên không xoá được");
+            }
+        }
+        return problemAdmin.deleteProblem(actor, problemId);
     }
 
     /** Doi chu de va do kho cua bai da co - quan tri vien, hoac giang vien voi bai cua minh. */

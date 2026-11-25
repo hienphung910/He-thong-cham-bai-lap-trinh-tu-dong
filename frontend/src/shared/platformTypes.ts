@@ -10,6 +10,10 @@ export interface BasicUser {
   roleName: string;
   /** Lop cua hoc sinh hoac bo mon cua giang vien (chi co o /api/users). */
   detail?: string;
+  /** false = giang vien tu dang ky dang cho quan tri vien duyet (chi co o /api/users). */
+  approved?: boolean;
+  /** Tai khoan dang cho duyet co gui kem file minh chung khong (chi co o /api/users). */
+  hasEvidence?: boolean;
 }
 
 export interface ProblemRef { id: string; title: string }
@@ -28,6 +32,10 @@ export interface Classroom {
   teacherName: string;
   studentCount: number;
   canManage: boolean;
+  /** Giang vien phu trach lop (hoac quan tri vien): xoa lop, quan ly tro giang, xoa hoc sinh. Tro giang la false. */
+  isOwner: boolean;
+  /** Hoc sinh da duoc moi nhung chua dong y - chi nguoi quan ly lop nhan duoc, khi lay chi tiet mot lop. */
+  invited?: BasicUser[];
   /** Ma de hoc sinh tu tham gia lop; "" voi nguoi khong quan ly lop. */
   joinCode: string;
   practiceCount: number;
@@ -54,11 +62,16 @@ export interface DocumentItem {
 export interface Assignment {
   id: string; classroomId: string; classroomName: string; title: string; description: string;
   dueAt: string; overdue: boolean; createdBy: string; solvedCount: number; total: number;
-  canManage: boolean; problems: (ProblemRef & { solved: boolean })[];
+  /**
+   * status cua tung bai doi voi nguoi dang xem: DONE = AC trong khoang tu luc giao toi han nop,
+   * LATE = chi AC sau han, EARLIER = da AC tu truoc khi giao, TODO = chua AC. solved = (status == DONE).
+   */
+  canManage: boolean; problems: (ProblemRef & { solved: boolean; status: AssignmentStatus })[];
 }
+export type AssignmentStatus = "DONE" | "LATE" | "EARLIER" | "TODO";
 export interface AssignmentProgress {
   title: string; problemIds: string[];
-  rows: { username: string; fullName: string; solvedCount: number; solved: boolean[] }[];
+  rows: { username: string; fullName: string; solvedCount: number; solved: boolean[]; statuses: AssignmentStatus[] }[];
 }
 
 // ---- binh luan duoi bai tap ----

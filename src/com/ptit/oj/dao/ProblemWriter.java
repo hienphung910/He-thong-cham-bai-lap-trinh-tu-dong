@@ -117,6 +117,27 @@ public class ProblemWriter {
         return dir;
     }
 
+    /** Ghi lai de bai (statement.txt) cua mot bai DA CO: ghi ra file tam roi doi ten, khong de file do dang. */
+    public void writeStatement(String problemId, String statement) throws IOException {
+        Path dir = problemsDir.resolve(problemId);
+        if (!Files.isDirectory(dir)) throw new IOException("Không thấy thư mục bài " + problemId);
+        Path temp = dir.resolve(tempName() + ".txt");
+        try {
+            writeText(temp, statement);
+            Files.move(temp, dir.resolve("statement.txt"), StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException | RuntimeException e) {
+            Files.deleteIfExists(temp);
+            throw e;
+        }
+    }
+
+    /** Xoa han thu muc cua mot bai (de bai, thuoc tinh, toan bo test). */
+    public void delete(String problemId) throws IOException {
+        Path dir = problemsDir.resolve(problemId);
+        deleteRecursively(dir);
+        if (Files.exists(dir)) throw new IOException("Không xoá hết được thư mục bài " + problemId);
+    }
+
     public Path problemDir(String problemId) {
         return problemsDir.resolve(problemId);
     }

@@ -120,6 +120,18 @@ public class AnalyticsService {
         return result;
     }
 
+    /** userId -> ma bai -> cac thoi diem nguoi do AC bai ay. Dung de xet han nop cua bai tap giao. */
+    public Map<String, Map<String, List<java.time.LocalDateTime>>> acceptedTimesByUser() {
+        Map<String, Map<String, List<java.time.LocalDateTime>>> result = new HashMap<>();
+        for (Submission s : judge.getSubmissionsNewestFirst()) {
+            if (!isAccepted(s)) continue;
+            result.computeIfAbsent(s.getAuthor().getId(), k -> new HashMap<>())
+                    .computeIfAbsent(s.getProblem().getId(), k -> new ArrayList<>())
+                    .add(s.getSubmittedAt());
+        }
+        return result;
+    }
+
     /** userId -> ma cac bai nguoi do da AC. Duyet toan bo lich su dung mot lan. */
     public Map<String, Set<String>> solvedByUser() {
         Map<String, Set<String>> result = new HashMap<>();

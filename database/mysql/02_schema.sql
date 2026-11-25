@@ -38,6 +38,9 @@ CREATE TABLE IF NOT EXISTS users (
     password_salt       VARCHAR(255) NOT NULL,
     password_iterations INT UNSIGNED NOT NULL,
     created_at          DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    -- 0 = giang vien tu dang ky dang cho quan tri vien duyet (chua dang nhap duoc).
+    -- CSDL tao tu ban cu chua co cot nay: may chu tu ALTER TABLE them vao luc khoi dong.
+    approved            TINYINT(1)   NOT NULL DEFAULT 1,
     PRIMARY KEY (id),
     UNIQUE KEY uq_users_username (username),
     CONSTRAINT chk_users_role CHECK (role IN ('STUDENT', 'TEACHER', 'ADMIN'))

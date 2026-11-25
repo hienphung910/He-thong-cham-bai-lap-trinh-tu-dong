@@ -10,6 +10,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -35,15 +36,47 @@ import java.util.Optional;
  */
 public class MySqlUserRepository implements UserRepository {
 
-    private static final String COLUMNS =
+    private static final String BASE_COLUMNS =
             "id, username, full_name, role, student_code, class_name, department, "
           + "password_hash, password_salt, password_iterations, created_at";
 
     private final MySqlDatabaseManager database;
+    /** Bang users da co cot approved chua (xem ensureApprovedColumn). */
+    private final boolean hasApproved;
+    private final String columns;
 
     public MySqlUserRepository(MySqlDatabaseManager database) {
         this.database = database;
+        this.hasApproved = ensureApprovedColumn();
+        this.columns = hasApproved ? BASE_COLUMNS + ", approved" : BASE_COLUMNS;
     }
+
+    /**
+     * CSDL tao tu ban schema cu chua co cot users.approved (giang vien tu dang ky phai cho duyet).
+     * Luc khoi dong: neu thieu cot thi tu them, moi tai khoan dang co duoc coi la da duyet
+     * (DEFAULT 1). Khong them duoc (tai khoan MySQL thieu quyen ALTER...) thi may chu van chay
+     * nhu truoc, chi khong nhan giang vien tu dang ky - xem supportsApproval().
+     */
+    private boolean ensureApprovedColumn() {
+        String check = "SELECT COUNT(*) FROM information_schema.COLUMNS "
+                     + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'approved'";
+        try (Connection c = database.open(); Statement st = c.createStatement()) {
+            try (ResultSet rs = st.executeQuery(check)) {
+                if (rs.next() && rs.getLong(1) > 0) return true;
+            }
+            st.executeUpdate("ALTER TABLE users ADD COLUMN approved TINYINT(1) NOT NULL DEFAULT 1");
+            System.out.println("Đã thêm cột users.approved (giảng viên tự đăng ký phải chờ duyệt).");
+            return true;
+        } catch (SQLException | DataAccessException e) {
+            System.err.println("CẢNH BÁO: không thêm được cột users.approved (" + e.getMessage() + "). "
+                    + "Giảng viên sẽ không tự đăng ký được cho tới khi chạy lệnh: "
+                    + "ALTER TABLE users ADD COLUMN approved TINYINT(1) NOT NULL DEFAULT 1;");
+            return false;
+        }
+    }
+
+    @Override
+    public boolean supportsApproval() { return hasApproved; }
 
     // ------------------------------------------------------------------ ghi
 
@@ -64,7 +97,8 @@ public class MySqlUserRepository implements UserRepository {
         if (user == null || credentials == null) {
             throw new IllegalArgumentException("Thiếu thông tin tài khoản hoặc mật khẩu");
         }
-        String sql = "INSERT INTO users (" + COLUMNS + ") VALUES (?,?,?,?,?,?,?,?,?,?,?) "
+        String sql = "INSERT INTO users (" + columns + ") VALUES (?,?,?,?,?,?,?,?,?,?,?"
+                   + (hasApproved ? ",?" : "") + ") "
                    + "ON DUPLICATE KEY UPDATE "
                    + "  username = VALUES(username),"
                    + "  full_name = VALUES(full_name),"
@@ -74,7 +108,8 @@ public class MySqlUserRepository implements UserRepository {
                    + "  department = VALUES(department),"
                    + "  password_hash = VALUES(password_hash),"
                    + "  password_salt = VALUES(password_salt),"
-                   + "  password_iterations = VALUES(password_iterations)";
+                   + "  password_iterations = VALUES(password_iterations)"
+                   + (hasApproved ? ", approved = VALUES(approved)" : "");
         try (Connection c = database.open(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, user.getId());
             ps.setString(2, user.getUsername());
@@ -87,6 +122,7 @@ public class MySqlUserRepository implements UserRepository {
             ps.setString(9, credentials.getSaltBase64());
             ps.setInt(10, credentials.getIterations());
             ps.setObject(11, LocalDateTime.now());
+            if (hasApproved) ps.setBoolean(12, user.isApproved());
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new DataAccessException("Không lưu được tài khoản " + user.getUsername(), e);
@@ -110,14 +146,14 @@ public class MySqlUserRepository implements UserRepository {
     @Override
     public Optional<User> findById(String id) {
         if (id == null) return Optional.empty();
-        return queryOne("SELECT " + COLUMNS + " FROM users WHERE id = ?", id);
+        return queryOne("SELECT " + columns + " FROM users WHERE id = ?", id);
     }
 
     /** Collation utf8mb4_0900_ai_ci lo viec so sanh khong phan biet hoa thuong. */
     @Override
     public Optional<User> findByUsername(String username) {
         if (username == null) return Optional.empty();
-        return queryOne("SELECT " + COLUMNS + " FROM users WHERE username = ?", username.trim());
+        return queryOne("SELECT " + columns + " FROM users WHERE username = ?", username.trim());
     }
 
     @Override
@@ -128,7 +164,7 @@ public class MySqlUserRepository implements UserRepository {
     @Override
     public List<User> findAll() {
         List<User> users = new ArrayList<>();
-        String sql = "SELECT " + COLUMNS + " FROM users ORDER BY created_at, id";
+        String sql = "SELECT " + columns + " FROM users ORDER BY created_at, id";
         try (Connection c = database.open();
              PreparedStatement ps = c.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -203,14 +239,17 @@ public class MySqlUserRepository implements UserRepository {
         String fullName = rs.getString("full_name");
         String role = rs.getString("role");
 
+        User user;
         if (User.ROLE_ADMIN.equals(role)) {
-            return new Admin(id, username, fullName);
+            user = new Admin(id, username, fullName);
+        } else if (User.ROLE_TEACHER.equals(role)) {
+            user = new Teacher(id, username, fullName, orEmpty(rs.getString("department")));
+        } else {
+            user = new Student(id, username, fullName,
+                    orEmpty(rs.getString("student_code")), orEmpty(rs.getString("class_name")));
         }
-        if (User.ROLE_TEACHER.equals(role)) {
-            return new Teacher(id, username, fullName, orEmpty(rs.getString("department")));
-        }
-        return new Student(id, username, fullName,
-                orEmpty(rs.getString("student_code")), orEmpty(rs.getString("class_name")));
+        if (hasApproved) user.setApproved(rs.getBoolean("approved"));
+        return user;
     }
 
     private String orEmpty(String value) {

@@ -19,10 +19,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Module 29 (thong bao), 30 (chat), 31 (dien dan):
- *   /api/notifications, /api/announcements, /api/chat/{kenh}, /api/forum
+ * Module 29 (thong bao), 30 (chat) va binh luan duoi bai tap:
+ *   /api/notifications, /api/chat/{kenh}, /api/problems/{ma}/comments, /api/comments, /api/admin/comments
  *
- * Ten kenh chat: "general" (ca he thong), "class-<maLop>", "meeting-<maBuoiHoc>".
+ * Ten kenh chat: "general" (ca he thong), "class-<maLop>".
  */
 public class CommunityApi extends ApiModule {
 
@@ -35,7 +35,7 @@ public class CommunityApi extends ApiModule {
 
     @Override
     public boolean handle(Request req) throws IOException {
-        return handleNotifications(req) || handleChat(req) || handleForum(req) || handleComments(req);
+        return handleNotifications(req) || handleChat(req) || handleComments(req);
     }
 
     // ----------------------------------------------------------- thong bao
@@ -56,27 +56,6 @@ public class CommunityApi extends ApiModule {
         if (req.is("POST", "notifications", "read")) {
             community.markAllRead(req.user().getId());
             req.sendOk();
-            return true;
-        }
-        // Giang vien / quan tri gui thong bao: toi mot lop (classroomId) hoac toi tat ca moi nguoi.
-        if (req.is("POST", "announcements")) {
-            User sender = req.staff();
-            Json.Value body = req.body();
-            String title = Check.text(body.getString("title"), "Tiêu đề", 150);
-            String text = Check.text(body.getString("body"), "Nội dung", 2000);
-            String classroomId = body.getString("classroomId", "");
-
-            List<String> receivers = new ArrayList<>();
-            if (classroomId.isEmpty()) {
-                if (!isAdmin(sender)) throw ApiException.forbidden("Chỉ quản trị viên mới gửi được cho toàn hệ thống");
-                for (User u : judge.getUsers()) receivers.add(u.getId());
-            } else {
-                Classroom classroom = platform.getSchool().findClassroom(classroomId);
-                platform.getSchool().requireManager(sender, classroom);
-                receivers.addAll(classroom.getStudentIds());
-            }
-            community.notifyMany(receivers, title, text + " — " + sender.getFullName());
-            req.send(Json.obj().put("sent", receivers.size()).build());
             return true;
         }
         return false;
@@ -152,22 +131,24 @@ public class CommunityApi extends ApiModule {
             User user = req.user();
             ProblemComment comment = community.findComment(req.arg(0));
             boolean own = comment.getAuthorId().equals(user.getId());
-            if (!isAdmin(user) && !own) throw ApiException.forbidden("Bạn chỉ xoá được bình luận của chính mình");
+            if (!own && !canModerate(user, comment)) throw ApiException.forbidden("Bạn chỉ xoá được bình luận của chính mình");
             community.deleteComment(comment.getId());
             // Quan tri vien tu choi mot binh luan dang cho duyet: bao cho tac gia biet.
             if (!own && !comment.isApproved()) {
                 community.notifyUser(comment.getAuthorId(), "Bình luận không được duyệt",
-                        "Bình luận của bạn ở bài " + comment.getProblemId() + " không được quản trị viên duyệt.",
+                        "Bình luận của bạn ở bài " + comment.getProblemId() + " không được duyệt.",
                         "Problems/" + comment.getProblemId());
             }
             req.sendOk();
             return true;
         }
         if (req.is("GET", "admin", "comments")) {
-            User admin = req.admin();
+            // Quan tri vien: moi binh luan. Giang vien: chi binh luan duoi bai trong kho rieng cua minh.
+            User admin = req.staff();
             List<String> pending = new ArrayList<>();
             List<String> approved = new ArrayList<>();
             for (ProblemComment c : community.getComments()) {
+                if (!canModerate(admin, c)) continue;
                 String title = judge.findProblem(c.getProblemId()).map(Problem::getTitle).orElse(c.getProblemId());
                 (c.isApproved() ? approved : pending).add(commentJson(c, admin, title));
             }
@@ -176,8 +157,11 @@ public class CommunityApi extends ApiModule {
             return true;
         }
         if (req.is("POST", "admin", "comments", "*", "approve")) {
-            req.admin();
+            User moderator = req.staff();
             ProblemComment comment = community.findComment(req.arg(0));
+            if (!canModerate(moderator, comment)) {
+                throw ApiException.forbidden("Bạn chỉ duyệt được bình luận dưới bài trong kho của mình");
+            }
             if (!comment.isApproved()) {
                 community.approveComment(comment);
                 community.notifyUser(comment.getAuthorId(), "Bình luận đã được duyệt",
@@ -194,11 +178,21 @@ public class CommunityApi extends ApiModule {
     private Problem visibleProblem(String problemId, User user) {
         Problem problem = judge.findProblem(problemId)
                 .orElseThrow(() -> ApiException.notFound("Không có bài " + problemId));
-        if (!problem.isShared() && !user.canEditProblem(problem)
-                && !platform.publishedProblemIds().contains(problem.getId())) {
+        if (!platform.accessFor(user).canOpen(problem)) {
             throw ApiException.notFound("Không có bài " + problemId);
         }
         return problem;
+    }
+
+    /**
+     * Ai duyet / xoa duoc mot binh luan: quan tri vien voi moi bai; giang vien voi bai trong KHO RIENG
+     * cua minh (bai kho chung van chi quan tri vien duyet).
+     */
+    private boolean canModerate(User user, ProblemComment comment) {
+        if (isAdmin(user)) return true;
+        if (isStudent(user)) return false;
+        Problem problem = judge.findProblem(comment.getProblemId()).orElse(null);
+        return problem != null && !problem.isShared() && user.canEditProblem(problem);
     }
 
     /** problemTitle != null: kem ten bai, dung cho trang duyet cua quan tri vien. */
@@ -217,63 +211,4 @@ public class CommunityApi extends ApiModule {
         return json.build();
     }
 
-    // ------------------------------------------------------------ dien dan
-
-    private boolean handleForum(Request req) throws IOException {
-        if (req.is("GET", "forum")) {
-            req.user();
-            List<String> items = new ArrayList<>();
-            for (ForumPost p : community.getPosts()) items.add(postJson(p, false));
-            req.send(Json.array(items));
-            return true;
-        }
-        if (req.is("POST", "forum")) {
-            User author = req.user();
-            Json.Value body = req.body();
-            ForumPost created = community.createPost(author, body.getString("title"),
-                    body.getString("body"), body.getString("problemId"));
-            req.send(postJson(created, true));
-            return true;
-        }
-        if (req.is("GET", "forum", "*")) {
-            req.user();
-            req.send(postJson(community.findPost(req.arg(0)), true));
-            return true;
-        }
-        if (req.is("POST", "forum", "*", "replies")) {
-            User author = req.user();
-            ForumPost post = community.findPost(req.arg(0));
-            community.reply(post, author, req.body().getString("body"));
-            req.send(postJson(post, true));
-            return true;
-        }
-        // Xoa chu de: chinh tac gia, hoac giang vien / quan tri vien.
-        if (req.is("DELETE", "forum", "*")) {
-            User user = req.user();
-            ForumPost post = community.findPost(req.arg(0));
-            if (isStudent(user) && !post.getAuthorId().equals(user.getId())) {
-                throw ApiException.forbidden("Bạn chỉ xoá được chủ đề của chính mình");
-            }
-            community.deletePost(post.getId());
-            req.sendOk();
-            return true;
-        }
-        return false;
-    }
-
-    private String postJson(ForumPost p, boolean detail) {
-        Json.Obj o = Json.obj().put("id", p.getId()).put("title", p.getTitle())
-                .put("authorId", p.getAuthorId()).put("authorName", p.getAuthorName())
-                .put("problemId", p.getProblemId()).put("createdAt", time(p.getCreatedAt()))
-                .put("replyCount", p.getReplies().size());
-        if (detail) {
-            List<String> replies = new ArrayList<>();
-            for (ForumPost.Reply r : p.getReplies()) {
-                replies.add(Json.obj().put("authorName", r.getAuthorName()).put("body", r.getBody())
-                        .put("createdAt", time(r.getCreatedAt())).build());
-            }
-            o.put("body", p.getBody()).putRaw("replies", Json.array(replies));
-        }
-        return o.build();
-    }
 }

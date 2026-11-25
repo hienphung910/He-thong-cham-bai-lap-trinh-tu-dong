@@ -114,6 +114,7 @@ const NAV_GROUPS: { title: string; icon: ReactNode; items: NavItem[] }[] = [
     items: [
       { key: "Dashboard", label: "Tổng quan", role: "teacher" },
       { key: "MyProblems", label: "Kho bài của tôi", role: "teacher" },
+      { key: "MyComments", label: "Bình luận bài của tôi", role: "teacher" },
     ],
   },
   {
@@ -485,7 +486,7 @@ function AppShell() {
                 {page === "Accounts" && <Accounts />}
                 {page === "Organizations" && <Organizations />}
                 {page === "System" && <SystemAdmin onSettingsChanged={loadHeader} />}
-                {page === "Comments" && <CommentModeration />}
+                {(page === "Comments" || page === "MyComments") && <CommentModeration />}
                 {page === "Audit" && <AuditLogs />}
               </>
             )}

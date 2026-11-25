@@ -7,7 +7,8 @@ interface AuthCtx {
   /** true trong luc dang hoi may chu xem token cu con hieu luc khong. */
   checking: boolean;
   login: (username: string, password: string) => Promise<void>;
-  register: (body: RegisterRequest) => Promise<void>;
+  /** Tra ve true neu tai khoan vua tao con phai cho quan tri vien duyet (giang vien). */
+  register: (body: RegisterRequest) => Promise<boolean>;
   logout: () => void;
 }
 
@@ -15,7 +16,7 @@ const Ctx = createContext<AuthCtx>({
   user: null,
   checking: true,
   login: async () => {},
-  register: async () => {},
+  register: async () => false,
   logout: () => {},
 });
 
@@ -48,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const register = useCallback(async (body: RegisterRequest) => {
-    await api.register(body);
+    return (await api.register(body)).pending === true;
   }, []);
 
   const logout = useCallback(() => {

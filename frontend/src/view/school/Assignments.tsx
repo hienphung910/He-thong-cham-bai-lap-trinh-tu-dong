@@ -67,7 +67,13 @@ export default function Assignments() {
             <span style={{ fontSize: 12.5, color: "#616161" }}>Bạn đã làm {a.solvedCount}/{a.total} bài</span>
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {a.problems.map((p) => <ProblemChip key={p.id} id={p.id} title={p.title} done={p.solved} />)}
+            {a.problems.map((p) => (
+              <span key={p.id} style={{ display: "inline-flex", gap: 4, alignItems: "center" }}>
+                <ProblemChip id={p.id} title={p.title} done={p.solved} />
+                {p.status === "LATE" && <Tag color="orange">Nộp muộn</Tag>}
+                {p.status === "EARLIER" && <Tag color="gray">Đã giải từ trước</Tag>}
+              </span>
+            ))}
           </div>
         </Card>
       ))}
@@ -77,7 +83,9 @@ export default function Assignments() {
           <Table head={["Học sinh", ...progress.problemIds, "Tổng"]} empty="Lớp chưa có học sinh."
             rows={progress.rows.map((r) => [
               <span><b>{r.fullName}</b> <span style={{ color: "#9E9E9E" }}>@{r.username}</span></span>,
-              ...r.solved.map((ok) => ok ? <Tag color="green">✓</Tag> : <Tag>—</Tag>),
+              ...r.statuses.map((status) => status === "DONE" ? <Tag color="green">✓</Tag>
+                : status === "LATE" ? <Tag color="orange">Muộn</Tag>
+                : status === "EARLIER" ? <Tag color="gray">Từ trước</Tag> : <Tag>—</Tag>),
               `${r.solvedCount}/${progress.problemIds.length}`,
             ])} />
         </Modal>

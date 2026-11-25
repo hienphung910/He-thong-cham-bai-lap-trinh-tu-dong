@@ -10,6 +10,12 @@ public abstract class User extends Entity {
 
     private final String username;
     private final String fullName;
+    /**
+     * Tai khoan da duoc dung chua. Chi giang vien TU DANG KY moi bat dau o trang thai false va
+     * phai cho quan tri vien duyet; moi tai khoan khac (hoc sinh, tai khoan do quan tri vien tao,
+     * tai khoan mau) deu la true ngay tu dau.
+     */
+    private volatile boolean approved = true;
 
     protected User(String id, String username, String fullName) {
         super(id);
@@ -19,6 +25,9 @@ public abstract class User extends Entity {
 
     public String getUsername() { return username; }
     public String getFullName() { return fullName; }
+
+    public boolean isApproved() { return approved; }
+    public void setApproved(boolean approved) { this.approved = approved; }
 
     /** Ten vai tro de hien thi cho nguoi dung doc. */
     public abstract String getRole();

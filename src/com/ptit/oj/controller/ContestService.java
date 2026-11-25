@@ -3,6 +3,7 @@ package com.ptit.oj.controller;
 import com.ptit.oj.dao.IdGenerator;
 import com.ptit.oj.dao.InMemoryRepository;
 import com.ptit.oj.dao.Repository;
+import com.ptit.oj.model.Classroom;
 import com.ptit.oj.model.Contest;
 import com.ptit.oj.model.Problem;
 import com.ptit.oj.model.ProctorEvent;
@@ -32,10 +33,15 @@ public class ContestService {
 
     private final Repository<Contest> contests = new InMemoryRepository<>();
     private final JudgeService judge;
+    private final SchoolService school;
 
-    public ContestService(JudgeService judge) {
+    public ContestService(JudgeService judge, SchoolService school) {
         this.judge = judge;
+        this.school = school;
     }
+
+    /** Cho phep lech vai phut: form tao ky thi dien san "bay gio", bam Tao cham mot chut van hop le. */
+    private static final int START_GRACE_MIN = 5;
 
     /** Mot dong cua bang xep hang. */
     public static class Row {
@@ -72,6 +78,16 @@ public class ContestService {
     public synchronized Contest create(User owner, String title, String description, LocalDateTime startAt,
                                        int durationMin, List<String> problemIds, boolean proctored,
                                        String classroomId) {
+        if (startAt != null && startAt.isBefore(LocalDateTime.now().minusMinutes(START_GRACE_MIN))) {
+            throw ApiException.badRequest("Giờ bắt đầu đã qua. Hãy chọn thời điểm từ bây giờ trở đi");
+        }
+        return createUnchecked(owner, title, description, startAt, durationMin, problemIds, proctored, classroomId);
+    }
+
+    /** Nhu create() nhung cho phep gio bat dau trong qua khu - chi dung khi tao du lieu mau. */
+    public synchronized Contest createUnchecked(User owner, String title, String description, LocalDateTime startAt,
+                                                int durationMin, List<String> problemIds, boolean proctored,
+                                                String classroomId) {
         if (startAt == null) throw ApiException.badRequest("Thiếu thời gian bắt đầu");
         if (durationMin < 5 || durationMin > 7 * 24 * 60) {
             throw ApiException.badRequest("Thời lượng phải từ 5 phút đến 7 ngày");
@@ -83,6 +99,14 @@ public class ContestService {
         contest.setProctored(proctored);
         contests.save(contest);
         return contest;
+    }
+
+    /** Ky thi ma nguoi nay dang lam bai (da vao thi, chua nop, con gio); null neu khong dang thi. */
+    public Contest sittingContestOf(String userId) {
+        for (Contest c : contests.findAll()) {
+            if (c.isSitting(userId)) return c;
+        }
+        return null;
     }
 
     /** Nguoi tao ky thi bat / tat giam sat, ke ca khi ky thi dang dien ra. */
@@ -115,21 +139,78 @@ public class ContestService {
 
     // ------------------------------------------- sua cuoc thi cua chinh minh
 
-    /** Nguoi tao cuoc thi va quan tri vien moi duoc them / bot bai, xoa cuoc thi. */
+    /**
+     * Ai quan ly duoc ky thi (sua, xoa, bat / tat va xem giam sat):
+     *  - quan tri vien;
+     *  - giang vien phu trach LOP cua ky thi, du ky thi do tro giang tao;
+     *  - nguoi tao ky thi, chung nao con la giang vien / tro giang cua lop do. Tro giang bi go khoi
+     *    lop thi mat quyen voi ky thi minh da tao.
+     */
     public boolean canManage(User user, Contest contest) {
-        return User.ROLE_ADMIN.equals(user.getRoleCode())
-                || contest.getOwnerUsername().equals(user.getUsername());
+        if (User.ROLE_ADMIN.equals(user.getRoleCode())) return true;
+        Classroom classroom = classroomOf(contest);
+        boolean owner = contest.getOwnerUsername().equals(user.getUsername());
+        if (classroom == null) return owner;          // lop khong con: chi nguoi tao don dep duoc
+        if (classroom.getTeacherId().equals(user.getId())) return true;
+        return owner && classroom.isTaughtBy(user.getId());
+    }
+
+    private Classroom classroomOf(Contest contest) {
+        for (Classroom c : school.getClassrooms()) {
+            if (c.getId().equals(contest.getClassroomId())) return c;
+        }
+        return null;
     }
 
     private void requireManage(User user, Contest contest) {
         if (!canManage(user, contest)) {
-            throw ApiException.forbidden("Chỉ người tạo kỳ thi hoặc quản trị viên mới sửa được kỳ thi này");
+            throw ApiException.forbidden("Chỉ giảng viên phụ trách lớp, người tạo kỳ thi hoặc quản trị viên mới sửa được kỳ thi này");
         }
+    }
+
+    /** De thi chi sua duoc TRUOC khi thi: sua luc dang thi hay da thi xong lam bang xep hang doi nguoc ve truoc. */
+    private void requireUpcoming(Contest contest) {
+        String status = contest.getStatus();
+        if ("RUNNING".equals(status)) {
+            throw ApiException.badRequest("Kỳ thi đang diễn ra, không thêm hay bỏ bài được nữa");
+        }
+        if ("ENDED".equals(status)) {
+            throw ApiException.badRequest("Kỳ thi đã kết thúc, không sửa đề được nữa");
+        }
+    }
+
+    /**
+     * Doi gio thi. Chua bat dau: doi duoc gio bat dau va thoi luong. Dang dien ra: chi GIA HAN duoc
+     * (tang thoi luong) de xu ly su co, khong doi gio bat dau va khong rut ngan. Da ket thuc: khong sua.
+     */
+    public synchronized void reschedule(User actor, Contest contest, LocalDateTime startAt, int durationMin) {
+        requireManage(actor, contest);
+        if (startAt == null) throw ApiException.badRequest("Thiếu thời gian bắt đầu");
+        if (durationMin < 5 || durationMin > 7 * 24 * 60) {
+            throw ApiException.badRequest("Thời lượng phải từ 5 phút đến 7 ngày");
+        }
+        String status = contest.getStatus();
+        if ("ENDED".equals(status)) {
+            throw ApiException.badRequest("Kỳ thi đã kết thúc, không đổi giờ được nữa");
+        }
+        if ("RUNNING".equals(status)) {
+            if (!startAt.equals(contest.getStartAt())) {
+                throw ApiException.badRequest("Kỳ thi đang diễn ra, không đổi giờ bắt đầu được. Chỉ gia hạn được thời lượng");
+            }
+            if (durationMin < contest.getDurationMin()) {
+                throw ApiException.badRequest("Kỳ thi đang diễn ra, chỉ gia hạn được chứ không rút ngắn thời lượng");
+            }
+        } else if (startAt.isBefore(LocalDateTime.now().minusMinutes(START_GRACE_MIN))) {
+            throw ApiException.badRequest("Giờ bắt đầu đã qua. Hãy chọn thời điểm từ bây giờ trở đi");
+        }
+        contest.setStartAt(startAt);
+        contest.setDurationMin(durationMin);
     }
 
     /** Them mot bai vao cuoc thi. Bai phai la bai kho chung hoac bai trong kho cua nguoi them. */
     public synchronized void addProblem(User actor, Contest contest, Problem problem) {
         requireManage(actor, contest);
+        requireUpcoming(contest);
         if (!actor.canUseProblem(problem)) {
             throw ApiException.forbidden("Bài " + problem.getId() + " nằm trong kho riêng của giảng viên khác");
         }
@@ -141,6 +222,7 @@ public class ContestService {
 
     public synchronized void removeProblem(User actor, Contest contest, String problemId) {
         requireManage(actor, contest);
+        requireUpcoming(contest);
         if (!contest.getProblemIds().contains(problemId)) {
             throw ApiException.notFound("Kỳ thi không có bài " + problemId);
         }

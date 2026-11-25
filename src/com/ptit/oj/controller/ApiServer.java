@@ -4,11 +4,8 @@ import com.ptit.oj.controller.api.AccountApi;
 import com.ptit.oj.controller.api.AnalyticsApi;
 import com.ptit.oj.controller.api.ApiModule;
 import com.ptit.oj.controller.api.AssignmentApi;
-import com.ptit.oj.controller.api.AssistantApi;
-import com.ptit.oj.controller.api.BillingApi;
 import com.ptit.oj.controller.api.CommunityApi;
 import com.ptit.oj.controller.api.ContestApi;
-import com.ptit.oj.controller.api.CourseApi;
 import com.ptit.oj.controller.api.MeetingApi;
 import com.ptit.oj.controller.api.PlaygroundApi;
 import com.ptit.oj.controller.api.Request;
@@ -70,6 +67,8 @@ public class ApiServer {
 
     private static final DateTimeFormatter ISO = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
     private static final int MAX_BODY_BYTES = 512 * 1024;        // 512 KB, du cho mot bai nop
+    /** Dang ky giang vien co the kem file minh chung toi da 1 MB (ma hoa base64 thanh ~1,4 MB). */
+    private static final int MAX_REGISTER_BODY_BYTES = 1536 * 1024;
     private static final int MAX_ADMIN_BODY_BYTES = 8 * 1024 * 1024;  // de bai + test co the lon hon
 
     /** Dia chi lang nghe; bo trong thi chi nghe 127.0.0.1. Trong container dat la 0.0.0.0. */
@@ -91,10 +90,10 @@ public class ApiServer {
         this.port = port;
         this.webRoot = webRoot;
         this.modules = Arrays.<ApiModule>asList(
-                new AccountApi(platform), new SchoolApi(platform), new CourseApi(platform),
+                new AccountApi(platform), new SchoolApi(platform),
                 new AssignmentApi(platform), new MeetingApi(platform), new ContestApi(platform),
-                new AnalyticsApi(platform), new AssistantApi(platform), new CommunityApi(platform),
-                new BillingApi(platform), new SystemApi(platform), new PlaygroundApi(platform),
+                new AnalyticsApi(platform), new CommunityApi(platform),
+                new SystemApi(platform), new PlaygroundApi(platform),
                 new TestcaseApi(platform));
     }
 
@@ -148,6 +147,7 @@ public class ApiServer {
         int status = 200;          // ma HTTP cua request nay, de ghi vao nhat ky
         String error = null;
         try {
+            enforceExamMode(ex, method, path);
             route(ex, method, path);
         } catch (ApiException e) {
             status = e.getStatus();
@@ -187,6 +187,39 @@ public class ApiServer {
         String token = SessionService.extractBearerToken(ex.getRequestHeaders().getFirst("Authorization"));
         String username = service.getAuth().authenticate(token).map(User::getUsername).orElse("(khách)");
         platform.getSystem().log(username, method + " " + path, "HTTP " + status, status == 200);
+    }
+
+    /**
+     * Che do thi o PHIA MAY CHU: hoc sinh dang trong bai thi chi goi duoc cac API can cho viec thi
+     * (xem de cua ky thi, nop bai, xem ket qua cua minh, bang xep hang, nop bai som, giam sat).
+     * Chat, binh luan, chay thu ma, lop hoc, phan tich... bi tu choi cho toi khi nop bai hoac het gio,
+     * du goi thang API ma khong qua giao dien.
+     */
+    private void enforceExamMode(HttpExchange ex, String method, String path) {
+        String token = SessionService.extractBearerToken(ex.getRequestHeaders().getFirst("Authorization"));
+        Optional<User> user = service.getAuth().authenticate(token);
+        if (!user.isPresent() || !User.ROLE_STUDENT.equals(user.get().getRoleCode())) return;
+        com.ptit.oj.model.Contest sitting = platform.getContests().sittingContestOf(user.get().getId());
+        if (sitting == null || allowedWhileSitting(method, path)) return;
+        throw ApiException.forbidden("Bạn đang trong bài thi \"" + sitting.getTitle()
+                + "\". Chức năng này mở lại sau khi bạn nộp bài hoặc hết giờ");
+    }
+
+    private static boolean allowedWhileSitting(String method, String path) {
+        if (path.startsWith("/api/auth/")) return true;
+        if ("GET".equals(method)) {
+            return path.equals("/api/health") || path.equals("/api/languages") || path.equals("/api/problems")
+                    || path.equals("/api/topics") || path.equals("/api/submissions")
+                    || path.startsWith("/api/submissions/") || path.equals("/api/contests")
+                    || path.startsWith("/api/contests/") || path.equals("/api/notifications")
+                    || path.equals("/api/settings");
+        }
+        if ("POST".equals(method)) {
+            return path.equals("/api/submit")
+                    || (path.startsWith("/api/contests/")
+                        && (path.endsWith("/finish") || path.endsWith("/proctor") || path.endsWith("/join")));
+        }
+        return false;
     }
 
     private void route(HttpExchange ex, String method, String path) throws IOException {
@@ -251,6 +284,12 @@ public class ApiServer {
             handleCreateProblem(ex, requireStaff(ex));
             return;
         }
+        // Xoa bai: duong dan dung la /api/admin/problems/{ma}; /tests/... thuoc ve TestcaseApi.
+        if ("DELETE".equals(method) && path.startsWith("/api/admin/problems/")
+                && path.indexOf('/', "/api/admin/problems/".length()) < 0) {
+            handleDeleteProblem(ex, requireStaff(ex), path.substring("/api/admin/problems/".length()));
+            return;
+        }
         if ("PUT".equals(method) && path.startsWith("/api/admin/problems/")) {
             handleUpdateProblem(ex, requireStaff(ex), path.substring("/api/admin/problems/".length()));
             return;
@@ -295,18 +334,55 @@ public class ApiServer {
         if (!platform.getSystem().isRegisterAllowed()) {
             throw ApiException.forbidden("Quản trị viên đang tạm khoá chức năng tự đăng ký");
         }
-        Json.Value body = Json.parseObject(readBody(ex, MAX_BODY_BYTES));
+        Json.Value body = Json.parseObject(readBody(ex, MAX_REGISTER_BODY_BYTES));
+        String role = body.getString("role", User.ROLE_STUDENT);
+        // Giang vien tu dang ky BAT BUOC gui kem file minh chung de quan tri vien co can cu duyet.
+        // Kiem tra file TRUOC khi tao tai khoan: thieu hoac hong thi khong tao gi ca, nguoi dung sua
+        // roi dang ky lai bang dung ten do. Hoc sinh khong can minh chung; co gui cung bo qua.
+        EvidenceStore.Evidence evidence = null;
+        if (User.ROLE_TEACHER.equals(role)) {
+            String rawEvidence = body.getString("evidence", "");
+            if (rawEvidence.trim().isEmpty()) {
+                throw ApiException.badRequest("Giảng viên cần gửi kèm file minh chứng khi đăng ký");
+            }
+            evidence = EvidenceStore.decode(rawEvidence);
+        }
         // role chi duoc la STUDENT hoac TEACHER; gui "ADMIN" thi register() tu choi (400).
         User created = service.getAuth().register(
-                body.getString("role", User.ROLE_STUDENT),
+                role,
                 body.getString("username"),
                 body.getString("password"),
                 body.getString("fullName"),
                 body.getString("studentCode", ""),
                 body.getString("className", ""),
                 body.getString("department", ""));
+        if (evidence != null) {
+            try {
+                platform.getEvidence().save(created.getId(), evidence);
+            } catch (IOException | RuntimeException e) {
+                // Khong luu duoc minh chung thi huy luon tai khoan vua tao de nguoi dung dang ky lai duoc.
+                service.getAuth().reject(created.getId());
+                throw new ApiException(500, "Không lưu được file minh chứng, hãy thử lại");
+            }
+        }
+        // Giang vien tu dang ky phai cho duyet: bao cho moi quan tri vien biet de vao duyet.
+        boolean pending = !created.isApproved();
+        if (pending) {
+            List<String> adminIds = new ArrayList<>();
+            for (User u : service.getUsers()) {
+                if (User.ROLE_ADMIN.equals(u.getRoleCode())) adminIds.add(u.getId());
+            }
+            platform.getCommunity().notifyMany(adminIds, "Giảng viên mới chờ duyệt",
+                    created.getFullName() + " (@" + created.getUsername() + ") vừa đăng ký tài khoản giảng viên.",
+                    "Accounts");
+        }
+        platform.getSystem().log(created.getUsername(), "Đăng ký",
+                pending ? "Giảng viên, chờ duyệt" : "Học sinh", true);
         sendJson(ex, 201, Json.obj()
-                .put("message", "Đăng ký thành công, mời bạn đăng nhập")
+                .put("message", pending
+                        ? "Đã gửi đăng ký. Tài khoản giảng viên cần quản trị viên duyệt rồi mới đăng nhập được"
+                        : "Đăng ký thành công, mời bạn đăng nhập")
+                .put("pending", pending)
                 .putRaw("user", userJson(created))
                 .build());
     }
@@ -365,15 +441,14 @@ public class ApiServer {
      * Danh sach bai tap nguoi xem duoc thay. KHONG tra ve so luong test, va chi tra ve
      * input/output cua test VI DU - test an khong bao gio roi xuong trinh duyet.
      *
-     * Bai kho chung: ai cung thay. Bai kho rieng cua giang vien: chi chu bai va quan tri vien
-     * thay, tru khi bai da duoc dua vao mot ky thi / bai tap giao / bai hoc (luc do ai cung mo duoc).
+     * Ai thay bai nao: xem ProblemAccess (bai kho rieng chi mo qua lop cua minh; bai cua ky thi
+     * dang dien ra chi mo cho hoc sinh dang o trong bai thi).
      */
     private String problemsJson(User viewer) {
-        Set<String> published = platform.publishedProblemIds();
+        ProblemAccess access = platform.accessFor(viewer);
         List<String> items = new ArrayList<>();
         for (Problem p : service.getProblems()) {
-            boolean visible = p.isShared() || viewer.canEditProblem(p) || published.contains(p.getId());
-            if (!visible) continue;
+            if (!access.canOpen(p)) continue;
             List<String> samples = new ArrayList<>();
             for (TestCase tc : p.getTestCases()) {
                 if (!tc.isSample()) continue;
@@ -421,14 +496,28 @@ public class ApiServer {
     }
 
     private String submissionsJson(User viewer) {
-        List<Submission> list = canSeeEveryone(viewer)
-                ? service.getSubmissionsNewestFirst()
-                : service.getSubmissionsOf(viewer);
         List<String> items = new ArrayList<>();
-        for (Submission s : list) {
-            items.add(submissionJson(s, false));
+        if (User.ROLE_STUDENT.equals(viewer.getRoleCode())) {
+            for (Submission s : service.getSubmissionsOf(viewer)) items.add(submissionJson(s, false));
+            return Json.array(items);
+        }
+        Set<String> myStudents = platform.getSchool().studentIdsTaughtBy(viewer.getId());
+        for (Submission s : service.getSubmissionsNewestFirst()) {
+            if (canSeeSubmission(viewer, s, myStudents)) items.add(submissionJson(s, false));
         }
         return Json.array(items);
+    }
+
+    /**
+     * Ai xem duoc mot bai nop (kem ma nguon): quan tri vien xem het; nguoi nop xem bai cua minh;
+     * giang vien chi xem bai cua hoc sinh trong lop minh day, va bai nop vao bai tap thuoc kho cua minh.
+     * Giang vien KHONG xem duoc bai nop cua hoc sinh lop khac.
+     */
+    private boolean canSeeSubmission(User viewer, Submission s, Set<String> myStudents) {
+        if (User.ROLE_ADMIN.equals(viewer.getRoleCode())) return true;
+        if (s.getAuthor().getId().equals(viewer.getId())) return true;
+        if (!User.ROLE_TEACHER.equals(viewer.getRoleCode())) return false;
+        return myStudents.contains(s.getAuthor().getId()) || (!s.getProblem().isShared() && viewer.canEditProblem(s.getProblem()));
     }
 
     private void handleSubmissionDetail(HttpExchange ex, User viewer, String id) throws IOException {
@@ -438,8 +527,10 @@ public class ApiServer {
         }
         Submission s = found.get();
         // Chan viec doan ma nop de doc ma nguon cua nguoi khac.
-        if (!canSeeEveryone(viewer) && !s.getAuthor().getId().equals(viewer.getId())) {
-            throw ApiException.forbidden("Bạn chỉ được xem bài nộp của chính mình");
+        if (!canSeeSubmission(viewer, s, platform.getSchool().studentIdsTaughtBy(viewer.getId()))) {
+            throw ApiException.forbidden(User.ROLE_TEACHER.equals(viewer.getRoleCode())
+                    ? "Bạn chỉ xem được bài nộp của học sinh trong lớp mình dạy"
+                    : "Bạn chỉ được xem bài nộp của chính mình");
         }
         sendJson(ex, 200, submissionJson(s, true));
     }
@@ -554,10 +645,12 @@ public class ApiServer {
 
         Problem problem = service.findProblem(problemId)
                 .orElseThrow(() -> ApiException.notFound("Không có bài " + problemId));
-        // Cung quy tac voi danh sach bai: bai kho rieng chua duoc dua vao ky thi / bai tap giao /
-        // bai hoc thi chi chu bai va quan tri vien nop duoc, du nguoi khac co doan dung ma bai.
-        if (!problem.isShared() && !author.canEditProblem(problem)
-                && !platform.publishedProblemIds().contains(problem.getId())) {
+        // Cung quy tac voi danh sach bai (ProblemAccess): khong mo duoc bai thi cung khong nop duoc,
+        // du co doan dung ma bai.
+        ProblemAccess access = platform.accessFor(author);
+        if (!access.canOpen(problem)) {
+            String reason = access.lockReason(problem);
+            if (reason != null) throw ApiException.forbidden(reason);
             throw ApiException.notFound("Không có bài " + problemId);
         }
         Language language = service.findLanguage(languageName)
@@ -627,6 +720,14 @@ public class ApiServer {
         Problem current = service.findProblem(id)
                 .orElseThrow(() -> ApiException.notFound("Không có bài " + id));
 
+        // Co gui ten / de / gioi han thi sua noi dung bai truoc (kiem tra quyen o ProblemAdminService).
+        if (body.has("title") || body.has("statement") || body.has("timeLimitMs") || body.has("memoryLimitMb")) {
+            current = service.updateProblem(admin, id,
+                    body.has("title") ? body.getString("title", "") : current.getTitle(),
+                    body.has("statement") ? body.getString("statement", "") : current.getStatement(),
+                    body.getLong("timeLimitMs", current.getTimeLimitMs()),
+                    intField(body, "memoryLimitMb", current.getMemoryLimitMb()));
+        }
         Problem updated = service.updateProblemMeta(admin, id,
                 body.has("topic") ? body.getString("topic", "") : current.getTopic(),
                 intField(body, "difficulty", current.getDifficulty()));
@@ -634,6 +735,28 @@ public class ApiServer {
                 .put("message", "Đã cập nhật bài " + updated.getId())
                 .putRaw("problem", problemSummaryJson(updated))
                 .build());
+    }
+
+    /** Xoa bai: chu bai (hoac quan tri vien voi bai kho chung). Bai dang duoc dung o dau do thi tu choi. */
+    private void handleDeleteProblem(HttpExchange ex, User actor, String rawId) throws IOException {
+        String id = rawId.trim().toUpperCase();
+        Problem problem = service.findProblemForEdit(actor, id);
+        List<String> usedIn = new ArrayList<>();
+        for (com.ptit.oj.model.Contest c : platform.getContests().getContests()) {
+            if (c.getProblemIds().contains(problem.getId())) usedIn.add("kỳ thi \"" + c.getTitle() + "\"");
+        }
+        for (com.ptit.oj.model.Assignment a : platform.getAssignments().getAll()) {
+            if (a.getProblemIds().contains(problem.getId())) usedIn.add("bài tập giao \"" + a.getTitle() + "\"");
+        }
+        for (com.ptit.oj.model.Classroom c : platform.getSchool().getClassrooms()) {
+            if (c.getPracticeProblemIds().contains(problem.getId())) usedIn.add("bài luyện tập của lớp " + c.getName());
+        }
+        if (!usedIn.isEmpty()) {
+            throw new ApiException(409, "Bài " + problem.getId() + " đang được dùng trong " + String.join(", ", usedIn)
+                    + ". Hãy gỡ bài khỏi các nơi đó trước");
+        }
+        service.deleteProblem(actor, problem.getId());
+        sendJson(ex, 200, Json.obj().put("ok", true).put("message", "Đã xoá bài " + problem.getId()).build());
     }
 
     /** So nguyen trong body; so qua lon bi tu choi thay vi ep kieu thanh mot so khac. */

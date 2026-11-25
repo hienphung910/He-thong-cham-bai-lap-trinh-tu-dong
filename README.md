@@ -21,14 +21,16 @@ Backend chỉ dùng API chuẩn của JDK. Máy chủ HTTP, bộ đọc/ghi JSON
 >
 > - **Lịch học** thay cho Phòng học trực tuyến: giảng viên lên lịch buổi học cho lớp và dán link phòng học (Google Meet, Zoom...) vào buổi đó, lúc lên lịch hoặc về sau. Học sinh thấy giờ học, lớp, giảng viên; từ 10 phút trước giờ học tới hết buổi, nút *Tham gia phòng học* mở link đó. Phòng học tự viết (bảng trắng, mã nguồn dùng chung, điểm danh, bản ghi) không còn trên giao diện.
 > - **Lớp của tôi** có thêm mục *Bài tập luyện tập*: các bài giảng viên chọn riêng cho lớp. Giảng viên bấm vào một học sinh trong danh sách lớp để xem phân tích học tập của em đó.
-> - **Bình luận dưới bài tập**: mỗi bài có phần bình luận ở cuối trang làm bài. Bình luận mới ở trạng thái chờ duyệt và chỉ tác giả thấy; quản trị viên duyệt ở Quản trị → Duyệt bình luận thì mọi người mới thấy. Bình luận lưu trong RAM như các module mở rộng khác.
+> - **Bình luận dưới bài tập**: mỗi bài có phần bình luận ở cuối trang làm bài. Bình luận mới ở trạng thái chờ duyệt và chỉ tác giả thấy; quản trị viên duyệt ở Quản trị → Duyệt bình luận thì mọi người mới thấy (giảng viên duyệt được bình luận dưới bài trong kho riêng của mình, ở Giảng dạy → Bình luận bài của tôi). Bình luận lưu trong RAM như các module mở rộng khác.
 > - **Tải file**: trang làm bài có nút icon tải file mã nguồn cạnh nút *Chèn code mẫu* (nội dung file được đưa vào ô soạn, đuôi file quyết định ngôn ngữ). Chỉ nhận một file mã nguồn, không nhận file nén. Form tạo bài có *Tải thư mục test* và *Tải nhiều file test*: mỗi test là một cặp `01.in` + `01.out` (nhận cả `.inp`, `.ans`), hoặc mỗi test một thư mục con kiểu `Test01/BAI.INP` + `Test01/BAI.OUT`; tên bắt đầu bằng `sample` là test ví dụ.
 > - **Sinh test** (Công cụ CP): mảng số chọn được số nguyên hoặc số thực; đồ thị chọn được có hướng / vô hướng, có trọng số / không có và số cạnh.
 > - **Kỳ thi theo lớp**: mỗi kỳ thi tổ chức cho một lớp, giảng viên chọn lớp lúc tạo (trong các lớp mình quản lý). Chỉ thành viên của lớp đó và quản trị viên thấy kỳ thi; chỉ học sinh của lớp vào thi được; bảng xếp hạng chỉ tính bài của thí sinh đã bấm *Vào thi*, nộp sau lúc vào. Học sinh của lớp nhận thông báo khi có kỳ thi mới. Xoá lớp thì các kỳ thi của lớp cũng bị xoá.
-> - **Chế độ thi**: trong lúc kỳ thi diễn ra, học sinh mở trang kỳ thi và bấm *Vào thi* mới thấy đề. Từ đó cho tới khi bấm *Nộp bài sớm* hoặc hết giờ, giao diện của học sinh chỉ còn màn hình thi: danh sách bài của kỳ thi, ô nộp bài, bảng xếp hạng và đồng hồ đếm ngược; không có menu, thông báo, bình luận hay phần phân tích / gợi ý sau khi nộp. Trạng thái này lưu ở máy chủ nên tải lại trang hay đăng nhập lại vẫn ở trong bài thi. Nộp bài sớm rồi thì không vào lại được và các bài nộp sau đó không tính vào kỳ thi.
-> - **Giám sát kỳ thi** (người tạo kỳ thi bật / tắt được, lúc tạo hoặc ngay trong khi thi): khi bật, trình duyệt của thí sinh đang trong bài thi ghi lại việc rời tab, chuyển sang cửa sổ khác, sao chép / cắt / dán và đóng hoặc tải lại trang; một thanh trên màn hình thi báo cho thí sinh biết đang bị giám sát. Người tạo kỳ thi xem danh sách thí sinh đã vào thi, bảng tổng hợp theo thí sinh và nhật ký sự kiện ngay trên trang kỳ thi (tự cập nhật), và nhận thông báo khi một thí sinh có vi phạm đầu tiên, rồi cứ mỗi 10 lần. Chỉ ghi độ dài nội dung sao chép / dán, không ghi nội dung. Việc ghi nhận và việc giới hạn giao diện đều do trình duyệt của thí sinh thực hiện nên chỉ có tác dụng với người dùng thông thường: tắt JavaScript, dùng thiết bị khác hoặc gọi thẳng API thì vượt qua được. Nhật ký lưu trong RAM.
+> - **Chế độ thi**: trong lúc kỳ thi diễn ra, học sinh mở trang kỳ thi và bấm *Vào thi* mới thấy đề. Từ đó cho tới khi bấm *Nộp bài sớm* hoặc hết giờ, giao diện của học sinh chỉ còn màn hình thi: danh sách bài của kỳ thi, ô nộp bài, bảng xếp hạng và đồng hồ đếm ngược; không có menu, thông báo, bình luận hay phần phân tích / gợi ý sau khi nộp. Trạng thái này lưu ở máy chủ nên tải lại trang hay đăng nhập lại vẫn ở trong bài thi. Máy chủ cũng tự chặn: học sinh đang thi chỉ gọi được API cần cho việc thi (đề của kỳ thi, nộp bài, kết quả của mình, bảng xếp hạng); chat, bình luận, chạy thử mã, lớp học, phân tích đều bị từ chối dù gọi thẳng API. Học sinh của lớp chưa bấm *Vào thi* thì không mở và không nộp được bài của kỳ thi đang diễn ra, kể cả bài kho chung. Nộp bài sớm rồi thì không vào lại được và các bài nộp sau đó không tính vào kỳ thi.
+> - **Giám sát kỳ thi** (người tạo kỳ thi bật / tắt được, lúc tạo hoặc ngay trong khi thi): khi bật, trình duyệt của thí sinh đang trong bài thi ghi lại việc rời tab, chuyển sang cửa sổ khác, sao chép / cắt / dán và đóng hoặc tải lại trang; một thanh trên màn hình thi báo cho thí sinh biết đang bị giám sát. Người tạo kỳ thi xem danh sách thí sinh đã vào thi, bảng tổng hợp theo thí sinh và nhật ký sự kiện ngay trên trang kỳ thi (tự cập nhật), và nhận thông báo khi một thí sinh có vi phạm đầu tiên, rồi cứ mỗi 10 lần. Chỉ ghi độ dài nội dung sao chép / dán, không ghi nội dung. Việc ghi nhận sự kiện do trình duyệt của thí sinh thực hiện nên chỉ có tác dụng với người dùng thông thường: tắt JavaScript hoặc dùng thêm thiết bị khác thì không bị ghi lại. Nhật ký lưu trong RAM.
 > - **Tài khoản quản trị** không có các mục Lớp của tôi, Bài tập được giao, Lịch học, nhóm Cá nhân và nhóm Giảng dạy; đổi mật khẩu vẫn mở được từ menu ở ảnh đại diện.
-> - **Đã bỏ khỏi giao diện**: Khóa học và tài liệu, Thành tích, Gói dịch vụ, Stress test, Trợ lý AI (cả pop-up ở trang làm bài), Diễn đàn, Trợ lý giảng dạy, Phụ huynh, phần xem lại diễn biến của kỳ thi, và phần điểm yếu trong Phân tích học tập.
+> - **Đã bỏ**: Khóa học và tài liệu, Thành tích, Gói dịch vụ, Stress test, Trợ lý AI (cả pop-up ở trang làm bài), Diễn đàn, Trợ lý giảng dạy, Phụ huynh, phòng học trực tuyến, phần xem lại diễn biến của kỳ thi, và phần điểm yếu trong Phân tích học tập. API của các phần này cũng đã gỡ khỏi máy chủ; các mục mô tả chúng ở phần dưới của tài liệu này là của phiên bản cũ.
+> - **Phân quyền**: giảng viên chỉ xem được bài nộp (kèm mã nguồn) của học sinh lớp mình dạy. Trợ giảng làm được việc hằng ngày của lớp (bài luyện tập, bài giao, lịch học, mời học sinh, tạo kỳ thi) nhưng không xoá lớp, không quản lý trợ giảng, không xoá học sinh. Giảng viên mời học sinh bằng tên đăng nhập thì học sinh phải tự đồng ý mới vào lớp. Kỳ thi do giảng viên phụ trách lớp, người tạo (khi còn dạy lớp đó) và quản trị viên quản lý; đề chỉ sửa được trước khi thi, đang thi chỉ gia hạn được. Quản trị viên khoá, xoá, đổi vai trò tài khoản ở Quản trị → Tài khoản.
+> - **Bài tập giao**: một bài chỉ tính là đã làm khi AC trong khoảng từ lúc giao tới hạn nộp. AC sau hạn hiện là *Nộp muộn*, AC từ trước khi giao hiện là *Đã giải từ trước*; cả hai không tính vào tiến độ.
 > - **Ô soạn mã** (trang làm bài, IDE trực tuyến, xem lại bài nộp) dùng CodeMirror, tô màu cú pháp theo bảng màu Dark+ của Visual Studio Code.
 >
 > API của các phần đã bỏ khỏi giao diện vẫn còn ở backend và trong bảng REST API bên dưới.
@@ -188,7 +190,7 @@ flowchart LR
 
 `ApiServer` tự xử lí các endpoint của phần lõi (đăng nhập, bài tập, nộp bài, bảng xếp hạng) qua `JudgeService`. Kho dữ liệu của `JudgeService` được truyền vào qua constructor (`JudgeService.mysql()` hoặc `JudgeService.inMemory()`), nên đổi giữa MySQL và bộ nhớ không phải sửa tầng nghiệp vụ hay giao diện. Câu SQL chỉ nằm trong package `dao`.
 
-Mọi endpoint còn lại đi theo cùng một đường. `ApiServer.route()` bọc request vào một đối tượng `Request` rồi hỏi lần lượt 13 lớp con của `ApiModule` trong `controller/api/`; lớp nào nhận ra đường dẫn của mình thì xử lí. Mỗi lớp `…Api` làm ba việc: kiểm tra quyền, gọi lớp `…Service` tương ứng, đổi kết quả thành JSON. Các service được tạo và giữ trong `Platform`.
+Mọi endpoint còn lại đi theo cùng một đường. `ApiServer.route()` bọc request vào một đối tượng `Request` rồi hỏi lần lượt 10 lớp con của `ApiModule` trong `controller/api/`; lớp nào nhận ra đường dẫn của mình thì xử lí. Mỗi lớp `…Api` làm ba việc: kiểm tra quyền, gọi lớp `…Service` tương ứng, đổi kết quả thành JSON. Các service được tạo và giữ trong `Platform`.
 
 Ví dụ với yêu cầu tạo lớp học: trình duyệt gửi `POST /api/classrooms`, `SchoolApi.handle()` gọi `req.staff()` để chặn học sinh, `SchoolService.createClassroom()` kiểm tra dữ liệu và lưu một đối tượng `Classroom` vào `InMemoryRepository`, rồi `SchoolApi` trả JSON của lớp vừa tạo.
 
@@ -241,9 +243,9 @@ src/com/ptit/oj
     │                    SchoolService, CourseService, AssignmentService, MeetingService,
     │                    ContestService, AnalyticsService, AssistantService, CommunityService,
     │                    BillingService, SystemService, PlaygroundService
-    ├── api/             Request, ApiModule (abstract) → AccountApi, SchoolApi, CourseApi,
-    │                    AssignmentApi, MeetingApi, ContestApi, AnalyticsApi, AssistantApi,
-    │                    CommunityApi, BillingApi, SystemApi, PlaygroundApi, TestcaseApi
+    ├── api/             Request, ApiModule (abstract) → AccountApi, SchoolApi,
+    │                    AssignmentApi, MeetingApi, ContestApi, AnalyticsApi,
+    │                    CommunityApi, SystemApi, PlaygroundApi, TestcaseApi
     └── judge/           Judge, ProcessRunner,
                          Language (abstract) → 4 ngôn ngữ, LanguageRegistry,
                          OutputComparator → Exact / Token / Line / Float, ComparatorFactory
@@ -285,16 +287,16 @@ Bốn module của báo cáo nằm ở các tệp sau:
 |---|---|---|---|---|
 | Tài khoản, giảng viên (1, 35) | `User` và các lớp con | `AuthService` | `AccountApi` | `account/`, `admin/Accounts.tsx` |
 | Tổ chức, lớp học, phụ huynh (2, 3, 32) | `Organization`, `Classroom`, `ParentContact` | `SchoolService` | `SchoolApi` | `school/`, `admin/`, `manage/` |
-| Khóa học, tài liệu (4, 36) | `Course`, `Lesson`, `Document` | `CourseService` | `CourseApi` | `school/Courses.tsx` |
+| Khóa học, tài liệu (4, 36) | `Course`, `Lesson`, `Document` | `CourseService` | (API đã gỡ) | `school/Courses.tsx` |
 | Bộ test (7) | `TestCase` | `ProblemAdminService` | `TestcaseApi` | `problem/admin/TestcaseManager.tsx` |
 | IDE, stress test (10, 12) | | `PlaygroundService` | `PlaygroundApi` | `tools/` |
 | Bài tập giao (13) | `Assignment` | `AssignmentService` | `AssignmentApi` | `school/Assignments.tsx` |
 | Buổi học, phòng học, điểm danh, bản ghi (14 đến 20, 37) | `Meeting`, `MeetingRoom`, `Stroke`, `Attendance`, `Recording` | `MeetingService` | `MeetingApi` | `meeting/` |
 | Kỳ thi, xem lại (21, 22) | `Contest` | `ContestService` | `ContestApi` | `contest/` |
 | Phân tích, báo cáo, thành tích (23 đến 26, 33, 38) | | `AnalyticsService` | `AnalyticsApi` | `profile/`, `manage/Dashboard.tsx`, `judge/SubmitInsight.tsx` |
-| Trợ lý AI (27, 28) | | `AssistantService` | `AssistantApi` | `judge/AssistantPopup.tsx`, `tools/Assistant.tsx`, `manage/TeachingAssistant.tsx` |
+| Trợ lý AI (27, 28) | | `AssistantService` | (API đã gỡ) | `judge/AssistantPopup.tsx`, `tools/Assistant.tsx`, `manage/TeachingAssistant.tsx` |
 | Thông báo, chat, diễn đàn (29, 30, 31) | `Notification`, `ChatMessage`, `ForumPost` | `CommunityService` | `CommunityApi` | `community/` |
-| Thanh toán (34) | `Plan`, `Payment` | `BillingService` | `BillingApi` | `profile/Billing.tsx` |
+| Thanh toán (34) | `Plan`, `Payment` | `BillingService` | (API đã gỡ) | `profile/Billing.tsx` |
 | Hệ thống, nhật ký (39, 40) | `AuditLog` | `SystemService` | `SystemApi` | `admin/` |
 
 Module 11 (Công cụ CP) chỉ có phần giao diện trong `tools/CpTools.tsx`.
@@ -421,19 +423,20 @@ Trừ 4 endpoint công khai, mọi request phải gửi header `Authorization: B
 |---|---|---|---|
 | GET | `/api/health` | công khai | Trạng thái máy chủ |
 | GET | `/api/languages` | công khai | Danh sách ngôn ngữ và trạng thái toolchain |
-| POST | `/api/auth/register` | công khai | Đăng ký tài khoản. `role` là `STUDENT` (mặc định) hoặc `TEACHER`, giá trị khác bị từ chối. Cả hai bị từ chối khi quản trị viên tắt tự đăng ký |
+| POST | `/api/auth/register` | công khai | Đăng ký tài khoản. `role` là `STUDENT` (mặc định) hoặc `TEACHER`, giá trị khác bị từ chối. Học sinh dùng được ngay; giảng viên ở trạng thái chờ duyệt (`pending: true`) và chưa đăng nhập được cho tới khi quản trị viên duyệt. Giảng viên bắt buộc gửi kèm `evidence`: file minh chứng dạng base64 (PNG, JPG, WEBP hoặc PDF, tối đa 1 MB), lưu ở `data/evidence/`. Cả hai bị từ chối khi quản trị viên tắt tự đăng ký |
 | POST | `/api/auth/login` | công khai | Đăng nhập, trả về token |
 | POST | `/api/auth/logout` | đăng nhập | Huỷ token |
 | GET | `/api/auth/me` | đăng nhập | Thông tin tài khoản đang đăng nhập |
 | POST | `/api/auth/password` | đăng nhập | Đổi mật khẩu của chính mình |
-| GET | `/api/problems` | đăng nhập | Các bài người gọi được thấy, kèm đề, chủ đề, độ khó, chủ bài và test ví dụ. Gồm kho chung, kho của mình và bài kho riêng đã nằm trong kỳ thi, bài tập giao hoặc bài giảng |
+| GET | `/api/problems` | đăng nhập | Các bài người gọi mở được, kèm đề, chủ đề, độ khó, chủ bài và test ví dụ. Kho chung ai cũng thấy; bài kho riêng chỉ mở qua lớp của mình (bài luyện tập, bài tập giao, kỳ thi của lớp). Bài của kỳ thi đang diễn ra chỉ mở cho học sinh đang ở trong bài thi; đang thi thì chỉ thấy bài của kỳ thi đó |
 | GET | `/api/topics` | đăng nhập | Lộ trình học theo thứ tự |
-| GET | `/api/submissions` | đăng nhập | Lịch sử nộp: học sinh chỉ thấy của mình |
-| GET | `/api/submissions/{id}` | chủ bài / GV / admin | Chi tiết từng test và mã nguồn |
+| GET | `/api/submissions` | đăng nhập | Lịch sử nộp: học sinh chỉ thấy của mình; giảng viên thấy của học sinh các lớp mình dạy và bài nộp vào bài thuộc kho của mình; admin thấy tất cả |
+| GET | `/api/submissions/{id}` | người nộp / GV của lớp / admin | Chi tiết từng test và mã nguồn (cùng quy tắc với danh sách) |
 | GET | `/api/scoreboard` | đăng nhập | Bảng xếp hạng |
-| POST | `/api/submit` | đăng nhập | Nộp bài; chấm xong trả về bài nộp kèm kết quả từng test |
+| POST | `/api/submit` | đăng nhập, mở được bài | Nộp bài; chấm xong trả về bài nộp kèm kết quả từng test |
 | POST | `/api/admin/problems` | GV / admin | Tạo bài tập. Bài của admin vào kho chung, bài của giảng viên vào kho riêng của người đó |
-| PUT | `/api/admin/problems/{id}` | admin; GV với bài của mình | Đổi chủ đề và độ khó của bài |
+| PUT | `/api/admin/problems/{id}` | admin; GV với bài của mình | Sửa bài: `title`, `statement`, `timeLimitMs`, `memoryLimitMb`, `topic`, `difficulty` (trường nào không gửi thì giữ nguyên) |
+| DELETE | `/api/admin/problems/{id}` | admin; GV với bài của mình | Xoá bài. Từ chối nếu bài đã có bài nộp hoặc đang nằm trong kỳ thi, bài tập giao, bài luyện tập của lớp |
 | GET, POST | `/api/admin/problems/{id}/tests` | admin; GV với bài của mình | Xem toàn bộ test của bài, thêm một test |
 | DELETE | `/api/admin/problems/{id}/tests/{tên}` | admin; GV với bài của mình | Xoá một test |
 
@@ -444,67 +447,54 @@ Trừ 4 endpoint công khai, mọi request phải gửi header `Authorization: B
 | Method | Endpoint | Quyền | Mô tả |
 |---|---|---|---|
 | GET | `/api/users` | GV / admin | Danh sách tài khoản |
-| POST | `/api/admin/users` | admin | Tạo tài khoản với vai trò bất kỳ |
+| POST | `/api/admin/users` | admin | Tạo tài khoản với vai trò bất kỳ (dùng được ngay, không cần duyệt) |
+| POST | `/api/admin/users/{id}/approve` | admin | Duyệt giảng viên tự đăng ký; file minh chứng bị xoá |
+| POST | `/api/admin/users/{id}/reject` | admin | Từ chối: xoá tài khoản đang chờ duyệt và file minh chứng |
+| GET | `/api/admin/users/{id}/evidence` | admin | File minh chứng của tài khoản đang chờ duyệt (`contentType`, `data` dạng base64) |
+| POST | `/api/admin/users/{id}/lock` | admin | Khoá tài khoản đang dùng: bị đăng xuất ngay, không đăng nhập lại được; mở lại bằng `approve` |
+| PUT | `/api/admin/users/{id}/role` | admin | Đổi vai trò (`role`). Tài khoản bị đăng xuất và rời các lớp đang tham gia; không hạ quyền giảng viên đang phụ trách lớp |
+| DELETE | `/api/admin/users/{id}` | admin | Xoá hẳn tài khoản (không xoá chính mình, không xoá giảng viên đang phụ trách lớp) |
 | GET | `/api/organizations` | đăng nhập | Danh sách tổ chức |
 | POST, DELETE | `/api/organizations`, `/api/organizations/{id}` | admin | Thêm, xoá tổ chức |
 | GET | `/api/classrooms` | đăng nhập | Các lớp mình thuộc về (admin thấy tất cả) |
 | POST | `/api/classrooms` | GV / admin | Tạo lớp |
 | GET | `/api/classrooms/{id}` | thành viên lớp | Chi tiết lớp: học sinh, trợ giảng |
-| DELETE | `/api/classrooms/{id}` | quản lý lớp | Xoá lớp |
+| DELETE | `/api/classrooms/{id}` | GV phụ trách / admin | Xoá lớp (trợ giảng không xoá được) |
 | POST | `/api/classrooms/{mã tham gia}/join` | học sinh | Tham gia lớp bằng mã tham gia (không phải mã lớp) |
-| POST, DELETE | `/api/classrooms/{id}/students`, `.../students/{userId}` | quản lý lớp | Thêm, xoá học sinh |
-| POST, DELETE | `/api/classrooms/{id}/assistants`, `.../assistants/{userId}` | quản lý lớp | Thêm, xoá trợ giảng |
+| POST | `/api/classrooms/{id}/students` | quản lý lớp | Mời học sinh bằng `username`. Học sinh chỉ vào lớp sau khi tự đồng ý |
+| DELETE | `/api/classrooms/{id}/students/{userId}` | GV phụ trách / admin | Xoá học sinh khỏi lớp, hoặc rút lời mời |
+| GET | `/api/classroom-invites` | đăng nhập | Các lời mời vào lớp đang chờ mình trả lời |
+| POST | `/api/classrooms/{id}/accept`, `.../decline` | người được mời | Đồng ý hoặc từ chối lời mời vào lớp |
+| POST, DELETE | `/api/classrooms/{id}/assistants`, `.../assistants/{userId}` | GV phụ trách / admin | Thêm, xoá trợ giảng |
 | POST, DELETE | `/api/classrooms/{id}/problems`, `.../problems/{mã bài}` | quản lý lớp | Thêm (`problemIds`), bỏ bài luyện tập riêng của lớp. Chi tiết lớp trả danh sách này trong `practice` |
-| GET, POST, DELETE | `/api/parents`, `/api/parents/{id}` | GV / admin | Danh bạ phụ huynh |
-| GET | `/api/parents/{id}/report` | GV / admin | Báo cáo học tập của con |
-| GET | `/api/courses`, `/api/documents` | đăng nhập | Khóa học kèm giáo trình; tài liệu |
-| POST | `/api/courses`, `/api/courses/{id}/lessons`, `/api/documents` | GV / admin | Thêm khóa học, bài giảng, tài liệu |
-| DELETE | `/api/courses/{id}`, `/api/documents/{id}` | GV / admin | Xoá khóa học, tài liệu |
 | GET | `/api/assignments` | đăng nhập | Bài tập giao của các lớp mình thuộc về, kèm tiến độ của mình |
 | POST, DELETE | `/api/assignments`, `/api/assignments/{id}` | quản lý lớp | Giao bài, xoá bài tập giao |
 | GET | `/api/assignments/{id}/progress` | quản lý lớp | Bảng tiến độ cả lớp |
 | GET | `/api/meetings` | đăng nhập | Buổi học của các lớp mình thuộc về |
 | POST, DELETE | `/api/meetings`, `/api/meetings/{id}` | quản lý lớp | Lên lịch, xoá buổi học |
 | PUT | `/api/meetings/{id}/link` | quản lý lớp | Dán, sửa link phòng học của một buổi trong lịch (chỉ nhận `http://`, `https://`; gửi rỗng để gỡ). Học sinh chỉ nhận được link trong `GET /api/meetings` khi buổi học đang mở |
-| POST | `/api/meetings/{id}/start`, `.../end` | quản lý lớp | Bắt đầu, kết thúc buổi học |
-| GET | `/api/meetings/{id}/room?strokes=N` | thành viên lớp | Trạng thái phòng; cũng là lệnh báo "tôi còn ở đây" và điểm danh |
-| PUT | `/api/meetings/{id}/room/code` | chủ phòng, hoặc thành viên khi bật cùng lập trình | Cập nhật mã nguồn dùng chung |
-| POST | `/api/meetings/{id}/room/collab` | chủ phòng | Bật, tắt cùng lập trình |
-| POST | `/api/meetings/{id}/room/strokes`, `.../room/hand` | thành viên lớp | Vẽ một nét lên bảng; giơ hoặc hạ tay |
-| DELETE | `/api/meetings/{id}/room/strokes` | quản lý lớp | Xoá bảng |
-| GET, PUT | `/api/meetings/{id}/attendance` | quản lý lớp | Xem, sửa điểm danh |
-| GET | `/api/recordings`, `/api/recordings/{id}` | thành viên lớp | Bản ghi buổi học |
 | POST | `/api/contests/{id}/join`, `.../finish` | học sinh | Vào thi (khi kỳ thi đang diễn ra); nộp bài sớm để kết thúc bài thi của mình |
-| PUT | `/api/contests/{id}/proctoring` | người tạo / admin | Bật, tắt giám sát (`on`) |
+| PUT | `/api/contests/{id}/proctoring` | quản lý kỳ thi | Bật, tắt giám sát (`on`) |
+| PUT | `/api/contests/{id}/schedule` | quản lý kỳ thi | Đổi giờ thi (`startAt`, `durationMin`). Chưa bắt đầu: đổi được cả hai. Đang diễn ra: chỉ gia hạn được thời lượng. Đã kết thúc: không sửa |
 | POST | `/api/contests/{id}/proctor` | đăng nhập | Trình duyệt thí sinh báo một sự kiện giám sát (`type`, `detail`, `problemId`). Chỉ lưu khi kỳ thi đang diễn ra và người gửi là học sinh |
-| GET | `/api/contests/{id}/proctor` | người tạo / admin | Nhật ký giám sát: tổng hợp theo thí sinh và 300 sự kiện mới nhất |
+| GET | `/api/contests/{id}/proctor` | quản lý kỳ thi | Nhật ký giám sát: tổng hợp theo thí sinh và 300 sự kiện mới nhất |
 | GET | `/api/contests`, `/api/contests/{id}?minute=N`, `/api/contests/{id}/events` | đăng nhập | Danh sách kỳ thi; bảng xếp hạng tại phút N; diễn biến nộp bài |
-| POST | `/api/contests` | quản lý lớp | Tạo kỳ thi cho một lớp (`classroomId` bắt buộc); người tạo là chủ kỳ thi |
-| POST, DELETE | `/api/contests/{id}/problems`, `/api/contests/{id}/problems/{mã bài}` | người tạo / admin | Thêm, bớt một bài của kỳ thi |
-| DELETE | `/api/contests/{id}` | người tạo / admin | Xoá kỳ thi |
+| POST | `/api/contests` | quản lý lớp | Tạo kỳ thi cho một lớp (`classroomId` bắt buộc). Giờ bắt đầu không được nằm trong quá khứ. Quản lý kỳ thi = GV phụ trách lớp, người tạo (khi còn dạy lớp đó) và admin |
+| POST, DELETE | `/api/contests/{id}/problems`, `/api/contests/{id}/problems/{mã bài}` | quản lý kỳ thi | Thêm, bớt một bài của kỳ thi. Chỉ làm được trước khi kỳ thi bắt đầu |
+| DELETE | `/api/contests/{id}` | quản lý kỳ thi | Xoá kỳ thi |
 | GET | `/api/analytics/me` | đăng nhập | Hồ sơ học tập của mình |
 | GET | `/api/analytics/users/{username}` | admin; GV với học sinh lớp mình | Hồ sơ học tập của một học sinh |
 | GET | `/api/dashboard` | GV / admin | Số liệu toàn hệ thống |
-| GET | `/api/gamification/leaderboard` | đăng nhập | Bảng điểm thưởng |
-| POST | `/api/assistant/hint` | đăng nhập | Gợi ý cho một bài |
-| GET | `/api/assistant/classrooms/{id}` | quản lý lớp | Tóm tắt tình hình lớp |
-| GET | `/api/assistant/students/{username}` | GV / admin | Nhận xét về một học sinh |
 | GET, POST | `/api/notifications`, `/api/notifications/read` | đăng nhập | Thông báo của mình; đánh dấu đã đọc |
-| POST | `/api/announcements` | quản lý lớp; admin khi gửi toàn hệ thống | Gửi thông báo |
-| GET, POST | `/api/chat/{kênh}?after=N` | đăng nhập; kênh lớp và kênh phòng học cần là thành viên lớp | Đọc tin nhắn mới, gửi tin nhắn |
+| GET, POST | `/api/chat/{kênh}?after=N` | đăng nhập; kênh lớp cần là thành viên lớp | Đọc tin nhắn mới, gửi tin nhắn |
 | GET, POST | `/api/problems/{mã bài}/comments` | đăng nhập, mở được bài | Bình luận dưới một bài: đã duyệt, cộng với bình luận chờ duyệt của chính mình; gửi bình luận mới (`text`, tối đa 1000 ký tự). Bình luận của quản trị viên hiện ngay |
-| DELETE | `/api/comments/{id}` | tác giả / admin | Xoá bình luận; admin xoá bình luận đang chờ duyệt tức là từ chối |
-| GET | `/api/admin/comments` | admin | Toàn bộ bình luận, chờ duyệt đứng trước |
-| POST | `/api/admin/comments/{id}/approve` | admin | Duyệt một bình luận |
-| GET | `/api/forum`, `/api/forum/{id}` | đăng nhập | Danh sách chủ đề; một chủ đề kèm các câu trả lời |
-| POST | `/api/forum`, `/api/forum/{id}/replies` | đăng nhập | Đăng chủ đề; trả lời |
-| DELETE | `/api/forum/{id}` | tác giả / GV / admin | Xoá chủ đề |
-| GET, POST | `/api/billing`, `/api/billing/pay` | đăng nhập | Các gói và giao dịch của mình; thanh toán mô phỏng |
-| GET | `/api/admin/payments` | admin | Toàn bộ giao dịch |
+| DELETE | `/api/comments/{id}` | tác giả / người duyệt | Xoá bình luận; người duyệt xoá bình luận đang chờ duyệt tức là từ chối |
+| GET | `/api/admin/comments` | admin; GV với bài kho riêng của mình | Bình luận mình duyệt được, chờ duyệt đứng trước |
+| POST | `/api/admin/comments/{id}/approve` | admin; GV với bài kho riêng của mình | Duyệt một bình luận |
 | GET | `/api/settings` | đăng nhập | Cấu hình công khai |
 | PUT | `/api/admin/settings` | admin | Đổi cấu hình |
 | GET | `/api/admin/system`, `/api/admin/audit?q=...` | admin | Thông tin máy chủ; nhật ký hoạt động |
-| POST | `/api/run`, `/api/stress` | đăng nhập | Chạy thử mã nguồn; stress test |
+| POST | `/api/run` | đăng nhập | Chạy thử mã nguồn |
 
 Tên kênh chat: `general`, `class-<mã lớp>`, `meeting-<mã buổi học>`.
 

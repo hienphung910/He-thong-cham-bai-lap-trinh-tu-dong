@@ -22,6 +22,12 @@ public interface UserRepository extends Repository<User> {
 
     Optional<Credentials> findCredentials(String userId);
 
+    /**
+     * Kho co luu duoc trang thai "cho duyet" cua tai khoan khong. Chi false khi bang users cua
+     * MySQL thieu cot approved va khong tu them duoc; khi do khong nhan giang vien tu dang ky.
+     */
+    default boolean supportsApproval() { return true; }
+
     /** Bang solvedCount cho tat ca tai khoan: userId -> so bai da giai. */
     Map<String, Integer> solvedCountByUser();
 }

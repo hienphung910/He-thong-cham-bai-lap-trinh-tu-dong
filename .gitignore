@@ -20,6 +20,9 @@ __pycache__/
 .vscode/
 *.iml
 
+# File minh chung giang vien gui kem khi dang ky (du lieu ca nhan, may chu tu luu)
+data/evidence/
+
 # Frontend
 frontend/node_modules/
 frontend/dist/

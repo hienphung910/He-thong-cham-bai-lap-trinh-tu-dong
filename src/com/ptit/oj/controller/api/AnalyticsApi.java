@@ -21,7 +21,6 @@ import java.util.Set;
  *   GET /api/analytics/me                 - ho so hoc tap cua chinh minh
  *   GET /api/analytics/users/{username}   - cua mot hoc sinh bat ky (giang vien, quan tri)
  *   GET /api/dashboard                    - so lieu toan he thong (giang vien, quan tri)
- *   GET /api/gamification/leaderboard     - bang diem thuong
  */
 public class AnalyticsApi extends ApiModule {
 
@@ -51,11 +50,6 @@ public class AnalyticsApi extends ApiModule {
         if (req.is("GET", "dashboard")) {
             User viewer = req.staff();
             req.send(dashboardJson(viewer));
-            return true;
-        }
-        if (req.is("GET", "gamification", "leaderboard")) {
-            req.user();
-            req.send(leaderboardJson());
             return true;
         }
         return false;
@@ -184,30 +178,4 @@ public class AnalyticsApi extends ApiModule {
                 .build();
     }
 
-    // ---------------------------------------------------------- bang diem thuong
-
-    private String leaderboardJson() {
-        Map<String, Set<String>> solvedByUser = analytics.sharedSolvedByUser();
-        Map<String, Integer> pointsByUser = new HashMap<>();
-        List<User> ranked = new ArrayList<>();
-        for (User u : judge.getUsers()) {
-            Set<String> solved = solvedByUser.get(u.getId());
-            if (solved == null) continue;                 // chua giai bai nao thi khong len bang
-            pointsByUser.put(u.getId(), analytics.points(solved));
-            ranked.add(u);
-        }
-        Collections.sort(ranked, (a, b) -> Integer.compare(pointsByUser.get(b.getId()), pointsByUser.get(a.getId())));
-
-        List<String> rows = new ArrayList<>();
-        int rank = 1;
-        for (User u : ranked) {
-            int points = pointsByUser.get(u.getId());
-            rows.add(Json.obj().put("rank", rank++)
-                    .put("username", u.getUsername()).put("fullName", u.getFullName())
-                    .put("points", points).put("rankName", analytics.rankName(points))
-                    .put("solved", solvedByUser.get(u.getId()).size())
-                    .build());
-        }
-        return Json.array(rows);
-    }
 }

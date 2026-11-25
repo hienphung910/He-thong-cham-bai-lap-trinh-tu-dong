@@ -98,7 +98,25 @@ public class ContestApi extends ApiModule {
                     .build());
             return true;
         }
-        // Nguoi tao ky thi bat / tat giam sat.
+        // Doi gio thi (truoc khi thi) hoac gia han (khi dang thi).
+        if (req.is("PUT", "contests", "*", "schedule")) {
+            User user = req.staff();
+            Contest c = contests.find(req.arg(0));
+            Json.Value body = req.body();
+            java.time.LocalDateTime oldEnd = c.getEndAt();
+            java.time.LocalDateTime oldStart = c.getStartAt();
+            contests.reschedule(user, c, parseTime(body.getString("startAt")), (int) body.getLong("durationMin", c.getDurationMin()));
+            if (!oldStart.equals(c.getStartAt()) || !oldEnd.equals(c.getEndAt())) {
+                Classroom classroom = classroomOf(c);
+                platform.getCommunity().notifyMany(classroom.getStudentIds(), "Kỳ thi đổi giờ: " + c.getTitle(),
+                        "Bắt đầu " + time(c.getStartAt()).replace('T', ' ') + ", kết thúc "
+                                + time(c.getEndAt()).replace('T', ' ') + ".",
+                        "Contests");
+            }
+            req.send(contestJson(c, user).build());
+            return true;
+        }
+        // Nguoi quan ly ky thi bat / tat giam sat.
         if (req.is("PUT", "contests", "*", "proctoring")) {
             User user = req.staff();
             Contest c = contests.find(req.arg(0));
@@ -140,7 +158,7 @@ public class ContestApi extends ApiModule {
             User user = req.user();
             Contest c = contests.find(req.arg(0));
             if (!contests.canManage(user, c)) {
-                throw ApiException.forbidden("Chỉ người tạo kỳ thi hoặc quản trị viên mới xem được nhật ký giám sát");
+                throw ApiException.forbidden("Chỉ giảng viên phụ trách lớp, người tạo kỳ thi hoặc quản trị viên mới xem được nhật ký giám sát");
             }
             req.send(proctorJson(c));
             return true;
@@ -170,10 +188,13 @@ public class ContestApi extends ApiModule {
     private void notifyOwner(Contest c, User student) {
         int count = contests.violationCount(c, student.getId());
         if (count != 1 && count % 10 != 0) return;
-        User owner = judge.getUsers().stream()
-                .filter(u -> u.getUsername().equals(c.getOwnerUsername())).findFirst().orElse(null);
-        if (owner == null) return;
-        platform.getCommunity().notifyUser(owner.getId(), "Giám sát kỳ thi: " + student.getFullName(),
+        // Bao cho nguoi tao ky thi va giang vien phu trach lop (neu la hai nguoi khac nhau).
+        java.util.Set<String> receivers = new java.util.LinkedHashSet<>();
+        for (User u : judge.getUsers()) {
+            if (u.getUsername().equals(c.getOwnerUsername()) && contests.canManage(u, c)) receivers.add(u.getId());
+        }
+        receivers.add(classroomOf(c).getTeacherId());
+        platform.getCommunity().notifyMany(receivers, "Giám sát kỳ thi: " + student.getFullName(),
                 student.getFullName() + " (@" + student.getUsername() + ") có " + count
                         + " lần rời tab / sao chép / dán trong kỳ thi " + c.getTitle()
                         + ". Mở kỳ thi để xem nhật ký giám sát.",

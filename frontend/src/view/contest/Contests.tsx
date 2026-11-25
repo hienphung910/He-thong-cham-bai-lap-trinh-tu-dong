@@ -97,14 +97,19 @@ function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
       window.dispatchEvent(new Event("oj-contests-changed"));
     } catch (e) { setEditError(errorText(e)); }
   }
-  // Them / bot bai: chi nguoi tao ky thi (c.canManage) moi thay cac nut nay.
+  // Them / bot bai: chi nguoi quan ly ky thi (c.canManage) va chi TRUOC khi thi moi thay cac nut nay.
   const [newProblem, setNewProblem] = useState("");
+  // Gio thi dang sua trong form; null = chua sua, hien gia tri hien tai cua ky thi.
+  const [schedule, setSchedule] = useState<{ startAt: string; durationMin: number } | null>(null);
   const [editError, setEditError] = useState("");
 
   async function edit(work: () => Promise<unknown>) {
     setEditError("");
-    try { await work(); setNewProblem(""); contest.reload(); } catch (e) { setEditError(errorText(e)); }
+    try { await work(); setNewProblem(""); setSchedule(null); contest.reload(); } catch (e) { setEditError(errorText(e)); }
   }
+
+  const canEditProblems = !!c && c.canManage && c.status === "UPCOMING";
+  const shownSchedule = schedule ?? { startAt: c ? c.startAt.slice(0, 16) : "", durationMin: c ? c.durationMin : 0 };
 
   const pastEvents = events.data ?? [];
 
@@ -124,14 +129,14 @@ function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
               {c.problems.map((p) => (
                 <span key={p.id} style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>
                   <ProblemChip id={p.id} title={p.title} />
-                  {c.canManage && (
+                  {canEditProblems && (
                     <button title={`Bỏ bài ${p.id} khỏi kỳ thi`} onClick={() => void edit(() => papi.removeContestProblem(c.id, p.id))}
                       style={{ border: "none", background: "none", color: "#9E9E9E", cursor: "pointer", fontSize: 14, padding: "0 4px" }}>×</button>
                   )}
                 </span>
               ))}
             </div>
-            {c.canManage && (
+            {canEditProblems && (
               <div style={{ display: "flex", gap: 8, marginTop: 10, maxWidth: 420 }}>
                 <input style={INPUT} value={newProblem} onChange={(e) => setNewProblem(e.target.value)}
                   placeholder="Mã bài (kho chung hoặc kho của bạn)"
@@ -155,6 +160,26 @@ function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
               </div>
             )}
           </Card>
+
+          {c.canManage && c.status !== "ENDED" && (
+            <Card title={c.status === "RUNNING" ? "Gia hạn kỳ thi" : "Giờ thi"}>
+              <Row>
+                <Field label="Bắt đầu">
+                  <input type="datetime-local" style={INPUT} disabled={c.status === "RUNNING"} value={shownSchedule.startAt}
+                    onChange={(e) => setSchedule({ ...shownSchedule, startAt: e.target.value })} />
+                </Field>
+                <Field label="Thời lượng (phút)">
+                  <input type="number" style={INPUT} min={c.status === "RUNNING" ? c.durationMin : 5} value={shownSchedule.durationMin}
+                    onChange={(e) => setSchedule({ ...shownSchedule, durationMin: Number(e.target.value) })} />
+                </Field>
+                <Btn disabled={schedule === null} onClick={() => void edit(() => papi.rescheduleContest(c.id,
+                  // Dang thi: giu nguyen gio bat dau (ke ca giay), chi doi thoi luong.
+                  c.status === "RUNNING" ? c.startAt : shownSchedule.startAt, shownSchedule.durationMin))}>
+                  {c.status === "RUNNING" ? "Gia hạn" : "Lưu giờ thi"}
+                </Btn>
+              </Row>
+            </Card>
+          )}
 
           {c.canManage && (
             <Card title={`Thí sinh tham gia (${c.participants?.length ?? 0})`}>

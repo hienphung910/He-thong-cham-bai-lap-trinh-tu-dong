@@ -23,6 +23,11 @@ public class Classroom extends Entity {
     private final String teacherId;
     private final Set<String> assistantIds = new CopyOnWriteArraySet<>();
     private final Set<String> studentIds = new CopyOnWriteArraySet<>();
+    /**
+     * Hoc sinh duoc giang vien moi bang ten dang nhap nhung CHUA dong y. Chua phai thanh vien:
+     * khong thay bai cua lop, va giang vien chua xem duoc phan tich hoc tap cua ho.
+     */
+    private final Set<String> invitedIds = new CopyOnWriteArraySet<>();
     /** Hoc sinh da bi giang vien xoa khoi lop: khong tu tham gia lai duoc. */
     private final Set<String> removedIds = new CopyOnWriteArraySet<>();
     private final String joinCode = newJoinCode();
@@ -52,6 +57,7 @@ public class Classroom extends Entity {
     public Set<String> getAssistantIds() { return assistantIds; }
     public Set<String> getStudentIds() { return studentIds; }
     public Set<String> getRemovedIds() { return removedIds; }
+    public Set<String> getInvitedIds() { return invitedIds; }
 
     /** Ma cac bai giang vien chon rieng cho lop nay luyen tap, theo thu tu them. */
     private final List<String> practiceProblemIds = new CopyOnWriteArrayList<>();

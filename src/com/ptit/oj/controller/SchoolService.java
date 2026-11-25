@@ -80,8 +80,51 @@ public class SchoolService {
         return mine;
     }
 
+    /** Viec hang ngay cua lop (bai luyen tap, bai giao, lich hoc, moi hoc sinh): giang vien phu trach va tro giang. */
     public boolean canManage(User user, Classroom classroom) {
         return isAdmin(user) || classroom.isTaughtBy(user.getId());
+    }
+
+    /**
+     * Viec chi GIANG VIEN PHU TRACH (va quan tri vien) duoc lam: xoa lop, them / go tro giang,
+     * xoa hoc sinh khoi lop. Tro giang khong lam duoc cac viec nay.
+     */
+    public boolean isOwner(User user, Classroom classroom) {
+        return isAdmin(user) || classroom.getTeacherId().equals(user.getId());
+    }
+
+    public void requireOwner(User user, Classroom classroom) {
+        if (!isOwner(user, classroom)) {
+            throw ApiException.forbidden("Chỉ giảng viên phụ trách lớp mới làm được việc này");
+        }
+    }
+
+    /** Ma cua moi hoc sinh trong cac lop nguoi nay day (phu trach hoac tro giang). */
+    public java.util.Set<String> studentIdsTaughtBy(String userId) {
+        java.util.Set<String> ids = new java.util.HashSet<>();
+        for (Classroom c : classrooms.findAll()) {
+            if (c.isTaughtBy(userId)) ids.addAll(c.getStudentIds());
+        }
+        return ids;
+    }
+
+    /** Cac lop nguoi nay la giang vien phu trach. */
+    public List<Classroom> classroomsLedBy(String userId) {
+        List<Classroom> led = new ArrayList<>();
+        for (Classroom c : classrooms.findAll()) {
+            if (c.getTeacherId().equals(userId)) led.add(c);
+        }
+        return led;
+    }
+
+    /** Go mot tai khoan khoi moi lop (hoc sinh, tro giang, loi moi) - khi tai khoan bi xoa hoac doi vai tro. */
+    public synchronized void removeEverywhere(String userId) {
+        for (Classroom c : classrooms.findAll()) {
+            c.getStudentIds().remove(userId);
+            c.getAssistantIds().remove(userId);
+            c.getInvitedIds().remove(userId);
+            c.getRemovedIds().remove(userId);
+        }
     }
 
     public void requireManager(User user, Classroom classroom) {
@@ -117,6 +160,43 @@ public class SchoolService {
         return classroom;
     }
 
+    /**
+     * Giang vien moi hoc sinh vao lop bang ten dang nhap. Hoc sinh chi thanh thanh vien sau khi tu
+     * dong y (acceptInvite): khong ai bi dua vao lop - va bi xem phan tich hoc tap - ma khong biet.
+     * @return false neu hoc sinh da o trong lop hoac da duoc moi roi
+     */
+    public synchronized boolean invite(Classroom classroom, User student) {
+        if (!User.ROLE_STUDENT.equals(student.getRoleCode())) {
+            throw ApiException.badRequest(student.getUsername() + " không phải tài khoản học sinh");
+        }
+        if (classroom.getStudentIds().contains(student.getId())) return false;
+        classroom.getRemovedIds().remove(student.getId());
+        return classroom.getInvitedIds().add(student.getId());
+    }
+
+    public synchronized void acceptInvite(Classroom classroom, User student) {
+        if (!classroom.getInvitedIds().remove(student.getId())) {
+            throw ApiException.notFound("Bạn không có lời mời vào lớp này");
+        }
+        classroom.getStudentIds().add(student.getId());
+    }
+
+    public synchronized void declineInvite(Classroom classroom, User student) {
+        if (!classroom.getInvitedIds().remove(student.getId())) {
+            throw ApiException.notFound("Bạn không có lời mời vào lớp này");
+        }
+    }
+
+    /** Cac lop dang moi nguoi nay. */
+    public List<Classroom> invitesOf(User user) {
+        List<Classroom> invites = new ArrayList<>();
+        for (Classroom c : classrooms.findAll()) {
+            if (c.getInvitedIds().contains(user.getId())) invites.add(c);
+        }
+        return invites;
+    }
+
+    /** Dua thang hoc sinh vao lop, khong qua loi moi - chi dung khi tao du lieu mau. */
     public synchronized void addStudent(Classroom classroom, User student) {
         if (!User.ROLE_STUDENT.equals(student.getRoleCode())) {
             throw ApiException.badRequest(student.getUsername() + " không phải tài khoản học sinh");
@@ -126,6 +206,7 @@ public class SchoolService {
     }
 
     public synchronized void removeStudent(Classroom classroom, String studentId) {
+        classroom.getInvitedIds().remove(studentId);       // xoa nguoi chua dong y = rut loi moi
         if (classroom.getStudentIds().remove(studentId)) classroom.getRemovedIds().add(studentId);
     }
 
@@ -133,6 +214,9 @@ public class SchoolService {
     public synchronized void addAssistant(Classroom classroom, User assistant) {
         if (!User.ROLE_TEACHER.equals(assistant.getRoleCode())) {
             throw ApiException.badRequest("Trợ giảng phải là tài khoản giảng viên");
+        }
+        if (!assistant.isApproved()) {
+            throw ApiException.badRequest("Tài khoản giảng viên này đang chờ quản trị viên duyệt");
         }
         if (classroom.getTeacherId().equals(assistant.getId())) {
             throw ApiException.badRequest("Người này đã là giảng viên phụ trách lớp");

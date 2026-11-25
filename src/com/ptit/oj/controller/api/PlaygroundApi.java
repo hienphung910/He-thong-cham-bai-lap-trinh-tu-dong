@@ -42,17 +42,6 @@ public class PlaygroundApi extends ApiModule {
             req.send(o.build());
             return true;
         }
-        if (req.is("POST", "stress")) {
-            req.user();
-            Json.Value body = req.body();
-            PlaygroundService.StressResult result = playground.stress(language(body),
-                    body.getString("solution"), body.getString("brute"), body.getString("generator"),
-                    (int) body.getLong("rounds", 20));
-            req.send(Json.obj().put("found", result.isFound()).put("rounds", result.getRounds())
-                    .put("message", result.getMessage()).put("input", result.getInput())
-                    .put("expected", result.getExpected()).put("actual", result.getActual()).build());
-            return true;
-        }
         return false;
     }
 

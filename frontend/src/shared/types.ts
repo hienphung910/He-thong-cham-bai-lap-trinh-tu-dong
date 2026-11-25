@@ -39,6 +39,8 @@ export interface RegisterRequest {
   fullName: string;
   studentCode: string;
   className: string;
+  /** File minh chung dang base64 (PNG / JPG / WEBP / PDF, toi da 1 MB). Giang vien bat buoc co; hoc sinh de "". */
+  evidence: string;
 }
 
 export interface LanguageInfo {
@@ -159,6 +161,11 @@ export interface NewProblemRequest {
 export interface UpdateProblemRequest {
   topic: string;
   difficulty: number;
+  /** Bo trong cac truong duoi day thi may chu giu nguyen gia tri cu. */
+  title?: string;
+  statement?: string;
+  timeLimitMs?: number;
+  memoryLimitMb?: number;
 }
 
 export interface NewProblemResponse {

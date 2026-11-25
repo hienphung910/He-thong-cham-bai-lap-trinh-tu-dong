@@ -92,7 +92,8 @@ export function putJson<T>(path: string, body: unknown): Promise<T> {
 
 export const api = {
   // --- xac thuc ---
-  register: (body: RegisterRequest) => postJson<{ message: string }>("/api/auth/register", body),
+  /** pending = true: tai khoan giang vien vua tao con phai cho quan tri vien duyet. */
+  register: (body: RegisterRequest) => postJson<{ message: string; pending: boolean }>("/api/auth/register", body),
   login: (username: string, password: string) =>
     postJson<LoginResponse>("/api/auth/login", { username, password }),
   me: () => request<AuthUser>("/api/auth/me"),
@@ -111,7 +112,10 @@ export const api = {
   // --- quan tri (backend van kiem tra lai vai tro) ---
   createProblem: (body: NewProblemRequest) =>
     postJson<NewProblemResponse>("/api/admin/problems", body),
-  /** Doi chu de va do kho cua bai da co. */
+  /** Sua bai da co: ten, de bai, gioi han, chu de, do kho. */
   updateProblem: (id: string, body: UpdateProblemRequest) =>
     putJson<NewProblemResponse>(`/api/admin/problems/${encodeURIComponent(id)}`, body),
+  /** Xoa bai; may chu tu choi neu bai da co nguoi nop hoac dang duoc dung trong ky thi / bai giao / lop. */
+  deleteProblem: (id: string) =>
+    request<{ ok: boolean; message: string }>(`/api/admin/problems/${encodeURIComponent(id)}`, { method: "DELETE" }),
 };
