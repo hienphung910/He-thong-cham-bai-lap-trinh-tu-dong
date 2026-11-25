@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { papi } from "../../shared/platformApi";
 import { Btn, Card, ErrorBox, Field, INPUT, Modal, Muted, Page, Progress, Row, Table, Tag, errorText, fmtTime, localDateTime, useLoad } from "../../shared/kit";
-import { parseIds } from "../../shared/nav";
 import ProblemChip from "../../shared/ProblemChip";
 import type { AssignmentProgress } from "../../shared/platformTypes";
-import ProblemPicker from "../problem/ProblemPicker";
+import ProblemField from "../problem/ProblemField";
 
 /**
  * Module 13 (bai tap duoc giao): hoc sinh thay bai tap cua cac lop minh hoc kem tien do;
@@ -15,10 +14,8 @@ export default function Assignments() {
   const classes = useLoad(() => papi.classrooms());
   const [error, setError] = useState("");
   const [progress, setProgress] = useState<AssignmentProgress | null>(null);
-  const [form, setForm] = useState({ classroomId: "", title: "", description: "", problems: "", dueAt: localDateTime(7 * 24 * 60) });
+  const [form, setForm] = useState({ classroomId: "", title: "", description: "", problems: [] as string[], dueAt: localDateTime(7 * 24 * 60) });
   const managed = (classes.data ?? []).filter((c) => c.canManage);
-  /** Dang mo bang chon bai cho bai tap sap giao (thay cho viec go ma bai). */
-  const [picking, setPicking] = useState(false);
 
   async function act(work: () => Promise<unknown>) {
     setError("");
@@ -43,28 +40,18 @@ export default function Assignments() {
               <Field label="Hạn nộp"><input type="datetime-local" style={INPUT} value={form.dueAt} onChange={(e) => setForm({ ...form, dueAt: e.target.value })} /></Field>
             </Row>
             <Row>
-              <Field label="Các bài cần làm (mã bài, cách nhau dấu phẩy)"><input style={INPUT} value={form.problems} onChange={(e) => setForm({ ...form, problems: e.target.value })} placeholder="K001, K002, K003" /></Field>
-              <Btn kind="ghost" onClick={() => setPicking(true)}>Chọn từ danh sách</Btn>
+              <ProblemField label="Các bài cần làm" pickerTitle="Chọn bài cần làm" ids={form.problems}
+                onChange={(problems) => setForm((old) => ({ ...old, problems }))} />
               <Field label="Ghi chú"><input style={INPUT} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>
-              <Btn disabled={!form.classroomId} onClick={() => void act(async () => {
-                await papi.createAssignment({ classroomId: form.classroomId, title: form.title, description: form.description, problemIds: parseIds(form.problems), dueAt: form.dueAt });
-                setForm({ ...form, title: "", description: "", problems: "" });
-              })}>Giao bài</Btn>
+              <Btn disabled={!form.classroomId || form.problems.length === 0}
+                title={!form.classroomId ? "Hãy chọn lớp" : form.problems.length === 0 ? "Hãy chọn ít nhất một bài" : undefined}
+                onClick={() => void act(async () => {
+                  await papi.createAssignment({ classroomId: form.classroomId, title: form.title, description: form.description, problemIds: form.problems, dueAt: form.dueAt });
+                  setForm({ ...form, title: "", description: "", problems: [] });
+                })}>Giao bài</Btn>
             </Row>
           </div>
         </Card>
-      )}
-      {picking && (
-        <ProblemPicker title="Chọn bài cần làm" excluded={parseIds(form.problems)}
-          onClose={() => setPicking(false)}
-          onPick={(ids) => {
-            setPicking(false);
-            setForm((old) => {
-              const all = parseIds(old.problems);
-              for (const id of ids) if (!all.includes(id)) all.push(id);
-              return { ...old, problems: all.join(", ") };
-            });
-          }} />
       )}
 
       {list.data?.length === 0 && <Muted>Chưa có bài tập nào được giao.</Muted>}

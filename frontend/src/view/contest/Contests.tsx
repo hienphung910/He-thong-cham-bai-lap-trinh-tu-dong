@@ -1,19 +1,13 @@
 import { useEffect, useState } from "react";
 import { papi } from "../../shared/platformApi";
 import { Btn, Card, ErrorBox, Field, INPUT, Muted, Page, Row, Switch, Table, Tag, errorText, fmtTime, localDateTime, useLoad } from "../../shared/kit";
-import { parseIds, useBackState } from "../../shared/nav";
+import { useBackState } from "../../shared/nav";
 import ProblemChip from "../../shared/ProblemChip";
 import { useAuth } from "../account/auth";
 import type { Contest } from "../../shared/platformTypes";
 import { ProctorPanel } from "./Proctor";
 import ProblemPicker from "../problem/ProblemPicker";
-
-/** Gop cac ma bai vua chon trong bang vao o nhap ma bai (bo ma trung, giu thu tu). */
-function mergeIds(text: string, picked: string[]): string {
-  const ids = parseIds(text);
-  for (const id of picked) if (!ids.includes(id)) ids.push(id);
-  return ids.join(", ");
-}
+import ProblemField from "../problem/ProblemField";
 
 const STATUS: Record<Contest["status"], { label: string; color: string }> = {
   UPCOMING: { label: "Sắp diễn ra", color: "blue" },
@@ -32,9 +26,7 @@ export default function Contests() {
   // Ky thi dang mo nam trong lich su trinh duyet: nut Back quay ve danh sach ky thi.
   const [openId, setOpenId] = useBackState<string | null>("contest", null);
   const [error, setError] = useState("");
-  const [form, setForm] = useState({ title: "", description: "", startAt: localDateTime(), durationMin: 120, problems: "", proctored: true, classroomId: "" });
-  /** Dang mo bang chon bai cho ky thi sap tao (thay cho viec go ma bai). */
-  const [picking, setPicking] = useState(false);
+  const [form, setForm] = useState({ title: "", description: "", startAt: localDateTime(), durationMin: 120, problems: [] as string[], proctored: true, classroomId: "" });
 
   async function act(work: () => Promise<unknown>) {
     setError("");
@@ -58,21 +50,18 @@ export default function Contests() {
             <Field label="Tên kỳ thi"><input style={INPUT} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></Field>
             <Field label="Bắt đầu"><input type="datetime-local" style={INPUT} value={form.startAt} onChange={(e) => setForm({ ...form, startAt: e.target.value })} /></Field>
             <Field label="Thời lượng (phút)"><input type="number" style={INPUT} value={form.durationMin} onChange={(e) => setForm({ ...form, durationMin: Number(e.target.value) })} /></Field>
-            <Field label="Các bài (mã bài, cách nhau dấu phẩy)"><input style={INPUT} value={form.problems} onChange={(e) => setForm({ ...form, problems: e.target.value })} placeholder="K001, K002" /></Field>
-            <Btn kind="ghost" onClick={() => setPicking(true)}>Chọn từ danh sách</Btn>
+            <ProblemField label="Các bài" pickerTitle="Chọn bài cho kỳ thi" ids={form.problems}
+              onChange={(problems) => setForm((old) => ({ ...old, problems }))} />
             <Switch label="Giám sát thí sinh" checked={form.proctored} onChange={(proctored) => setForm({ ...form, proctored })}
               title="Ghi lại việc rời tab, chuyển cửa sổ, sao chép, dán của thí sinh trong lúc thi. Bật / tắt lại được ở trang kỳ thi." />
-            <Btn disabled={!form.classroomId} title={form.classroomId ? undefined : "Hãy chọn lớp tham gia kỳ thi"} onClick={() => void act(async () => {
-              await papi.createContest({ title: form.title, description: form.description, startAt: form.startAt, durationMin: form.durationMin, problemIds: parseIds(form.problems), proctored: form.proctored, classroomId: form.classroomId });
-              setForm({ ...form, title: "", problems: "" });
-            })}>Tạo</Btn>
+            <Btn disabled={!form.classroomId || form.problems.length === 0}
+              title={!form.classroomId ? "Hãy chọn lớp tham gia kỳ thi" : form.problems.length === 0 ? "Hãy chọn ít nhất một bài" : undefined}
+              onClick={() => void act(async () => {
+                await papi.createContest({ title: form.title, description: form.description, startAt: form.startAt, durationMin: form.durationMin, problemIds: form.problems, proctored: form.proctored, classroomId: form.classroomId });
+                setForm({ ...form, title: "", problems: [] });
+              })}>Tạo</Btn>
           </Row>
         </Card>
-      )}
-      {picking && (
-        <ProblemPicker title="Chọn bài cho kỳ thi" excluded={parseIds(form.problems)}
-          onClose={() => setPicking(false)}
-          onPick={(ids) => { setPicking(false); setForm((old) => ({ ...old, problems: mergeIds(old.problems, ids) })); }} />
       )}
       <Table head={["Kỳ thi", "Lớp", "Người tạo", "Bắt đầu", "Thời lượng", "Số bài", "Trạng thái", ""]}
         empty={isStaff ? "Chưa có kỳ thi nào." : "Các lớp của bạn chưa có kỳ thi nào."}
@@ -116,14 +105,13 @@ function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
   /** Dang mo bang chon bai de them vao ky thi nay. */
   const [pickingMore, setPickingMore] = useState(false);
   // Them / bot bai: chi nguoi quan ly ky thi (c.canManage) va chi TRUOC khi thi moi thay cac nut nay.
-  const [newProblem, setNewProblem] = useState("");
   // Gio thi dang sua trong form; null = chua sua, hien gia tri hien tai cua ky thi.
   const [schedule, setSchedule] = useState<{ startAt: string; durationMin: number } | null>(null);
   const [editError, setEditError] = useState("");
 
   async function edit(work: () => Promise<unknown>) {
     setEditError("");
-    try { await work(); setNewProblem(""); setSchedule(null); contest.reload(); } catch (e) { setEditError(errorText(e)); }
+    try { await work(); setSchedule(null); contest.reload(); } catch (e) { setEditError(errorText(e)); }
   }
 
   const canEditProblems = !!c && c.canManage && c.status === "UPCOMING";
@@ -155,12 +143,8 @@ function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
               ))}
             </div>
             {canEditProblems && (
-              <div style={{ display: "flex", gap: 8, marginTop: 10, maxWidth: 420 }}>
-                <input style={INPUT} value={newProblem} onChange={(e) => setNewProblem(e.target.value)}
-                  placeholder="Mã bài (kho chung hoặc kho của bạn)"
-                  onKeyDown={(e) => { if (e.key === "Enter" && newProblem.trim()) void edit(() => papi.addContestProblem(c.id, newProblem.trim())); }} />
-                <Btn disabled={!newProblem.trim()} onClick={() => void edit(() => papi.addContestProblem(c.id, newProblem.trim()))}>Thêm bài</Btn>
-                <Btn kind="ghost" onClick={() => setPickingMore(true)}>Chọn từ danh sách</Btn>
+              <div style={{ marginTop: 10 }}>
+                <Btn small kind="ghost" onClick={() => setPickingMore(true)}>Thêm bài từ danh sách</Btn>
               </div>
             )}
             {pickingMore && (

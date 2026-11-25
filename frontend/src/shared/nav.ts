@@ -73,7 +73,3 @@ export function useBackState<T>(key: string, initial: T): [T, (value: T) => void
   return [value, set];
 }
 
-/** Tach chuoi "K001, K002 K003" thanh mang ma bai. */
-export function parseIds(text: string): string[] {
-  return text.split(/[\s,;]+/).map((s) => s.trim().toUpperCase()).filter((s) => s !== "");
-}

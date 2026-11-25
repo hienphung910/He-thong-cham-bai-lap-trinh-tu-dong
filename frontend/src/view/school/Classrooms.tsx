@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { papi } from "../../shared/platformApi";
-import { parseIds, useBackState } from "../../shared/nav";
+import { useBackState } from "../../shared/nav";
 import { Btn, Card, ErrorBox, Field, Grid, INPUT, Muted, Page, Row, Table, Tag, errorText, useLoad } from "../../shared/kit";
 import ProblemChip from "../../shared/ProblemChip";
 import { useAuth } from "../account/auth";
@@ -151,8 +151,7 @@ function ClassroomDetail({ id, onBack }: { id: string; onBack: () => void }) {
   const detail = useLoad(() => papi.classroom(id), [id]);
   const [error, setError] = useState("");
   const [student, setStudent] = useState("");
-  const [problemIds, setProblemIds] = useState("");
-  /** Dang mo bang chon bai luyen tap (thay cho viec go ma bai). */
+  /** Dang mo bang chon bai luyen tap (bai chi duoc chon tu bang, khong go ma bai). */
   const [picking, setPicking] = useState(false);
   /** Hoc sinh dang duoc xem phan tich hoc tap (ten dang nhap); null = dang o trang lop. */
   const [viewing, setViewing] = useBackState<string | null>("classStudent", null);
@@ -208,16 +207,7 @@ function ClassroomDetail({ id, onBack }: { id: string; onBack: () => void }) {
             right={practice.length > 0 && !c.canManage ? <Tag color={solved === practice.length ? "green" : "blue"}>Đã giải {solved}/{practice.length}</Tag> : undefined}>
             {c.canManage && (
               <div style={{ marginBottom: 12 }}>
-                <Row>
-                  <Field label="Thêm bài cho lớp (mã bài, cách nhau dấu phẩy)">
-                    <input style={{ ...INPUT, width: 360 }} value={problemIds} onChange={(e) => setProblemIds(e.target.value)} placeholder="K001, K002, V010" />
-                  </Field>
-                  <Btn disabled={!problemIds.trim()} onClick={() => void act(async () => {
-                    await papi.addPracticeProblems(id, parseIds(problemIds));
-                    setProblemIds("");
-                  })}>Thêm bài</Btn>
-                  <Btn kind="ghost" onClick={() => setPicking(true)}>Chọn từ danh sách</Btn>
-                </Row>
+                <Btn small kind="ghost" onClick={() => setPicking(true)}>Thêm bài từ danh sách</Btn>
               </div>
             )}
             {practice.length === 0 && <Muted>Lớp chưa có bài luyện tập.</Muted>}
