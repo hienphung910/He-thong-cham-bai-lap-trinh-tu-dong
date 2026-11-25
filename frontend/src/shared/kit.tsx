@@ -45,7 +45,7 @@ export function errorText(e: unknown): string {
 
 /** "2026-11-22T14:30:00" -> "22/11/2026 14:30" */
 export function fmtTime(iso: string | null | undefined): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   const [date, time = ""] = iso.split("T");
   const [y, m, d] = date.split("-");
   return `${d}/${m}/${y} ${time.slice(0, 5)}`;

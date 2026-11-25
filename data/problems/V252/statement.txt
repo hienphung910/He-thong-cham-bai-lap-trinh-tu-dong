@@ -18,7 +18,7 @@ Giới hạn:
 - 1 ≤ u, v ≤ n.
 
 Gợi ý:
-- Sau hai cầu 1–2 và 2–3, đảo 1 tới được đảo 3: in CO.
-- Cầu 3–1 được bắc thêm (thừa) rồi bị gió cuốn đi ngay; đảo 1 vẫn tới được đảo 3 qua đảo 2: in CO.
-- Đợt gió tiếp theo cuốn trôi cầu 2–3, lúc này đảo 3 bị cô lập: in KHONG.
+- Sau hai cầu 1-2 và 2-3, đảo 1 tới được đảo 3: in CO.
+- Cầu 3-1 được bắc thêm (thừa) rồi bị gió cuốn đi ngay; đảo 1 vẫn tới được đảo 3 qua đảo 2: in CO.
+- Đợt gió tiếp theo cuốn trôi cầu 2-3, lúc này đảo 3 bị cô lập: in KHONG.
 - Đảo 4 luôn tới được chính nó: in CO.

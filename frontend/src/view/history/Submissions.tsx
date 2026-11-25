@@ -116,17 +116,17 @@ export default function Submissions({ reloadKey }: { reloadKey: number }) {
                   {fmtTime(s.submittedAt)}
                 </td>
                 <td style={{ ...TD, fontSize: 13 }}>
-                  {s.authorName || s.author} · <span style={{ color: "#9E9E9E", fontFamily: "var(--font-mono)", fontSize: 11 }}>{s.author}</span>
+                  {s.authorName || s.author} - <span style={{ color: "#9E9E9E", fontFamily: "var(--font-mono)", fontSize: 11 }}>{s.author}</span>
                 </td>
                 <td style={{ ...TD, textAlign: "left" }}>
                   <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 600, color: "var(--color-red)" }}>{s.problem.id}</span>
-                  {" · "}
+                  {" - "}
                   <span style={{ color: s.verdict === "AC" ? "var(--color-green)" : "var(--color-wa-text)", fontWeight: 500 }}>{s.problem.title}</span>
                 </td>
                 <td style={{ ...TD, fontSize: 13, textAlign: "center" }}>{s.language}</td>
                 <td style={{ ...TD, textAlign: "center" }}><VBadge verdict={s.verdict} /></td>
                 <td style={{ ...TD, fontFamily: "var(--font-mono)", fontSize: 12, color: "#757575", textAlign: "center" }}>
-                  {s.execTimeMs !== null ? `${(s.execTimeMs / 1000).toFixed(2)}s` : "—"}
+                  {s.execTimeMs !== null ? `${(s.execTimeMs / 1000).toFixed(2)}s` : "-"}
                 </td>
               </tr>
             ))}
@@ -155,7 +155,7 @@ export function SubmissionDetail({ detail, onClose }: { detail: Submission; onCl
           padding: "14px 20px", borderBottom: "1px solid #E0E0E0", background: "var(--color-table-header-bg)",
         }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: "#212121" }}>
-            {detail.problem.id} — {detail.problem.title}
+            {detail.problem.id} - {detail.problem.title}
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 18, color: "#9E9E9E", cursor: "pointer" }}>×</button>
         </div>
@@ -163,10 +163,10 @@ export function SubmissionDetail({ detail, onClose }: { detail: Submission; onCl
           <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
             <VBadge verdict={detail.verdict} />
             <span style={{ fontFamily: "var(--font-mono)", fontSize: 12.5 }}>
-              Đúng {detail.passed}/{detail.total} test · {(detail.score ?? 0).toFixed(1)}/{detail.maxPoints.toFixed(0)} điểm
+              Đúng {detail.passed}/{detail.total} test - {(detail.score ?? 0).toFixed(1)}/{detail.maxPoints.toFixed(0)} điểm
             </span>
             <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "#9E9E9E" }}>
-              {detail.language} · @{detail.author}
+              {detail.language} - @{detail.author}
             </span>
           </div>
           {detail.message && (

@@ -136,7 +136,7 @@ export default function ExamView({ contest, user, problems, languages, onChanged
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ display: "block", fontSize: 13, fontWeight: active ? 700 : 500, color: "#212121", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.title}</span>
                     <span style={{ fontSize: 11, color: "#9E9E9E", fontFamily: "var(--font-mono)" }}>
-                      {p.id}{solved ? " · đã giải" : cell && cell.wrong > 0 ? " · chưa đúng" : ""}
+                      {p.id}{solved ? " - đã giải" : cell && cell.wrong > 0 ? " - chưa đúng" : ""}
                     </span>
                   </span>
                 </button>
@@ -164,7 +164,7 @@ export default function ExamView({ contest, user, problems, languages, onChanged
                   <b>{r.solved}</b>,
                   ...r.cells.map((cell) => cell.solvedAt !== null
                     ? <Tag color="green">✓ Đã giải</Tag>
-                    : cell.wrong > 0 ? <Tag color="red">Chưa đúng</Tag> : "·"),
+                    : cell.wrong > 0 ? <Tag color="red">Chưa đúng</Tag> : "-"),
                 ])} />
             </div>
           </div>

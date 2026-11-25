@@ -474,7 +474,7 @@ function AppShell() {
                 }}>
                   <div style={{ padding: "10px 14px 8px", borderBottom: "1px solid #F0F0F0", marginBottom: 4 }}>
                     <div style={{ fontSize: 14, fontWeight: 600, color: "#212121" }}>{user.fullName || user.username}</div>
-                    <div style={{ fontSize: 11, color: "#9E9E9E", fontFamily: "var(--font-mono)" }}>@{user.username} · {user.roleName}</div>
+                    <div style={{ fontSize: 11, color: "#9E9E9E", fontFamily: "var(--font-mono)" }}>@{user.username} - {user.roleName}</div>
                   </div>
                   <button onClick={() => { go("Account"); setAvatarOpen(false); }} style={MENU_ITEM}>Tài khoản của tôi</button>
                   <button onClick={handleLogout} style={{ ...MENU_ITEM, color: "#F44336" }}>Đăng xuất</button>

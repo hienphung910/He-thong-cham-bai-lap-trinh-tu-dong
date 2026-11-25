@@ -26,7 +26,7 @@ export default function Organizations() {
       </Card>
       <Table head={["Mã", "Tên", "Địa chỉ", "Mô tả", "Số lớp", ""]} empty="Chưa có tổ chức nào."
         rows={(list.data ?? []).map((o) => [
-          o.id, <b>{o.name}</b>, o.address || "—", o.description || "—", o.classCount,
+          o.id, <b>{o.name}</b>, o.address || "-", o.description || "-", o.classCount,
           <Btn small kind="danger" onClick={() => { if (window.confirm(`Xoá tổ chức "${o.name}"?`)) void act(() => papi.deleteOrganization(o.id)); }}>Xoá</Btn>,
         ])} />
     </Page>

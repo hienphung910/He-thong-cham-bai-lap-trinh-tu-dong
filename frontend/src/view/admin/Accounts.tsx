@@ -64,11 +64,11 @@ export default function Accounts() {
         </span>}>
           <Table head={["Tên đăng nhập", "Họ tên", "Vai trò", "Lớp / bộ môn", "Trạng thái", "Minh chứng", ""]}
             rows={pending.map((u) => [
-              <b>{u.username}</b>, u.fullName, <Tag color={ROLE_COLOR[u.role]}>{u.roleName}</Tag>, u.detail || "—",
+              <b>{u.username}</b>, u.fullName, <Tag color={ROLE_COLOR[u.role]}>{u.roleName}</Tag>, u.detail || "-",
               isPending(u) ? <Tag color="orange">Chờ duyệt</Tag> : <Tag color="red">Đang khoá</Tag>,
               u.hasEvidence
                 ? <Btn small kind="ghost" onClick={() => void openEvidence(u)}>Xem</Btn>
-                : <span style={{ color: "#9E9E9E" }}>—</span>,
+                : <span style={{ color: "#9E9E9E" }}>-</span>,
               <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
                 <Btn small onClick={() => void decide(() => papi.approveUser(u.id))}>{isPending(u) ? "Duyệt" : "Mở khoá"}</Btn>
                 <Btn small kind="danger" onClick={() => {
@@ -82,7 +82,7 @@ export default function Accounts() {
         </Card>
       )}
       {viewing && (
-        <Modal title={`Minh chứng — ${viewing.user.fullName} (@${viewing.user.username})`} onClose={closeEvidence} width={780}>
+        <Modal title={`Minh chứng - ${viewing.user.fullName} (@${viewing.user.username})`} onClose={closeEvidence} width={780}>
           {viewing.contentType === "application/pdf"
             ? <iframe src={viewing.url} title="Minh chứng" style={{ width: "100%", height: "68vh", border: "1px solid #E0E0E0", borderRadius: 6 }} />
             : (
@@ -102,7 +102,7 @@ export default function Accounts() {
       </div>
       <Table head={["Tên đăng nhập", "Họ tên", "Vai trò", "Lớp / bộ môn", ""]}
         rows={shown.map((u) => [
-          <b>{u.username}</b>, u.fullName, <Tag color={ROLE_COLOR[u.role]}>{u.roleName}</Tag>, u.detail || "—",
+          <b>{u.username}</b>, u.fullName, <Tag color={ROLE_COLOR[u.role]}>{u.roleName}</Tag>, u.detail || "-",
           u.id === me?.id ? <span style={{ fontSize: 12, color: "#9E9E9E" }}>Tài khoản của bạn</span> : (
             <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", alignItems: "center", flexWrap: "wrap" }}>
               <select title="Đổi vai trò" style={{ ...INPUT, width: 132, height: 28, fontSize: 12 }} value={u.role}

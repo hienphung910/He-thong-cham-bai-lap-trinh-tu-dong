@@ -210,7 +210,7 @@ export default function Problems({
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 17, fontWeight: 700, color: "#212121" }}>Lớp học của tôi</div>
             <div style={{ fontSize: 12, color: "#757575", marginTop: 2 }}>
-              {activeClass ? `Bài luyện tập của ${activeClass.name} · Giảng viên ${activeClass.teacherName}` : `Lộ trình ${group}`}
+              {activeClass ? `Bài luyện tập của ${activeClass.name} - Giảng viên ${activeClass.teacherName}` : `Lộ trình ${group}`}
             </div>
           </div>
           <select
@@ -228,7 +228,7 @@ export default function Problems({
             {classes.length > 0 && (
               <optgroup label="Lớp của tôi">
                 {classes.map((c) => (
-                  <option key={c.id} value={CLASS + c.id}>{c.id} · {c.name} — GV {c.teacherName}</option>
+                  <option key={c.id} value={CLASS + c.id}>{c.id} - {c.name} - GV {c.teacherName}</option>
                 ))}
               </optgroup>
             )}
@@ -286,7 +286,7 @@ export default function Problems({
           {nextToLearn && (
             <button
               onClick={() => setSelectedId(nextToLearn.id)}
-              title={`${nextToLearn.id} — ${nextToLearn.title}`}
+              title={`${nextToLearn.id} - ${nextToLearn.title}`}
               style={{
                 height: 34, padding: "0 14px", cursor: "pointer", borderRadius: 6, fontSize: 12.5, fontWeight: 700,
                 background: "var(--color-accent)", color: "var(--color-on-accent)", border: "1px solid var(--color-accent-dark)",
@@ -351,7 +351,7 @@ export default function Problems({
                         <span style={{ fontSize: 11.5, fontWeight: 700, padding: "2px 10px", borderRadius: 10, color: diff.color, background: diff.bg }}>
                           {diff.label}
                         </span>
-                      ) : <span style={{ color: "#BDBDBD" }}>—</span>}
+                      ) : <span style={{ color: "#BDBDBD" }}>-</span>}
                     </td>
                   </tr>
                 );

@@ -233,7 +233,7 @@ export default function ProblemEditor({ topics, onClose, onCreated }: { topics: 
             <div>
               <label style={LABEL}>Chủ đề trong lộ trình</label>
               <select value={topic} onChange={(e) => setTopic(e.target.value)} style={{ ...INPUT, fontFamily: "var(--font-sans)" }}>
-                <option value="">(Chưa phân loại — hiện ở "Bài khác")</option>
+                <option value="">(Chưa phân loại - hiện ở "Bài khác")</option>
                 {topics.map((t) => <option key={t.id} value={t.id}>{t.order}. {t.name}</option>)}
               </select>
             </div>

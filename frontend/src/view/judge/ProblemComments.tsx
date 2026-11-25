@@ -47,7 +47,7 @@ export default function ProblemComments({ problemId }: { problemId: string }) {
           <div key={c.id} style={{ borderLeft: "3px solid var(--color-accent)", paddingLeft: 12 }}>
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", fontSize: 12.5 }}>
               <b style={{ color: "#212121" }}>{c.authorName}</b>
-              <span style={{ color: "#9E9E9E" }}>{c.authorRole} · {fmtTime(c.createdAt)}</span>
+              <span style={{ color: "#9E9E9E" }}>{c.authorRole} - {fmtTime(c.createdAt)}</span>
               {c.canDelete && (
                 <button onClick={() => void remove(c.id)} style={{
                   background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 12, color: "#C62828",

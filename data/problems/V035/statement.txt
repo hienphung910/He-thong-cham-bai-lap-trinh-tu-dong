@@ -16,7 +16,7 @@ Thao tác thất bại thì không làm thay đổi gì.
 
 Giới hạn:
 - 1 ≤ Q ≤ 500.
-- Tên tài khoản gồm 1 đến 8 chữ cái thường a–z.
+- Tên tài khoản gồm 1 đến 8 chữ cái thường a-z.
 - 1 ≤ x ≤ 10^9.
 - Số dư có thể vượt quá 2^31, hãy dùng số nguyên 64 bit.
 

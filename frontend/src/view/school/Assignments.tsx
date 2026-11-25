@@ -63,7 +63,7 @@ export default function Assignments() {
           {a.canManage && <Btn small kind="danger" onClick={() => { if (window.confirm(`Xoá bài tập "${a.title}"?`)) void act(() => papi.deleteAssignment(a.id)); }}>Xoá</Btn>}
         </>}>
           <div style={{ fontSize: 13, color: "#616161", marginBottom: 8 }}>
-            Hạn nộp <b>{fmtTime(a.dueAt)}</b> · giao bởi {a.createdBy}{a.description ? ` · ${a.description}` : ""}
+            Hạn nộp <b>{fmtTime(a.dueAt)}</b> - giao bởi {a.createdBy}{a.description ? ` - ${a.description}` : ""}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
             <div style={{ flex: 1, maxWidth: 260 }}><Progress value={a.total === 0 ? 0 : (a.solvedCount * 100) / a.total} /></div>
@@ -82,13 +82,13 @@ export default function Assignments() {
       ))}
 
       {progress && (
-        <Modal title={`Tiến độ lớp — ${progress.title}`} onClose={() => setProgress(null)} width={760}>
+        <Modal title={`Tiến độ lớp - ${progress.title}`} onClose={() => setProgress(null)} width={760}>
           <Table head={["Học sinh", ...progress.problemIds, "Tổng"]} empty="Lớp chưa có học sinh."
             rows={progress.rows.map((r) => [
               <span><b>{r.fullName}</b> <span style={{ color: "#9E9E9E" }}>@{r.username}</span></span>,
               ...r.statuses.map((status) => status === "DONE" ? <Tag color="green">✓</Tag>
                 : status === "LATE" ? <Tag color="orange">Muộn</Tag>
-                : status === "EARLIER" ? <Tag color="gray">Từ trước</Tag> : <Tag>—</Tag>),
+                : status === "EARLIER" ? <Tag color="gray">Từ trước</Tag> : <Tag>-</Tag>),
               `${r.solvedCount}/${progress.problemIds.length}`,
             ])} />
         </Modal>

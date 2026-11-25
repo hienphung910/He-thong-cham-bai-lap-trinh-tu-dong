@@ -72,7 +72,7 @@ export default function Classrooms() {
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {(invites.data ?? []).map((inv) => (
               <div key={inv.id} style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", fontSize: 13.5 }}>
-                <span style={{ flex: 1, minWidth: 220 }}><b>{inv.name}</b> · giảng viên {inv.teacherName}</span>
+                <span style={{ flex: 1, minWidth: 220 }}><b>{inv.name}</b> - giảng viên {inv.teacherName}</span>
                 <Btn small onClick={() => void act(() => papi.acceptInvite(inv.id))}>Đồng ý</Btn>
                 <Btn small kind="ghost" onClick={() => void act(() => papi.declineInvite(inv.id))}>Từ chối</Btn>
               </div>
@@ -117,7 +117,7 @@ export default function Classrooms() {
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {(requests.data ?? []).map((r) => (
               <div key={r.id} style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", fontSize: 13.5 }}>
-                <span style={{ flex: 1, minWidth: 220 }}><b>{r.name}</b> · giảng viên {r.teacherName}</span>
+                <span style={{ flex: 1, minWidth: 220 }}><b>{r.name}</b> - giảng viên {r.teacherName}</span>
                 <Tag color="orange">Chờ duyệt</Tag>
                 <Btn small kind="ghost" onClick={() => void act(() => papi.cancelJoinRequest(r.id))}>Huỷ yêu cầu</Btn>
               </div>
@@ -135,8 +135,8 @@ export default function Classrooms() {
           </span>}>
             <div style={{ fontSize: 13, color: "#616161", lineHeight: 1.7 }}>
               <div>Giảng viên: <b>{c.teacherName}</b></div>
-              <div>Tổ chức: {c.organizationName || "—"}</div>
-              <div>Sĩ số: {c.studentCount} học sinh · {c.practiceCount} bài luyện tập</div>
+              <div>Tổ chức: {c.organizationName || "-"}</div>
+              <div>Sĩ số: {c.studentCount} học sinh - {c.practiceCount} bài luyện tập</div>
               {c.joinCode && <div style={{ marginTop: 6 }}>Mã tham gia: <JoinCode code={c.joinCode} /></div>}
             </div>
             <div style={{ marginTop: 10 }}><Btn small onClick={() => setOpenId(c.id)}>Vào lớp</Btn></div>
@@ -174,7 +174,7 @@ function ClassroomDetail({ id, onBack }: { id: string; onBack: () => void }) {
   const solved = practice.filter((p) => p.solved).length;
 
   return (
-    <Page title={c ? c.name : "Lớp học"} subtitle={c ? `Mã lớp ${c.id} · Giảng viên ${c.teacherName}` : ""}
+    <Page title={c ? c.name : "Lớp học"} subtitle={c ? `Mã lớp ${c.id} - Giảng viên ${c.teacherName}` : ""}
       actions={<>
         {c?.isOwner && <Btn kind="danger" onClick={() => void removeClass()}>Xoá lớp</Btn>}
         <Btn kind="ghost" onClick={onBack}>← Danh sách lớp</Btn>
@@ -194,7 +194,7 @@ function ClassroomDetail({ id, onBack }: { id: string; onBack: () => void }) {
             <Card title={`Yêu cầu vào lớp (${(c.requests ?? []).length})`}>
               <Table head={["Tên đăng nhập", "Họ tên", "Lớp", ""]}
                 rows={(c.requests ?? []).map((u) => [
-                  <b>{u.username}</b>, u.fullName, u.detail || "—",
+                  <b>{u.username}</b>, u.fullName, u.detail || "-",
                   <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
                     <Btn small onClick={() => void act(() => papi.approveJoinRequest(id, u.id))}>Duyệt</Btn>
                     <Btn small kind="danger" onClick={() => void act(() => papi.rejectJoinRequest(id, u.id))}>Từ chối</Btn>
@@ -229,7 +229,7 @@ function ClassroomDetail({ id, onBack }: { id: string; onBack: () => void }) {
           </Card>
 
           {picking && (
-            <ProblemPicker title={`Chọn bài luyện tập — ${c.name}`} excluded={practice.map((p) => p.id)}
+            <ProblemPicker title={`Chọn bài luyện tập - ${c.name}`} excluded={practice.map((p) => p.id)}
               onClose={() => setPicking(false)}
               onPick={(ids) => { setPicking(false); void act(() => papi.addPracticeProblems(id, ids)); }} />
           )}

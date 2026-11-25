@@ -104,7 +104,7 @@ export default function Schedule() {
         ])} />
 
       {editing && (
-        <Modal title={`Link phòng học — ${editing.meeting.title}`} onClose={() => setEditing(null)} width={560}>
+        <Modal title={`Link phòng học - ${editing.meeting.title}`} onClose={() => setEditing(null)} width={560}>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <input autoFocus style={{ ...INPUT, width: "100%", boxSizing: "border-box" }} value={editing.link}
               onChange={(e) => setEditing({ ...editing, link: e.target.value })} placeholder="https://meet.google.com/..." />

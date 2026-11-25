@@ -3,11 +3,11 @@ Bạn Hoa trồng n cây hướng dương, cây thứ i cao a[i] xăng-ti-mét. 
 Chiều cao trung bình bằng S chia cho n, với S = a[1] + a[2] + ... + a[n] (kết quả phép chia này có thể không phải số nguyên).
 
 Đầu vào:
-- Dòng đầu tiên chứa số nguyên n — số cây.
+- Dòng đầu tiên chứa số nguyên n - số cây.
 - Dòng thứ hai chứa n số nguyên a[1], a[2], ..., a[n], cách nhau một dấu cách.
 
 Đầu ra:
-- Một số nguyên — số cây có chiều cao lớn hơn hẳn chiều cao trung bình.
+- Một số nguyên - số cây có chiều cao lớn hơn hẳn chiều cao trung bình.
 
 Giới hạn:
 - 1 ≤ n ≤ 1000

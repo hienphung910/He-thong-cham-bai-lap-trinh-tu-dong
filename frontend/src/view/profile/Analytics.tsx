@@ -17,7 +17,7 @@ export default function Analytics({ username, onBack }: { username?: string; onB
   const started = (p?.topics ?? []).filter((t) => t.total > 0);
 
   return (
-    <Page title={username ? `Phân tích học tập — ${p ? p.user.fullName : username}` : "Phân tích học tập"}
+    <Page title={username ? `Phân tích học tập - ${p ? p.user.fullName : username}` : "Phân tích học tập"}
       actions={onBack ? <Btn kind="ghost" onClick={onBack}>← Quay lại lớp</Btn> : undefined}>
       <ErrorBox text={profile.error} />
       {p && (

@@ -177,7 +177,7 @@ export default function ProblemDetail({
             </button>
           )}
           <span style={{ fontSize: 13, fontWeight: 600, color: "#212121" }}>
-            {exam ? `Bài thi · ${problem.id}` : `Làm bài lớp: CodeHub · ${problem.id}`}
+            {exam ? `Bài thi - ${problem.id}` : `Làm bài lớp: CodeHub - ${problem.id}`}
           </span>
           {topicName && <span style={{ fontSize: 12, color: "#757575" }}>{topicName}</span>}
           {diff && (
@@ -188,7 +188,7 @@ export default function ProblemDetail({
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           {nextProblem && (
-            <button onClick={onNext} title={`${nextProblem.id} — ${nextProblem.title}`} style={{
+            <button onClick={onNext} title={`${nextProblem.id} - ${nextProblem.title}`} style={{
               display: "flex", alignItems: "center", gap: 4, background: "none", border: "1px solid #E0E0E0",
               borderRadius: 6, height: 30, padding: "0 12px", color: "#757575", fontSize: 12, cursor: "pointer",
             }}>
@@ -203,10 +203,10 @@ export default function ProblemDetail({
         <div style={{ background: "#fff", border: "1px solid #E0E0E0", borderRadius: 8, padding: "20px 24px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
             <div style={{ fontSize: 16, fontWeight: 700, color: "#212121" }}>
-              Đề bài: <span style={{ fontFamily: "var(--font-mono)", color: "var(--color-red)" }}>{problem.id}</span> — {problem.title}
+              Đề bài: <span style={{ fontFamily: "var(--font-mono)", color: "var(--color-red)" }}>{problem.id}</span> - {problem.title}
             </div>
             <span style={{ fontSize: 12, color: "#9E9E9E", fontFamily: "var(--font-mono)", whiteSpace: "nowrap" }}>
-              {problem.timeLimitMs / 1000}s · {problem.memoryLimitMb} MB
+              {problem.timeLimitMs / 1000}s - {problem.memoryLimitMb} MB
             </span>
           </div>
 
@@ -289,7 +289,7 @@ export default function ProblemDetail({
               </svg>
             </button>
             {uploaded && (
-              <span title={`${uploaded.name} · ${formatBytes(uploaded.size)} · ${uploaded.lines} dòng`} style={{
+              <span title={`${uploaded.name} - ${formatBytes(uploaded.size)} - ${uploaded.lines} dòng`} style={{
                 display: "inline-flex", alignItems: "center", gap: 6, height: 26, padding: "0 4px 0 10px", borderRadius: 13,
                 background: "var(--color-red-light)", border: "1px solid #F3D9A4", fontSize: 12, color: "var(--color-red)",
                 fontFamily: "var(--font-mono)", maxWidth: 260,
@@ -359,7 +359,7 @@ export default function ProblemDetail({
                 background: "var(--color-ac-bg)", border: "1px solid var(--color-green-border)", borderRadius: 6,
               }}>
                 <span style={{ flex: 1, fontSize: 13, color: "var(--color-ac-text)", fontWeight: 600 }}>
-                  Chính xác! Sẵn sàng cho bài tiếp theo: {nextProblem.id} — {nextProblem.title}
+                  Chính xác! Sẵn sàng cho bài tiếp theo: {nextProblem.id} - {nextProblem.title}
                 </span>
                 <button onClick={onNext} style={{
                   height: 32, padding: "0 16px", border: "none", borderRadius: 6, cursor: "pointer",

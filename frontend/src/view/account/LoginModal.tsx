@@ -291,7 +291,7 @@ export default function LoginModal() {
                       </span>
                       <span style={{ flex: 1, minWidth: 0 }}>
                         <span title={evidence.name} style={{ display: "block", fontSize: 13.5, fontWeight: 600, color: "#212121", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{evidence.name}</span>
-                        <span style={{ display: "block", fontSize: 11.5, color: "#9E9E9E", marginTop: 1 }}>Minh chứng · {formatSize(evidence.size)}</span>
+                        <span style={{ display: "block", fontSize: 11.5, color: "#9E9E9E", marginTop: 1 }}>Minh chứng - {formatSize(evidence.size)}</span>
                       </span>
                       <button type="button" onClick={() => evidenceInput.current?.click()} style={{
                         height: 30, padding: "0 10px", borderRadius: 6, border: "1px solid #E0E0E0", background: "#fff",

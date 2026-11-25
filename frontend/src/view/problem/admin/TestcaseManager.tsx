@@ -24,7 +24,7 @@ export default function TestcaseManager({ problem, onClose }: { problem: Problem
   }
 
   return (
-    <Modal title={`Bộ test của ${problem.id} — ${problem.title}`} onClose={onClose} width={860}>
+    <Modal title={`Bộ test của ${problem.id} - ${problem.title}`} onClose={onClose} width={860}>
       <ErrorBox text={error || loaded.error} />
       <Table head={["Tên test", "Loại", "Điểm", "Input", "Output", ""]} empty="Đang tải..."
         rows={tests.map((t) => [

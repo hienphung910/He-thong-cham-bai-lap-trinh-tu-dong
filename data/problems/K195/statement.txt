@@ -1,7 +1,7 @@
 Một dãy số được gọi là "dãy soi gương" nếu đọc từ trái sang phải hay từ phải sang trái đều giống hệt nhau. Chẳng hạn dãy 1 2 3 2 1 là dãy soi gương, còn dãy 1 2 3 1 thì không. Em hãy kiểm tra xem dãy số của bạn Lan có phải dãy soi gương hay không.
 
 Đầu vào:
-- Dòng đầu tiên chứa số nguyên n — số phần tử của dãy.
+- Dòng đầu tiên chứa số nguyên n - số phần tử của dãy.
 - Dòng thứ hai chứa n số nguyên a[1], a[2], ..., a[n], cách nhau một dấu cách.
 
 Đầu ra:

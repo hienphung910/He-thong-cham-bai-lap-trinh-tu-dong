@@ -5,7 +5,7 @@ Bạn An có n tấm thẻ bài xếp thành hàng, đánh số từ 1 đến n,
 - Dòng thứ hai chứa n số nguyên a[1], a[2], ..., a[n], cách nhau một dấu cách.
 
 Đầu ra:
-- Một số nguyên — số cặp vị trí (i, j) với 1 ≤ i < j ≤ n và a[i] + a[j] = s (in 0 nếu không có cặp nào).
+- Một số nguyên - số cặp vị trí (i, j) với 1 ≤ i < j ≤ n và a[i] + a[j] = s (in 0 nếu không có cặp nào).
 
 Giới hạn:
 - 1 ≤ n ≤ 100

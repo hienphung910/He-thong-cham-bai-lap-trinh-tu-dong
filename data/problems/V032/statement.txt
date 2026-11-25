@@ -20,7 +20,7 @@ Anh trực trạm nhận được T yêu cầu, mỗi yêu cầu là một trong
 Giới hạn:
 - 1 ≤ T ≤ 50.
 - Mỗi dòng yêu cầu (tính cả từ MA hoặc GIAI và các dấu cách) dài không quá 80 ký tự.
-- Trong yêu cầu MA, văn bản gồm ít nhất một từ; mỗi từ gồm các chữ cái in hoa A–Z và chữ số 0–9.
+- Trong yêu cầu MA, văn bản gồm ít nhất một từ; mỗi từ gồm các chữ cái in hoa A-Z và chữ số 0-9.
 - Trong yêu cầu GIAI, mỗi nhóm gồm 1 đến 6 ký tự '.' hoặc '-', có ít nhất một nhóm, dấu / chỉ nằm giữa hai nhóm.
 
 Gợi ý:

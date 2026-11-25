@@ -24,7 +24,7 @@ export default function AdminPanel({ problems, topics, onProblemsChanged, mine =
 
   /** Xoa han mot bai. May chu tu choi neu bai da co nguoi nop hoac dang nam trong ky thi / bai giao / lop. */
   async function removeProblem(p: Problem) {
-    if (!window.confirm(`Xoá bài ${p.id} — ${p.title}?\n\nĐề bài và toàn bộ test sẽ bị xoá, không khôi phục được.`)) return;
+    if (!window.confirm(`Xoá bài ${p.id} - ${p.title}?\n\nĐề bài và toàn bộ test sẽ bị xoá, không khôi phục được.`)) return;
     try {
       await api.deleteProblem(p.id);
       await onProblemsChanged();
@@ -112,7 +112,7 @@ export default function AdminPanel({ problems, topics, onProblemsChanged, mine =
                       <td style={{ padding: "8px 14px" }}>
                         {diff
                           ? <span style={{ fontSize: 11, fontWeight: 600, color: diff.color, background: diff.bg, borderRadius: 5, padding: "2px 8px", whiteSpace: "nowrap" }}>{diff.label}</span>
-                          : <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>—</span>}
+                          : <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>-</span>}
                       </td>
                       <td style={{ padding: "8px 14px", whiteSpace: "nowrap" }}><span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--color-text-secondary)" }}>{p.timeLimitMs} ms / {p.memoryLimitMb} MB</span></td>
                       <td style={{ padding: "8px 14px" }}><span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--color-text-secondary)" }}>{p.maxPoints.toFixed(0)}</span></td>

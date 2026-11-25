@@ -186,8 +186,8 @@ export function ProctorPanel({ contestId, running, enabled, toggle }: {
                 <span style={{ fontFamily: "var(--font-mono)", fontSize: 12.5 }}>{clockOf(e.at)}</span>,
                 <span><b>{e.fullName}</b> <span style={{ color: "#9E9E9E" }}>@{e.username}</span></span>,
                 <Tag color={EVENT_LABEL[e.type]?.color ?? "gray"}>{EVENT_LABEL[e.type]?.label ?? e.type}</Tag>,
-                e.detail || "—",
-                e.problemId ? <span style={{ fontFamily: "var(--font-mono)" }}>{e.problemId}</span> : "—",
+                e.detail || "-",
+                e.problemId ? <span style={{ fontFamily: "var(--font-mono)" }}>{e.problemId}</span> : "-",
               ])} />
           </div>
         </>

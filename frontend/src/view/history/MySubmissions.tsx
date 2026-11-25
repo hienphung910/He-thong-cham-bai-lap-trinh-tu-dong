@@ -70,7 +70,7 @@ export default function MySubmissions() {
                 <td style={{ ...TD, fontFamily: "var(--font-mono)", fontSize: 12, color: "#757575", whiteSpace: "nowrap" }}>{fmtTime(s.submittedAt)}</td>
                 <td style={{ ...TD, textAlign: "left" }}>
                   <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, fontWeight: 600, color: "var(--color-red)" }}>{s.problem.id}</span>
-                  {" · "}
+                  {" - "}
                   <span style={{ color: s.verdict === "AC" ? "var(--color-green)" : "#212121", fontWeight: 500 }}>{s.problem.title}</span>
                 </td>
                 <td style={{ ...TD, textAlign: "center", fontSize: 13 }}>{s.language}</td>
@@ -79,7 +79,7 @@ export default function MySubmissions() {
                   {(s.score ?? 0).toFixed(0)}/{s.maxPoints.toFixed(0)}
                 </td>
                 <td style={{ ...TD, fontFamily: "var(--font-mono)", fontSize: 12, color: "#757575", textAlign: "center" }}>
-                  {s.execTimeMs !== null ? `${(s.execTimeMs / 1000).toFixed(2)}s` : "—"}
+                  {s.execTimeMs !== null ? `${(s.execTimeMs / 1000).toFixed(2)}s` : "-"}
                 </td>
               </tr>
             ))}

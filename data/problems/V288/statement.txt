@@ -20,4 +20,4 @@ Giới hạn:
 Gợi ý:
 - Ở ví dụ 1, T = "xabacabay". Từ "aba" xuất hiện ở vị trí 2 và 6, từ "cab" xuất hiện ở vị trí 5, còn "zz" không xuất hiện. Các ký tự từ vị trí 2 đến 8 bị che nên kết quả là "x#######y".
 - Ở ví dụ 2, T = "hello": từ "ell" che vị trí 2 đến 4, từ "l" che vị trí 3 và 4, từ "helloworld" dài hơn T nên không xuất hiện.
-- Với automat Aho–Corasick, tại mỗi vị trí i chỉ cần biết từ cấm dài nhất kết thúc tại i: các từ cấm ngắn hơn kết thúc tại i đều nằm gọn trong đoạn của nó. Giá trị này tính được bằng cách lấy max dọc theo liên kết thất bại.
+- Với automat Aho-Corasick, tại mỗi vị trí i chỉ cần biết từ cấm dài nhất kết thúc tại i: các từ cấm ngắn hơn kết thúc tại i đều nằm gọn trong đoạn của nó. Giá trị này tính được bằng cách lấy max dọc theo liên kết thất bại.

@@ -2,7 +2,7 @@ Bảng đèn điện tử ở cổng trường hiển thị n con số thành m�
 
 Đầu vào:
 - Dòng đầu tiên chứa hai số nguyên n và k, cách nhau một dấu cách.
-- Dòng thứ hai chứa n số nguyên a[1], a[2], ..., a[n] — các số trên bảng lúc đầu, từ trái sang phải.
+- Dòng thứ hai chứa n số nguyên a[1], a[2], ..., a[n] - các số trên bảng lúc đầu, từ trái sang phải.
 
 Đầu ra:
 - In ra trên một dòng n số trên bảng sau k lần xoay, từ trái sang phải, cách nhau một dấu cách.

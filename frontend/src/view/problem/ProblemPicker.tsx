@@ -143,7 +143,7 @@ export default function ProblemPicker({ title, excluded, onPick, onClose }: {
                   <td style={CELL}>
                     {diff
                       ? <span style={{ fontSize: 11, fontWeight: 700, padding: "1px 8px", borderRadius: 10, color: diff.color, background: diff.bg, whiteSpace: "nowrap" }}>{diff.label}</span>
-                      : "—"}
+                      : "-"}
                   </td>
                   <td style={{ ...CELL, whiteSpace: "nowrap" }}>
                     {already ? <Tag color="gray">Đã có</Tag> : p.owner ? <Tag color="purple">Kho của tôi</Tag> : ""}
@@ -157,7 +157,7 @@ export default function ProblemPicker({ title, excluded, onPick, onClose }: {
 
       <div style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap" }}>
         <span style={{ flex: 1, fontSize: 12.5, color: "#757575" }}>
-          {shown.length} bài đang hiện · đã chọn <b style={{ color: "#212121" }}>{selected.size}</b>
+          {shown.length} bài đang hiện - đã chọn <b style={{ color: "#212121" }}>{selected.size}</b>
         </span>
         {selected.size > 0 && <Btn kind="ghost" onClick={() => setSelected(new Set())}>Bỏ chọn hết</Btn>}
         <Btn disabled={selected.size === 0} onClick={() => onPick([...selected])}>Thêm {selected.size || ""} bài</Btn>

@@ -19,6 +19,6 @@ Giới hạn:
 - 1 ≤ u, v ≤ n; trong sự kiện loại 1 và 2, cặp u v có thể ghi theo thứ tự bất kỳ.
 
 Gợi ý:
-- Sau khi thông các đường 1–2, 2–3, 3–4, cả bốn xã thuộc một vùng: câu hỏi loại 4 in 1.
-- Cấm đường 2–3 (ghi là 3 2): xã 1 không còn tới được xã 4, in KHONG; số vùng là 2.
-- Thông đường 4–1: xã 1 lại tới được xã 3, in CO.
+- Sau khi thông các đường 1-2, 2-3, 3-4, cả bốn xã thuộc một vùng: câu hỏi loại 4 in 1.
+- Cấm đường 2-3 (ghi là 3 2): xã 1 không còn tới được xã 4, in KHONG; số vùng là 2.
+- Thông đường 4-1: xã 1 lại tới được xã 3, in CO.

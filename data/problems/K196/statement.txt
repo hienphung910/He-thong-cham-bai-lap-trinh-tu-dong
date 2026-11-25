@@ -5,7 +5,7 @@ Rạp múa rối nước có m ghế, đánh số từ 1 đến m. Hôm nay cô 
 - Dòng thứ hai chứa n số nguyên khác nhau là số ghế đã bán, mỗi số từ 1 đến m.
 
 Đầu ra:
-- Dòng đầu tiên in số k — số ghế còn trống.
+- Dòng đầu tiên in số k - số ghế còn trống.
 - Nếu k > 0, dòng thứ hai in k số ghế trống theo thứ tự tăng dần, cách nhau một dấu cách.
 
 Giới hạn:

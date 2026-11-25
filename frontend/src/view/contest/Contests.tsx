@@ -44,7 +44,7 @@ export default function Contests() {
             <Field label="Lớp tham gia">
               <select style={INPUT} value={form.classroomId} onChange={(e) => setForm({ ...form, classroomId: e.target.value })}>
                 <option value="">(chọn lớp)</option>
-                {managed.map((c) => <option key={c.id} value={c.id}>{c.name} · {c.studentCount} học sinh</option>)}
+                {managed.map((c) => <option key={c.id} value={c.id}>{c.name} - {c.studentCount} học sinh</option>)}
               </select>
             </Field>
             <Field label="Tên kỳ thi"><input style={INPUT} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></Field>
@@ -120,7 +120,7 @@ function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
   const pastEvents = events.data ?? [];
 
   return (
-    <Page title={c ? c.title : "Kỳ thi"} subtitle={c ? `Lớp ${c.classroomName} · ${fmtTime(c.startAt)} → ${fmtTime(c.endAt)}${c.description ? ` · ${c.description}` : ""}` : ""}
+    <Page title={c ? c.title : "Kỳ thi"} subtitle={c ? `Lớp ${c.classroomName} - ${fmtTime(c.startAt)} - ${fmtTime(c.endAt)}${c.description ? ` - ${c.description}` : ""}` : ""}
       actions={<Btn kind="ghost" onClick={onBack}>← Danh sách kỳ thi</Btn>}>
       <ErrorBox text={editError || contest.error || events.error} />
       {c && (
@@ -148,7 +148,7 @@ function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
               </div>
             )}
             {pickingMore && (
-              <ProblemPicker title={`Thêm bài — ${c.title}`} excluded={c.problems.map((p) => p.id)}
+              <ProblemPicker title={`Thêm bài - ${c.title}`} excluded={c.problems.map((p) => p.id)}
                 onClose={() => setPickingMore(false)}
                 onPick={(ids) => {
                   setPickingMore(false);
@@ -220,7 +220,7 @@ function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
                 <b>{r.solved}</b>,
                 ...r.cells.map((cell) => cell.solvedAt !== null
                   ? <Tag color="green">✓ Đã giải</Tag>
-                  : cell.wrong > 0 ? <Tag color="red">Chưa đúng</Tag> : "·"),
+                  : cell.wrong > 0 ? <Tag color="red">Chưa đúng</Tag> : "-"),
               ])} />
           </Card>
 

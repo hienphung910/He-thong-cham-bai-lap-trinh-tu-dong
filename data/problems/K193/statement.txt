@@ -1,7 +1,7 @@
 Bạn Vy cân chú cún Bơ vào mỗi buổi sáng trong n ngày liên tiếp, ngày thứ i Bơ nặng a[i] gam. Em hãy cho biết từ mỗi ngày sang ngày hôm sau, cân nặng của Bơ thay đổi bao nhiêu gam.
 
 Đầu vào:
-- Dòng đầu tiên chứa số nguyên n — số ngày.
+- Dòng đầu tiên chứa số nguyên n - số ngày.
 - Dòng thứ hai chứa n số nguyên a[1], a[2], ..., a[n], cách nhau một dấu cách.
 
 Đầu ra:

@@ -1,4 +1,4 @@
-Ở câu lạc bộ cờ của phường, các bạn nhỏ chơi cờ ca-rô trên bàn cờ 3 hàng, 3 cột. Hai người lần lượt đánh: người cầm X luôn đi trước, sau đó đến O, rồi X, rồi O... Mỗi lượt đánh vào một ô trống. Ván cờ kết thúc ngay khi có người tạo được 3 quân của mình thẳng hàng (cùng hàng, cùng cột hoặc cùng một trong hai đường chéo) — người đó thắng — hoặc khi bàn cờ kín ô mà không ai thắng — khi đó hòa. Sau khi ván kết thúc thì không ai đánh thêm.
+Ở câu lạc bộ cờ của phường, các bạn nhỏ chơi cờ ca-rô trên bàn cờ 3 hàng, 3 cột. Hai người lần lượt đánh: người cầm X luôn đi trước, sau đó đến O, rồi X, rồi O... Mỗi lượt đánh vào một ô trống. Ván cờ kết thúc ngay khi có người tạo được 3 quân của mình thẳng hàng (cùng hàng, cùng cột hoặc cùng một trong hai đường chéo) - người đó thắng - hoặc khi bàn cờ kín ô mà không ai thắng - khi đó hòa. Sau khi ván kết thúc thì không ai đánh thêm.
 
 Bác trọng tài nhận được ảnh chụp T bàn cờ và cần ghi nhận xét cho từng bàn:
 - KHONG HOP LE nếu không thể có bàn cờ này khi hai bên chơi đúng luật như trên.

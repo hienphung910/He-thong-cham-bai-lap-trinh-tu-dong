@@ -17,4 +17,4 @@ Giới hạn:
 Gợi ý:
 - Với p = 7, các số 1, 2, 3, 4, 5, 6 khi bình phương cho phần dư lần lượt 1, 4, 2, 2, 4, 1. Vậy a = 2 có hai nghiệm 3 và 4, in 3; còn a = 3 vô nghiệm.
 - 6^2 = 36 ≡ 10 (mod 13) và 7^2 = 49 ≡ 10 (mod 13), in 6. Tương tự 6^2 = 36 ≡ 2 (mod 17).
-- Theo tiêu chuẩn Euler, với p lẻ và a khác 0, phương trình có nghiệm khi và chỉ khi a^((p-1)/2) ≡ 1 (mod p). Khi p - 1 chia hết cho một lũy thừa lớn của 2 (ví dụ p = 998244353 = 119 · 2^23 + 1), hãy dùng thuật toán Tonelli–Shanks. Mọi số đều nhỏ hơn 2^31 nên tích hai số vừa với số nguyên 64 bit.
+- Theo tiêu chuẩn Euler, với p lẻ và a khác 0, phương trình có nghiệm khi và chỉ khi a^((p-1)/2) ≡ 1 (mod p). Khi p - 1 chia hết cho một lũy thừa lớn của 2 (ví dụ p = 998244353 = 119 · 2^23 + 1), hãy dùng thuật toán Tonelli-Shanks. Mọi số đều nhỏ hơn 2^31 nên tích hai số vừa với số nguyên 64 bit.

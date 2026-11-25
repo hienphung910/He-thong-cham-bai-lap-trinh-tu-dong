@@ -86,9 +86,9 @@ export default function StreakBadge({ info }: { info: StreakInfo | null }) {
 
   const lit = info.activeToday;
   const title = lit
-    ? `Chuỗi ${info.current} ngày — hôm nay đã luyện tập`
+    ? `Chuỗi ${info.current} ngày - hôm nay đã luyện tập`
     : info.current > 0
-      ? `Chuỗi ${info.current} ngày — hôm nay chưa nộp bài`
+      ? `Chuỗi ${info.current} ngày - hôm nay chưa nộp bài`
       : "Chưa có chuỗi luyện tập";
 
   return (
@@ -284,7 +284,7 @@ export function StreakToast({ value, onClose }: { value: number | null; onClose:
         </div>
         <div style={{ fontSize: 12, color: "#757575", marginTop: 2 }}>
           {value === 1
-            ? "Khởi đầu tốt — quay lại vào ngày mai để giữ chuỗi."
+            ? "Khởi đầu tốt - quay lại vào ngày mai để giữ chuỗi."
             : next !== null
               ? `Cố lên, còn ${next - value} ngày nữa tới mốc ${next} ngày.`
               : "Phong độ tuyệt vời, giữ vững nhé!"}

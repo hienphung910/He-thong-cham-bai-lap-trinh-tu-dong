@@ -21,4 +21,4 @@ Gợi ý:
 - Tin nhắn "hoctapchamchi" không chứa từ cấm nào nên in KHONG.
 - Tin nhắn "chuadaoxong" chứa từ cấm "dao" nên in CO.
 - Tin nhắn "chualuon" có các chữ "lu" nhưng không có "lua" liền nhau, nên in KHONG.
-- Nên dựng automat Aho–Corasick một lần cho các từ cấm rồi cho từng tin nhắn chạy qua. Chú ý một từ cấm có thể là hậu tố của một đoạn đang khớp dở của từ cấm khác (ví dụ từ cấm "abcd" và "bc" với tin nhắn "abce").
+- Nên dựng automat Aho-Corasick một lần cho các từ cấm rồi cho từng tin nhắn chạy qua. Chú ý một từ cấm có thể là hậu tố của một đoạn đang khớp dở của từ cấm khác (ví dụ từ cấm "abcd" và "bc" với tin nhắn "abce").
