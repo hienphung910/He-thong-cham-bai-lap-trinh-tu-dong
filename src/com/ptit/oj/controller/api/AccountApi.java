@@ -15,7 +15,6 @@ import java.util.List;
 /**
  * Module 1 (tai khoan) va 35 (giang vien):
  *   GET  /api/users            - danh sach tai khoan (chi quan tri vien)
- *   POST /api/admin/users      - quan tri vien tao tai khoan voi vai tro bat ky
  *   POST /api/admin/users/{id}/approve - duyet giang vien tu dang ky
  *   POST /api/admin/users/{id}/reject  - tu choi: xoa tai khoan dang cho duyet
  *   GET  /api/admin/users/{id}/evidence - file minh chung giang vien gui kem khi dang ky
@@ -77,7 +76,7 @@ public class AccountApi extends ApiModule {
                 requireNoLedClassroom(current.getId());
             }
             User changed = judge.getAuth().changeRole(admin, current.getId(), role);
-            // Tu cach thanh vien cu (hoc sinh / tro giang cua lop) khong con hop voi vai tro moi.
+            // Tu cach thanh vien cu (hoc sinh cua lop) khong con hop voi vai tro moi.
             if (changed != current) platform.getSchool().removeEverywhere(changed.getId());
             req.send(userJson(changed).put("detail", detailOf(changed)).put("approved", changed.isApproved()).build());
             return true;
@@ -101,15 +100,6 @@ public class AccountApi extends ApiModule {
                     .put("contentType", evidence.getContentType())
                     .put("data", evidence.toBase64())
                     .build());
-            return true;
-        }
-        if (req.is("POST", "admin", "users")) {
-            req.admin();
-            Json.Value body = req.body();
-            User created = judge.getAuth().createByAdmin(
-                    body.getString("role"), body.getString("username"), body.getString("password"),
-                    body.getString("fullName"), body.getString("detail"));
-            req.send(userJson(created).put("detail", detailOf(created)).put("approved", true).build());
             return true;
         }
         if (req.is("POST", "auth", "password")) {

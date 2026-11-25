@@ -32,7 +32,7 @@ export interface Classroom {
   teacherName: string;
   studentCount: number;
   canManage: boolean;
-  /** Giang vien phu trach lop (hoac quan tri vien): xoa lop, quan ly tro giang, xoa hoc sinh. Tro giang la false. */
+  /** Giang vien phu trach lop (hoac quan tri vien): xoa lop, xoa hoc sinh. */
   isOwner: boolean;
   /** Hoc sinh da duoc moi nhung chua dong y - chi nguoi quan ly lop nhan duoc, khi lay chi tiet mot lop. */
   invited?: BasicUser[];
@@ -43,7 +43,6 @@ export interface Classroom {
   practice?: { id: string; title: string; difficulty: number; solved: boolean }[];
   /** Chi co khi lay chi tiet mot lop. */
   students?: (BasicUser & { solved: number })[];
-  assistants?: BasicUser[];
 }
 
 export interface ParentContact {

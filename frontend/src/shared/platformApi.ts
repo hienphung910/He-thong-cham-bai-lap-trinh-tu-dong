@@ -1,6 +1,6 @@
 import { postJson, putJson, request } from "./api";
 import type {
-  Assignment, AssignmentProgress, AuditRow, BasicUser, ChatMessage, Classroom, Contest, ContestEvent, Dashboard, Meeting, NotificationList, Organization, ProctorEventType, ProctorLog, ProblemComment, Profile, RunResult, Settings, TestcaseItem,
+  Assignment, AssignmentProgress, BasicUser, ChatMessage, Classroom, Contest, ContestEvent, Dashboard, Meeting, NotificationList, Organization, ProctorEventType, ProctorLog, ProblemComment, Profile, RunResult, Settings, TestcaseItem,
 } from "./platformTypes";
 
 /** Goi REST API cua cac module mo rong (cac lop ...Api.java). Moi ham ung voi mot endpoint. */
@@ -12,8 +12,6 @@ const del = <T = Ok>(path: string) => request<T>(path, { method: "DELETE" });
 export const papi = {
   // --- tai khoan (Module 1, 35) ---
   users: () => request<BasicUser[]>("/api/users"),
-  createUser: (body: { role: string; username: string; password: string; fullName: string; detail: string }) =>
-    postJson<BasicUser>("/api/admin/users", body),
   approveUser: (id: string) => postJson<BasicUser>(`/api/admin/users/${enc(id)}/approve`, {}),
   rejectUser: (id: string) => postJson<Ok>(`/api/admin/users/${enc(id)}/reject`, {}),
   /** Khoa tai khoan dang dung (mo lai bang approveUser), doi vai tro, xoa han. */
@@ -47,8 +45,6 @@ export const papi = {
     postJson<Ok>(`/api/classrooms/${enc(id)}/problems`, { problemIds }),
   removePracticeProblem: (id: string, problemId: string) =>
     del(`/api/classrooms/${enc(id)}/problems/${enc(problemId)}`),
-  addAssistant: (id: string, username: string) => postJson<Ok>(`/api/classrooms/${enc(id)}/assistants`, { username }),
-  removeAssistant: (id: string, userId: string) => del(`/api/classrooms/${enc(id)}/assistants/${enc(userId)}`),
 
   // --- khoa hoc, tai lieu, bai tap giao (Module 4, 36, 13) ---
 
@@ -114,7 +110,6 @@ export const papi = {
   settings: () => request<Settings>("/api/settings"),
   updateSettings: (body: Partial<Settings>) => putJson<Settings>("/api/admin/settings", body),
   systemInfo: () => request<{ label: string; value: string }[]>("/api/admin/system"),
-  audit: (q: string) => request<AuditRow[]>(`/api/admin/audit?q=${enc(q)}`),
 
   // --- IDE, stress test, bo test (Module 10, 12, 7) ---
   run: (body: { language: string; code: string; input: string }) => postJson<RunResult>("/api/run", body),

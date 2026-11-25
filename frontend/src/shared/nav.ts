@@ -8,7 +8,7 @@ export type PageKey =
   | "Chat" | "Notifications"
   | "Submissions" | "MySubmissions" | "Leaderboard"
   | "Dashboard" | "MyProblems"
-  | "Admin" | "Accounts" | "Comments" | "MyComments" | "Organizations" | "System" | "Audit";
+  | "Admin" | "Accounts" | "Comments" | "MyComments" | "Organizations" | "System";
 
 interface Nav {
   /** Chuyen sang trang khac. */

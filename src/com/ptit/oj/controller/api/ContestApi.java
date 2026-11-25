@@ -51,7 +51,7 @@ public class ContestApi extends ApiModule {
         if (req.is("POST", "contests")) {
             User user = req.staff();
             Json.Value body = req.body();
-            // Ky thi to chuc cho mot lop: nguoi tao phai la giang vien / tro giang cua lop do (hoac quan tri vien).
+            // Ky thi to chuc cho mot lop: nguoi tao phai la giang vien phu trach lop do (hoac quan tri vien).
             String classroomId = body.getString("classroomId", "");
             if (classroomId.trim().isEmpty()) throw ApiException.badRequest("Hãy chọn lớp tham gia kỳ thi");
             Classroom classroom = platform.getSchool().findClassroom(classroomId);
@@ -277,7 +277,7 @@ public class ContestApi extends ApiModule {
         throw ApiException.notFound("Lớp của kỳ thi này không còn tồn tại");
     }
 
-    /** Ai thay duoc ky thi: quan tri vien, nguoi tao, va thanh vien (giang vien, tro giang, hoc sinh) cua lop duoc thi. */
+    /** Ai thay duoc ky thi: quan tri vien, nguoi tao, va thanh vien (giang vien, hoc sinh) cua lop duoc thi. */
     private boolean canSee(Contest c, User user) {
         if (contests.canManage(user, c)) return true;
         for (Classroom room : platform.getSchool().getClassrooms()) {

@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Module 2 (to chuc), 3 (lop hoc), 35 (tro giang):
+ * Module 2 (to chuc), 3 (lop hoc):
  *   /api/organizations, /api/classrooms
  */
 public class SchoolApi extends ApiModule {
@@ -99,7 +99,7 @@ public class SchoolApi extends ApiModule {
         if (req.is("DELETE", "classrooms", "*")) {
             User user = req.staff();
             Classroom c = school.findClassroom(req.arg(0));
-            school.requireOwner(user, c);          // tro giang khong xoa duoc lop
+            school.requireOwner(user, c);
             school.deleteClassroom(c.getId());
             // Xoa luon bai tap giao, buoi hoc va ban ghi cua lop: neu de lai thi khong ai xoa duoc
             // nua (moi thao tac deu can tim thay lop) va bai kho rieng trong do van bi coi la da cong bo.
@@ -143,7 +143,7 @@ public class SchoolApi extends ApiModule {
         return false;
     }
 
-    /** Them / xoa hoc sinh va tro giang cua mot lop - chi nguoi quan ly lop. */
+    /** Moi / xoa hoc sinh va quan ly bai luyen tap cua mot lop - chi nguoi quan ly lop. */
     private boolean handleMembers(Request req) throws IOException {
         if (req.is("POST", "classrooms", "*", "students")) {
             Classroom c = managedClassroom(req);
@@ -184,26 +184,6 @@ public class SchoolApi extends ApiModule {
             req.sendOk();
             return true;
         }
-        if (req.is("POST", "classrooms", "*", "assistants")) {
-            Classroom c = ownedClassroom(req);
-            User assistant = requireUsername(req.body().getString("username"));
-            boolean alreadyIn = c.getAssistantIds().contains(assistant.getId());
-            school.addAssistant(c, assistant);
-            if (!alreadyIn) {
-                platform.getCommunity().notifyUser(assistant.getId(), "Bạn được thêm làm trợ giảng lớp " + c.getName(),
-                        req.user().getFullName() + " đã thêm bạn làm trợ giảng của lớp " + c.getName()
-                                + ". Lớp đã có trong Lớp của tôi.",
-                        "Classrooms");
-            }
-            req.sendOk();
-            return true;
-        }
-        if (req.is("DELETE", "classrooms", "*", "assistants", "*")) {
-            Classroom c = ownedClassroom(req);
-            school.removeAssistant(c, req.arg(1));
-            req.sendOk();
-            return true;
-        }
         return false;
     }
 
@@ -235,7 +215,7 @@ public class SchoolApi extends ApiModule {
                 .put("studentCount", c.getStudentIds().size())
                 .put("practiceCount", c.getPracticeProblemIds().size())
                 .put("canManage", school.canManage(viewer, c))
-                // isOwner: giang vien phu trach (hoac quan tri vien) - xoa lop, quan ly tro giang, xoa hoc sinh.
+                // isOwner: giang vien phu trach (hoac quan tri vien) - xoa lop, xoa hoc sinh.
                 .put("isOwner", school.isOwner(viewer, c))
                 // Ma tham gia chi nguoi quan ly lop thay, de dua cho hoc sinh.
                 .put("joinCode", school.canManage(viewer, c) ? c.getJoinCode() : "");
@@ -251,11 +231,6 @@ public class SchoolApi extends ApiModule {
             if (u == null) continue;
             Set<String> solved = solvedByUser.get(id);
             students.add(userJson(u).put("solved", solved == null ? 0 : solved.size()).build());
-        }
-        List<String> assistants = new ArrayList<>();
-        for (String id : c.getAssistantIds()) {
-            User u = users.get(id);
-            if (u != null) assistants.add(userJson(u).build());
         }
         // Hoc sinh da duoc moi nhung chua dong y: chi nguoi quan ly lop thay.
         List<String> invited = new ArrayList<>();
@@ -279,7 +254,6 @@ public class SchoolApi extends ApiModule {
                 .putRaw("practice", Json.array(practice))
                 .putRaw("students", Json.array(students))
                 .putRaw("invited", Json.array(invited))
-                .putRaw("assistants", Json.array(assistants))
                 .build();
     }
 

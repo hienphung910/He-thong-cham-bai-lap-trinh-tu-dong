@@ -64,18 +64,6 @@ public class SystemApi extends ApiModule {
             req.send(Json.array(info));
             return true;
         }
-        if (req.is("GET", "admin", "audit")) {
-            req.admin();
-            List<String> items = new ArrayList<>();
-            for (AuditLog log : system.getAuditLogs(req.query("q"))) {
-                if (items.size() == 300) break;       // giao dien chi can cac dong gan nhat
-                items.add(Json.obj().put("id", log.getId()).put("time", time(log.getTime()))
-                        .put("username", log.getUsername()).put("action", log.getAction())
-                        .put("detail", log.getDetail()).put("success", log.isSuccess()).build());
-            }
-            req.send(Json.array(items));
-            return true;
-        }
         return false;
     }
 

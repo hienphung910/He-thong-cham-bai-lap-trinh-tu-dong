@@ -288,6 +288,8 @@ public class ApiServer {
         }
         if (status != 200) sendError(ex, status, error);
         audit(ex, method, path, status);
+        // Moi request khong phai GET deu co the da doi du lieu (ke ca khi bao loi giua chung): bao de luu xuong o dia.
+        if (!"GET".equals(method)) platform.markChanged();
     }
 
     /**

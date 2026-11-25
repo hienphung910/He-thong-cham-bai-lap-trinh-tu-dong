@@ -11,6 +11,9 @@ import java.time.LocalDateTime;
  */
 public class ProblemComment extends Entity {
 
+    /** Lop nay duoc luu xuong o dia (StateStore): giu nguyen so nay de ban luu cu van doc duoc khi them truong. */
+    private static final long serialVersionUID = 1L;
+
     public static final String APPROVED = "APPROVED";
 
     private final String problemId;

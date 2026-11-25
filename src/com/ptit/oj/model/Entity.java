@@ -3,7 +3,9 @@ package com.ptit.oj.model;
 import java.util.Objects;
 
 /** Lop cha truu tuong cho moi thuc the co ma dinh danh trong he thong. */
-public abstract class Entity {
+public abstract class Entity implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private final String id;
 

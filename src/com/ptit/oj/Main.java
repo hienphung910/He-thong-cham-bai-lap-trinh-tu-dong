@@ -119,9 +119,26 @@ public class Main {
         System.out.println("Cô lập bài nộp: " + com.ptit.oj.controller.judge.Sandbox.describe());
 
         Platform platform = new Platform(service);
-        // Du lieu mau (lop, ky thi, bai giao mau) chi danh cho che do chay thu --no-db. Khi chay voi
-        // CSDL that thi KHONG tao: neu khong, moi lan khoi dong lai tu dua hoc sinh that vao mot lop mau.
-        if (noDatabase) new DemoData(platform).seed(true);
+        // Lop hoc, ky thi, bai giao, lich hoc, thong bao, chat, binh luan song trong RAM. Khi chay voi
+        // CSDL that (tai khoan khong mat) thi luu chung xuong data/state de khoi dong lai khong mat.
+        // Che do --no-db mac dinh khong luu vi tai khoan cung mat theo; dat OJ_PERSIST_STATE=true de thu.
+        boolean persist = !noDatabase || "true".equalsIgnoreCase(String.valueOf(DatabaseConfig.setting("OJ_PERSIST_STATE")).trim());
+        boolean restored = false;
+        if (persist) {
+            com.ptit.oj.controller.StateStore store = new com.ptit.oj.controller.StateStore(platform,
+                    service.getDataDir().resolve("state").resolve("platform.bin"));
+            restored = store.load();
+            platform.setStateStore(store);
+            store.start();
+            System.out.println("Lưu dữ liệu lớp học, kỳ thi: bật (data/state)"
+                    + (restored ? "" : ", chưa có dữ liệu cũ"));
+        }
+        // Du lieu mau (lop, ky thi, bai giao mau) chi danh cho che do chay thu --no-db va chi khi chua
+        // co du lieu da luu. Khi chay voi CSDL that thi KHONG tao.
+        if (noDatabase && !restored) {
+            new DemoData(platform).seed(true);
+            platform.markChanged();
+        }
         if (!platform.getSystem().isRegisterAllowed()) {
             System.out.println("Tự đăng ký: ĐANG TẮT (đặt " + com.ptit.oj.controller.SystemService.ALLOW_REGISTER_ENV
                     + "=true hoặc bật ở Quản trị → Hệ thống để mở).");

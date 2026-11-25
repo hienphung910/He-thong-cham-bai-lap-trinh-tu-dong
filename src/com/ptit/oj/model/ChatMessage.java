@@ -5,6 +5,9 @@ import java.time.LocalDateTime;
 /** Mot tin nhan trong mot kenh chat (Module 30). */
 public class ChatMessage extends Entity {
 
+    /** Lop nay duoc luu xuong o dia (StateStore): giu nguyen so nay de ban luu cu van doc duoc khi them truong. */
+    private static final long serialVersionUID = 1L;
+
     private final String channel;          // "general", "class-CLS-001", "meeting-MTG-001"
     private final String senderName;
     private final String senderRole;

@@ -106,6 +106,21 @@ public class SystemService {
         return words;
     }
 
+    /**
+     * Nap lai cau hinh da luu (StateStore). Thong bao chung va tu cam: lay ban da luu (quan tri vien
+     * da sua tren web). Cho tu dang ky: neu OJ_ALLOW_REGISTER duoc dat ro rang thi bien moi truong
+     * thang, de nguoi van hanh luon khoa / mo duoc bang cau hinh trien khai.
+     */
+    synchronized void restoreSettings(Map<String, String> saved) {
+        String configured = com.ptit.oj.dao.DatabaseConfig.setting(ALLOW_REGISTER_ENV);
+        boolean envDecides = configured != null && !configured.trim().isEmpty();
+        for (Map.Entry<String, String> e : saved.entrySet()) {
+            if (!settings.containsKey(e.getKey()) || e.getValue() == null) continue;
+            if (e.getKey().equals(ALLOW_REGISTER) && envDecides) continue;
+            settings.put(e.getKey(), e.getValue());
+        }
+    }
+
     public boolean isRegisterAllowed() {
         return "true".equals(getSetting(ALLOW_REGISTER));
     }

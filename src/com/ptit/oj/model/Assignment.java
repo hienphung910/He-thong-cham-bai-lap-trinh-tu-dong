@@ -6,6 +6,9 @@ import java.util.List;
 /** Bai tap giao cho mot lop (Module 13): danh sach bai can lam truoc han nop. */
 public class Assignment extends Entity {
 
+    /** Lop nay duoc luu xuong o dia (StateStore): giu nguyen so nay de ban luu cu van doc duoc khi them truong. */
+    private static final long serialVersionUID = 1L;
+
     private final String classroomId;
     private final String title;
     private final String description;

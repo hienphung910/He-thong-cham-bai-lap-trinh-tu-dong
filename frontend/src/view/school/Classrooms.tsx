@@ -34,7 +34,7 @@ function JoinCode({ code }: { code: string }) {
 }
 
 /**
- * Module 3 (lop hoc) va 35 (tro giang): danh sach lop cua toi. Giang vien tao lop - moi lop
+ * Module 3 (lop hoc): danh sach lop cua toi. Giang vien tao lop - moi lop
  * co mot ma tham gia de dua cho hoc sinh; hoc sinh nhap ma do de vao lop. Trong lop co bai
  * luyen tap giang vien chon rieng cho lop, danh sach thanh vien va chat rieng cua lop.
  */
@@ -132,7 +132,6 @@ function ClassroomDetail({ id, onBack }: { id: string; onBack: () => void }) {
   const detail = useLoad(() => papi.classroom(id), [id]);
   const [error, setError] = useState("");
   const [student, setStudent] = useState("");
-  const [assistant, setAssistant] = useState("");
   const [problemIds, setProblemIds] = useState("");
   /** Dang mo bang chon bai luyen tap (thay cho viec go ma bai). */
   const [picking, setPicking] = useState(false);
@@ -254,28 +253,6 @@ function ClassroomDetail({ id, onBack }: { id: string; onBack: () => void }) {
                   </div>
                 ) : "",
               ])} />
-          </Card>
-
-          <Card title="Trợ giảng">
-            {c.isOwner && (
-              <div style={{ marginBottom: 12 }}>
-                <Row>
-                  <Field label="Thêm trợ giảng (tên đăng nhập của một tài khoản giảng viên)">
-                    <input style={INPUT} value={assistant} onChange={(e) => setAssistant(e.target.value)} />
-                  </Field>
-                  <Btn onClick={() => void act(async () => { await papi.addAssistant(id, assistant.trim()); setAssistant(""); })}>Thêm</Btn>
-                </Row>
-              </div>
-            )}
-            {(c.assistants ?? []).length === 0 && <Muted>Lớp chưa có trợ giảng.</Muted>}
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {(c.assistants ?? []).map((a) => (
-                <span key={a.id} style={{ display: "inline-flex", gap: 8, alignItems: "center", fontSize: 13 }}>
-                  <Tag color="purple">{a.fullName} (@{a.username})</Tag>
-                  {c.isOwner && <Btn small kind="danger" onClick={() => void act(() => papi.removeAssistant(id, a.id))}>Bỏ</Btn>}
-                </span>
-              ))}
-            </div>
           </Card>
 
           <Card title="Chat của lớp">

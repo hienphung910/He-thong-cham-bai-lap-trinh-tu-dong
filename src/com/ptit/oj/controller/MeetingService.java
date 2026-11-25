@@ -81,6 +81,16 @@ public class MeetingService {
         return clean;
     }
 
+    /** Moi buoi hoc - de luu xuong o dia (StateStore). */
+    List<Meeting> all() {
+        return meetings.findAll();
+    }
+
+    /** Nap lai lich hoc da luu (StateStore) - chi goi luc khoi dong. */
+    void restore(List<Meeting> saved) {
+        for (Meeting m : saved) meetings.save(m);
+    }
+
     public Meeting find(String id) {
         return meetings.findById(id).orElseThrow(() -> ApiException.notFound("Không có buổi học " + id));
     }

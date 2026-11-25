@@ -14,6 +14,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class Contest extends Entity {
 
+    /** Lop nay duoc luu xuong o dia (StateStore): giu nguyen so nay de ban luu cu van doc duoc khi them truong. */
+    private static final long serialVersionUID = 1L;
+
     private final String title;
     private final String description;
     /** Gio bat dau va thoi luong sua duoc truoc khi thi; dang thi thi chi gia han duoc (ContestService.reschedule). */

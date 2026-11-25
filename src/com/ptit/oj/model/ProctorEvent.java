@@ -11,6 +11,9 @@ import java.time.LocalDateTime;
  */
 public class ProctorEvent extends Entity {
 
+    /** Lop nay duoc luu xuong o dia (StateStore): giu nguyen so nay de ban luu cu van doc duoc khi them truong. */
+    private static final long serialVersionUID = 1L;
+
     /** Cac loai su kien duoc chap nhan. */
     public static final String TAB_HIDDEN = "TAB_HIDDEN";         // chuyen tab khac / thu nho trinh duyet
     public static final String TAB_RETURN = "TAB_RETURN";         // quay lai tab thi

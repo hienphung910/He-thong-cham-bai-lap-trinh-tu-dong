@@ -7,7 +7,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
- * Lop hoc (Module 3): mot giang vien phu trach, co the co tro giang va nhieu hoc sinh.
+ * Lop hoc (Module 3): mot giang vien phu trach va nhieu hoc sinh.
  *
  * Hoc sinh tu tham gia bang MA THAM GIA (joinCode) sinh ngau nhien, khong phai bang ma lop:
  * ma lop danh so tuan tu (CLS-001, CLS-002...) nen ai cung doan duoc.
@@ -17,11 +17,13 @@ import java.util.concurrent.CopyOnWriteArraySet;
  */
 public class Classroom extends Entity {
 
+    /** Lop nay duoc luu xuong o dia (StateStore): giu nguyen so nay de ban luu cu van doc duoc khi them truong. */
+    private static final long serialVersionUID = 1L;
+
     private final String name;
     private final String organizationId;   // "" neu lop khong thuoc to chuc nao
     private final String courseId;         // "" neu lop chua gan khoa hoc
     private final String teacherId;
-    private final Set<String> assistantIds = new CopyOnWriteArraySet<>();
     private final Set<String> studentIds = new CopyOnWriteArraySet<>();
     /**
      * Hoc sinh duoc giang vien moi bang ten dang nhap nhung CHUA dong y. Chua phai thanh vien:
@@ -54,7 +56,6 @@ public class Classroom extends Entity {
     public String getOrganizationId() { return organizationId; }
     public String getCourseId() { return courseId; }
     public String getTeacherId() { return teacherId; }
-    public Set<String> getAssistantIds() { return assistantIds; }
     public Set<String> getStudentIds() { return studentIds; }
     public Set<String> getRemovedIds() { return removedIds; }
     public Set<String> getInvitedIds() { return invitedIds; }
@@ -65,12 +66,12 @@ public class Classroom extends Entity {
     public List<String> getPracticeProblemIds() { return practiceProblemIds; }
     public String getJoinCode() { return joinCode; }
 
-    /** Giang vien phu trach hoac tro giang cua lop. */
+    /** Giang vien phu trach lop. */
     public boolean isTaughtBy(String userId) {
-        return teacherId.equals(userId) || assistantIds.contains(userId);
+        return teacherId.equals(userId);
     }
 
-    /** Moi nguoi thuoc lop: giang vien, tro giang, hoc sinh. */
+    /** Moi nguoi thuoc lop: giang vien va hoc sinh. */
     public boolean hasMember(String userId) {
         return isTaughtBy(userId) || studentIds.contains(userId);
     }

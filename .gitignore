@@ -24,6 +24,7 @@ __pycache__/
 data/evidence/
 # Nhat ky hoat dong va mat khau admin sinh tu dong: may chu tu ghi, khong dua len git
 data/audit/
+data/state/
 data/admin-password.txt
 
 # Frontend

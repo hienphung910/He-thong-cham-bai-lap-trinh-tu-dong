@@ -20,7 +20,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * Nguyen tac:
  *  - Khi tu dang ky, client chi duoc chon STUDENT hoac TEACHER. Tai khoan ADMIN
- *    khong bao gio tao duoc qua register(), chi quan tri vien tao (createByAdmin).
+ *    khong bao gio tao duoc qua register(): tai khoan quan tri dau tien do bootstrapAdmin() tao,
+ *    muon them thi quan tri vien doi vai tro cua mot tai khoan da co (changeRole).
  *  - Hoc sinh tu dang ky la dung duoc ngay. Giang vien tu dang ky thi tai khoan o trang thai
  *    cho duyet: khong dang nhap duoc cho toi khi quan tri vien duyet (approve) hoac tu choi (reject).
  *  - Sai username va sai mat khau tra ve cung mot thong bao, de khong lo
@@ -130,28 +131,6 @@ public class AuthService {
         return user;
     }
 
-    /**
-     * Quan tri vien tao tai khoan voi vai tro bat ky (Module 1, 35).
-     * extra la "lop" doi voi hoc sinh, "bo mon" doi voi giang vien.
-     */
-    public synchronized User createByAdmin(String role, String username, String rawPassword,
-                                           String fullName, String extra) {
-        String cleanUsername = normalizeOrFail(username);
-        String cleanFullName = requireText(fullName, "Họ tên", MAX_FULL_NAME);
-        String cleanExtra = optionalText(extra, "Lớp / bộ môn", MAX_CODE);
-
-        User user;
-        if (User.ROLE_STUDENT.equals(role)) {
-            user = new Student(newUserId(), cleanUsername, cleanFullName, "", cleanExtra);
-        } else if (User.ROLE_TEACHER.equals(role)) {
-            user = new Teacher(newUserId(), cleanUsername, cleanFullName, cleanExtra);
-        } else if (User.ROLE_ADMIN.equals(role)) {
-            user = new Admin(newUserId(), cleanUsername, cleanFullName);
-        } else {
-            throw new AuthException(400, "Vai trò phải là STUDENT, TEACHER hoặc ADMIN");
-        }
-        return createAccount(user, rawPassword);
-    }
 
     // ------------------------------------------- duyet giang vien tu dang ky
 

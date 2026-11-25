@@ -5,6 +5,9 @@ import java.time.LocalDateTime;
 /** Buoi hoc truc tuyen cua mot lop (Module 15). Trang thai: SCHEDULED -> LIVE -> ENDED. */
 public class Meeting extends Entity {
 
+    /** Lop nay duoc luu xuong o dia (StateStore): giu nguyen so nay de ban luu cu van doc duoc khi them truong. */
+    private static final long serialVersionUID = 1L;
+
     public static final String SCHEDULED = "SCHEDULED";
     public static final String LIVE = "LIVE";
     public static final String ENDED = "ENDED";

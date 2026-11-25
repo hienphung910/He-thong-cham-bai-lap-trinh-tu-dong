@@ -143,6 +143,36 @@ public class CommunityService {
         comments.deleteById(id);
     }
 
+    // ------------------------------------------- luu / nap lai (StateStore)
+
+    synchronized List<Notification> notificationsSnapshot() {
+        return new ArrayList<>(notifications);
+    }
+
+    synchronized Map<String, List<ChatMessage>> channelsSnapshot() {
+        Map<String, List<ChatMessage>> copy = new HashMap<>();
+        for (Map.Entry<String, List<ChatMessage>> e : channels.entrySet()) copy.put(e.getKey(), new ArrayList<>(e.getValue()));
+        return copy;
+    }
+
+    synchronized Map<String, Long> lastSeqSnapshot() {
+        return new HashMap<>(lastSeq);
+    }
+
+    /** Nap lai thong bao, chat va binh luan da luu - chi goi luc khoi dong. */
+    synchronized void restore(List<Notification> savedNotifications, Map<String, List<ChatMessage>> savedChannels,
+                              Map<String, Long> savedLastSeq, List<ProblemComment> savedComments) {
+        notifications.addAll(savedNotifications);
+        for (Map.Entry<String, List<ChatMessage>> e : savedChannels.entrySet()) {
+            channels.put(e.getKey(), new ArrayList<>(e.getValue()));
+        }
+        lastSeq.putAll(savedLastSeq);
+        // getComments() tra ve moi nhat truoc; luu lai theo thu tu cu truoc de thu tu hien thi khong dao.
+        List<ProblemComment> oldestFirst = new ArrayList<>(savedComments);
+        Collections.reverse(oldestFirst);
+        for (ProblemComment c : oldestFirst) comments.save(c);
+    }
+
     // ------------------------------------------------------------ dien dan
 
     public ForumPost createPost(User author, String title, String body, String problemId) {

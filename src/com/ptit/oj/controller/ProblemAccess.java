@@ -17,7 +17,7 @@ import java.util.Set;
  *  - Quan tri vien, va nguoi sua duoc bai (chu bai kho rieng): luon mo duoc.
  *  - Bai kho chung: ai cung mo duoc. Bai kho rieng: chi mo duoc qua LOP cua minh - bai luyen tap
  *    cua lop, bai tap giao cho lop, ky thi cua lop. Hoc sinh lop khac khong thay.
- *  - Ky thi chua bat dau: hoc sinh chua thay de. Giang vien / tro giang cua lop thi thay.
+ *  - Ky thi chua bat dau: hoc sinh chua thay de. Giang vien phu trach lop thi thay.
  *  - Ky thi DANG DIEN RA: hoc sinh cua lop chi mo duoc bai thi khi dang o trong bai thi (da bam
  *    Vao thi, chua nop bai som). Chua vao thi hoac da nop bai thi cac bai do bi khoa, ke ca bai
  *    kho chung - neu khong, hoc sinh lam truoc ben ngoai (khong bi giam sat) roi moi vao thi dan vao.

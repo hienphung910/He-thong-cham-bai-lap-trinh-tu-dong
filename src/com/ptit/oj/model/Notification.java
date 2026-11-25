@@ -5,6 +5,9 @@ import java.time.LocalDateTime;
 /** Mot thong bao gui toi mot nguoi dung (Module 29). */
 public class Notification extends Entity {
 
+    /** Lop nay duoc luu xuong o dia (StateStore): giu nguyen so nay de ban luu cu van doc duoc khi them truong. */
+    private static final long serialVersionUID = 1L;
+
     private final String userId;
     private final String title;
     private final String body;

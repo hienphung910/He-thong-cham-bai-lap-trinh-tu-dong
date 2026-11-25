@@ -37,6 +37,11 @@ public class AssignmentService {
 
     public List<Assignment> getAll() { return assignments.findAll(); }
 
+    /** Nap lai bai tap giao da luu (StateStore) - chi goi luc khoi dong. */
+    void restore(List<Assignment> saved) {
+        for (Assignment a : saved) assignments.save(a);
+    }
+
     /** Bai tap giao cua cac lop cho truoc, han nop gan nhat dung truoc. */
     public List<Assignment> ofClassrooms(List<Classroom> classrooms) {
         List<Assignment> result = new ArrayList<>();

@@ -12,7 +12,8 @@ import java.util.Set;
  * Noi tao va giu tat ca service cua cac module mo rong (lop hoc, khoa hoc, phong hoc,
  * cuoc thi, phan tich, cong dong...). ApiServer chi can giu mot doi tuong Platform.
  *
- * Du lieu cua cac service nay nam trong RAM (InMemoryRepository): tat may chu la mat.
+ * Du lieu cua cac service nay song trong RAM (InMemoryRepository). Khi chay voi CSDL that, StateStore
+ * chup chung xuong data/state vai giay mot lan va nap lai luc khoi dong, nen khoi dong lai khong mat.
  * Tai khoan va lich su nop bai van do JudgeService luu (MySQL hoac RAM) nhu cu.
  */
 public class Platform {
@@ -26,6 +27,8 @@ public class Platform {
     private final BillingService billing = new BillingService();
     private final SystemService system;
     private final RateLimiter limiter = new RateLimiter();
+    /** Noi luu du lieu cac module mo rong xuong o dia; null neu khong bat (che do --no-db). */
+    private volatile StateStore stateStore;
     private final SubmissionGate gate = new SubmissionGate();
     private final EvidenceStore evidence;
     private final ContestService contests;
@@ -57,6 +60,14 @@ public class Platform {
     public BillingService getBilling() { return billing; }
     public SystemService getSystem() { return system; }
     public EvidenceStore getEvidence() { return evidence; }
+    public StateStore getStateStore() { return stateStore; }
+    public void setStateStore(StateStore stateStore) { this.stateStore = stateStore; }
+
+    /** Bao rang du lieu vua thay doi, de StateStore ghi xuong o dia (khong lam gi neu khong bat luu). */
+    public void markChanged() {
+        StateStore store = stateStore;
+        if (store != null) store.markDirty();
+    }
     /** Dem tan suat (dang nhap sai, dang ky, chat...) dung chung cho moi module. */
     public RateLimiter getLimiter() { return limiter; }
     /** Cong vao cua bo cham: moi nguoi mot bai mot luc, ca he thong co tran so bai dang cho. */

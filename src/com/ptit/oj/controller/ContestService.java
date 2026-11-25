@@ -142,9 +142,8 @@ public class ContestService {
     /**
      * Ai quan ly duoc ky thi (sua, xoa, bat / tat va xem giam sat):
      *  - quan tri vien;
-     *  - giang vien phu trach LOP cua ky thi, du ky thi do tro giang tao;
-     *  - nguoi tao ky thi, chung nao con la giang vien / tro giang cua lop do. Tro giang bi go khoi
-     *    lop thi mat quyen voi ky thi minh da tao.
+     *  - giang vien phu trach LOP cua ky thi;
+     *  - nguoi tao ky thi, chung nao con la giang vien phu trach lop do.
      */
     public boolean canManage(User user, Contest contest) {
         if (User.ROLE_ADMIN.equals(user.getRoleCode())) return true;
@@ -288,6 +287,23 @@ public class ContestService {
             if (e.getUserId().equals(userId) && e.isViolation()) count++;
         }
         return count;
+    }
+
+    /** Ban sao nhat ky giam sat cua moi ky thi - de luu xuong o dia (StateStore). */
+    synchronized Map<String, List<ProctorEvent>> proctorEventsSnapshot() {
+        Map<String, List<ProctorEvent>> copy = new LinkedHashMap<>();
+        for (Map.Entry<String, List<ProctorEvent>> e : proctorEvents.entrySet()) {
+            copy.put(e.getKey(), new ArrayList<>(e.getValue()));
+        }
+        return copy;
+    }
+
+    /** Nap lai ky thi va nhat ky giam sat da luu (StateStore) - chi goi luc khoi dong. */
+    synchronized void restore(List<Contest> savedContests, Map<String, List<ProctorEvent>> savedEvents) {
+        for (Contest c : savedContests) contests.save(c);
+        for (Map.Entry<String, List<ProctorEvent>> e : savedEvents.entrySet()) {
+            proctorEvents.put(e.getKey(), new ArrayList<>(e.getValue()));
+        }
     }
 
     public List<Contest> getContests() {

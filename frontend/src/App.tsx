@@ -29,7 +29,6 @@ import Dashboard from "./view/manage/Dashboard";
 import Accounts from "./view/admin/Accounts";
 import Organizations from "./view/admin/Organizations";
 import SystemAdmin from "./view/admin/SystemAdmin";
-import AuditLogs from "./view/admin/AuditLogs";
 import CommentModeration from "./view/admin/CommentModeration";
 
 /**
@@ -127,7 +126,6 @@ const NAV_GROUPS: { title: string; icon: ReactNode; items: NavItem[] }[] = [
       { key: "Comments", label: "Bình luận bài tập", role: "admin" },
       { key: "Organizations", label: "Tổ chức", role: "admin" },
       { key: "System", label: "Hệ thống", role: "admin" },
-      { key: "Audit", label: "Nhật ký hoạt động", role: "admin" },
     ],
   },
 ];
@@ -512,7 +510,6 @@ function AppShell() {
                 {page === "Organizations" && <Organizations />}
                 {page === "System" && <SystemAdmin onSettingsChanged={loadHeader} />}
                 {(page === "Comments" || page === "MyComments") && <CommentModeration />}
-                {page === "Audit" && <AuditLogs />}
               </>
             )}
           </main>

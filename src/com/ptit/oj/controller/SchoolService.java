@@ -15,7 +15,7 @@ import java.util.List;
  * Nghiep vu ve to chuc, lop hoc va phu huynh (Module 2, 3, 32, 35).
  *
  * Quy tac phan quyen cua lop hoc nam o day:
- *  - quan ly lop = quan tri vien, giang vien phu trach hoac tro giang cua lop do,
+ *  - quan ly lop = quan tri vien hoac giang vien phu trach lop do,
  *  - thanh vien  = nguoi quan ly + hoc sinh cua lop.
  */
 public class SchoolService {
@@ -80,14 +80,14 @@ public class SchoolService {
         return mine;
     }
 
-    /** Viec hang ngay cua lop (bai luyen tap, bai giao, lich hoc, moi hoc sinh): giang vien phu trach va tro giang. */
+    /** Quan ly lop (bai luyen tap, bai giao, lich hoc, moi hoc sinh...): giang vien phu trach va quan tri vien. */
     public boolean canManage(User user, Classroom classroom) {
         return isAdmin(user) || classroom.isTaughtBy(user.getId());
     }
 
     /**
-     * Viec chi GIANG VIEN PHU TRACH (va quan tri vien) duoc lam: xoa lop, them / go tro giang,
-     * xoa hoc sinh khoi lop. Tro giang khong lam duoc cac viec nay.
+     * Giang vien phu trach lop (hoac quan tri vien). Hien trung voi canManage vi lop chi con mot
+     * giang vien; giu ten rieng cho cac viec khong the hoan tac: xoa lop, xoa hoc sinh khoi lop.
      */
     public boolean isOwner(User user, Classroom classroom) {
         return isAdmin(user) || classroom.getTeacherId().equals(user.getId());
@@ -99,7 +99,7 @@ public class SchoolService {
         }
     }
 
-    /** Ma cua moi hoc sinh trong cac lop nguoi nay day (phu trach hoac tro giang). */
+    /** Ma cua moi hoc sinh trong cac lop nguoi nay phu trach. */
     public java.util.Set<String> studentIdsTaughtBy(String userId) {
         java.util.Set<String> ids = new java.util.HashSet<>();
         for (Classroom c : classrooms.findAll()) {
@@ -117,11 +117,10 @@ public class SchoolService {
         return led;
     }
 
-    /** Go mot tai khoan khoi moi lop (hoc sinh, tro giang, loi moi) - khi tai khoan bi xoa hoac doi vai tro. */
+    /** Go mot tai khoan khoi moi lop (hoc sinh, loi moi) - khi tai khoan bi xoa hoac doi vai tro. */
     public synchronized void removeEverywhere(String userId) {
         for (Classroom c : classrooms.findAll()) {
             c.getStudentIds().remove(userId);
-            c.getAssistantIds().remove(userId);
             c.getInvitedIds().remove(userId);
             c.getRemovedIds().remove(userId);
         }
@@ -129,7 +128,7 @@ public class SchoolService {
 
     public void requireManager(User user, Classroom classroom) {
         if (!canManage(user, classroom)) {
-            throw ApiException.forbidden("Chỉ giảng viên hoặc trợ giảng của lớp mới làm được việc này");
+            throw ApiException.forbidden("Chỉ giảng viên phụ trách lớp mới làm được việc này");
         }
     }
 
@@ -210,23 +209,7 @@ public class SchoolService {
         if (classroom.getStudentIds().remove(studentId)) classroom.getRemovedIds().add(studentId);
     }
 
-    /** Them tro giang: phai la tai khoan giang vien va khong phai giang vien chinh. */
-    public synchronized void addAssistant(Classroom classroom, User assistant) {
-        if (!User.ROLE_TEACHER.equals(assistant.getRoleCode())) {
-            throw ApiException.badRequest("Trợ giảng phải là tài khoản giảng viên");
-        }
-        if (!assistant.isApproved()) {
-            throw ApiException.badRequest("Tài khoản giảng viên này đang chờ quản trị viên duyệt");
-        }
-        if (classroom.getTeacherId().equals(assistant.getId())) {
-            throw ApiException.badRequest("Người này đã là giảng viên phụ trách lớp");
-        }
-        classroom.getAssistantIds().add(assistant.getId());
-    }
 
-    public synchronized void removeAssistant(Classroom classroom, String userId) {
-        classroom.getAssistantIds().remove(userId);
-    }
 
     /** Them cac bai luyen tap cho lop; bai da co thi bo qua. */
     public synchronized void addPracticeProblems(Classroom classroom, List<String> problemIds) {
@@ -244,6 +227,12 @@ public class SchoolService {
 
     public void deleteClassroom(String id) {
         classrooms.deleteById(id);
+    }
+
+    /** Nap lai to chuc va lop hoc da luu (StateStore) - chi goi luc khoi dong. */
+    synchronized void restore(List<Organization> savedOrganizations, List<Classroom> savedClassrooms) {
+        for (Organization o : savedOrganizations) organizations.save(o);
+        for (Classroom c : savedClassrooms) classrooms.save(c);
     }
 
     // ----------------------------------------------------------- phu huynh

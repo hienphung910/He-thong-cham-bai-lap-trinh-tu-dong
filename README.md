@@ -29,7 +29,7 @@ Backend chỉ dùng API chuẩn của JDK. Máy chủ HTTP, bộ đọc/ghi JSON
 > - **Giám sát kỳ thi** (người tạo kỳ thi bật / tắt được, lúc tạo hoặc ngay trong khi thi): khi bật, trình duyệt của thí sinh đang trong bài thi ghi lại việc rời tab, chuyển sang cửa sổ khác, sao chép / cắt / dán và đóng hoặc tải lại trang; một thanh trên màn hình thi báo cho thí sinh biết đang bị giám sát. Người tạo kỳ thi xem danh sách thí sinh đã vào thi, bảng tổng hợp theo thí sinh và nhật ký sự kiện ngay trên trang kỳ thi (tự cập nhật), và nhận thông báo khi một thí sinh có vi phạm đầu tiên, rồi cứ mỗi 10 lần. Chỉ ghi độ dài nội dung sao chép / dán, không ghi nội dung. Việc ghi nhận sự kiện do trình duyệt của thí sinh thực hiện nên chỉ có tác dụng với người dùng thông thường: tắt JavaScript hoặc dùng thêm thiết bị khác thì không bị ghi lại. Nhật ký lưu trong RAM.
 > - **Tài khoản quản trị** không có các mục Lớp của tôi, Bài tập được giao, Lịch học, nhóm Cá nhân và nhóm Giảng dạy; đổi mật khẩu vẫn mở được từ menu ở ảnh đại diện.
 > - **Đã bỏ**: Khóa học và tài liệu, Thành tích, Gói dịch vụ, Stress test, Trợ lý AI (cả pop-up ở trang làm bài), Diễn đàn, Trợ lý giảng dạy, Phụ huynh, phòng học trực tuyến, phần xem lại diễn biến của kỳ thi, và phần điểm yếu trong Phân tích học tập. API của các phần này cũng đã gỡ khỏi máy chủ; các mục mô tả chúng ở phần dưới của tài liệu này là của phiên bản cũ.
-> - **Phân quyền**: giảng viên chỉ xem được bài nộp (kèm mã nguồn) của học sinh lớp mình dạy. Trợ giảng làm được việc hằng ngày của lớp (bài luyện tập, bài giao, lịch học, mời học sinh, tạo kỳ thi) nhưng không xoá lớp, không quản lý trợ giảng, không xoá học sinh. Giảng viên mời học sinh bằng tên đăng nhập thì học sinh phải tự đồng ý mới vào lớp. Kỳ thi do giảng viên phụ trách lớp, người tạo (khi còn dạy lớp đó) và quản trị viên quản lý; đề chỉ sửa được trước khi thi, đang thi chỉ gia hạn được. Quản trị viên khoá, xoá, đổi vai trò tài khoản ở Quản trị → Tài khoản.
+> - **Phân quyền**: giảng viên chỉ xem được bài nộp (kèm mã nguồn) của học sinh lớp mình dạy. Mỗi lớp chỉ có một giảng viên phụ trách (đã bỏ trợ giảng). Giảng viên mời học sinh bằng tên đăng nhập thì học sinh phải tự đồng ý mới vào lớp. Kỳ thi do giảng viên phụ trách lớp, người tạo (khi còn dạy lớp đó) và quản trị viên quản lý; đề chỉ sửa được trước khi thi, đang thi chỉ gia hạn được. Quản trị viên duyệt, khoá, xoá, đổi vai trò tài khoản ở Quản trị → Tài khoản, nhưng không tự tạo tài khoản mới được: tài khoản chỉ sinh ra qua đăng ký (học sinh dùng ngay, giảng viên chờ duyệt), muốn thêm quản trị viên thì đổi vai trò của một tài khoản đã có. Trang Nhật ký hoạt động đã bỏ; nhật ký vẫn được ghi ra `data/audit/audit.log` trên máy chủ.
 > - **Bảo mật**: đăng nhập sai nhiều lần bị tạm khoá (8 lần / 10 phút cho một tên từ một địa chỉ), đăng ký bị giới hạn theo địa chỉ; mỗi người chỉ có một bài đang chấm và cả hệ thống tối đa 16 bài chờ; nhật ký hoạt động được ghi nối tiếp ra `data/audit/audit.log`; mọi phản hồi có header bảo mật (CSP, `X-Frame-Options`, `nosniff`); chủ bài kho riêng và chủ kỳ thi được ghi bằng mã tài khoản thay cho tên đăng nhập.
 > - **Bài tập giao**: một bài chỉ tính là đã làm khi AC trong khoảng từ lúc giao tới hạn nộp. AC sau hạn hiện là *Nộp muộn*, AC từ trước khi giao hiện là *Đã giải từ trước*; cả hai không tính vào tiến độ.
 > - **Ô soạn mã** (trang làm bài, IDE trực tuyến, xem lại bài nộp) dùng CodeMirror, tô màu cú pháp theo bảng màu Dark+ của Visual Studio Code.
@@ -95,7 +95,7 @@ Backend chỉ dùng API chuẩn của JDK. Máy chủ HTTP, bộ đọc/ghi JSON
 - Mật khẩu băm bằng PBKDF2-HMAC-SHA256 (120 000 vòng, salt riêng cho từng tài khoản) và so sánh trong thời gian hằng số.
 - Token phiên 32 byte sinh bằng `SecureRandom`, hết hạn sau 8 giờ. Đổi mật khẩu sẽ huỷ mọi phiên khác của tài khoản đó.
 - Mọi truy vấn dùng `PreparedStatement`; mã bài và tên test được kiểm tra để chặn path traversal.
-- Nhật ký hoạt động ghi mọi request làm thay đổi dữ liệu (POST, PUT, DELETE) và mọi lần đăng nhập, kể cả đăng nhập sai. Chỉ quản trị viên xem được.
+- Nhật ký hoạt động ghi mọi request làm thay đổi dữ liệu (POST, PUT, DELETE) và mọi lần đăng nhập, kể cả đăng nhập sai, ra file `data/audit/audit.log`. Không còn trang xem trên web; người vận hành đọc file trên máy chủ.
 - Máy chủ mặc định chỉ lắng nghe trên `127.0.0.1`; chỉ mở ra ngoài khi đặt `OJ_BIND_ADDRESS`.
 
 ## Các module mô phỏng
@@ -152,12 +152,12 @@ Cột "Ở đâu" ghi đường đi trên menu của giao diện.
 | 32 | Parent Management | Giảng dạy → Phụ huynh | Chạy thật |
 | 33 | Reporting & Dashboard | Giảng dạy → Tổng quan | Chạy thật |
 | 34 | Payment & Subscription | Cá nhân → Gói dịch vụ | Mô phỏng |
-| 35 | Teacher Management | Quản trị → Tài khoản, giảng viên; trợ giảng trong Lớp của tôi | Chạy thật |
+| 35 | Teacher Management | Quản trị → Tài khoản, giảng viên (duyệt, khoá, đổi vai trò) | Chạy thật |
 | 36 | Document Management | Học tập → Khóa học, tài liệu | Chạy thật |
 | 37 | Recording Management | Học tập → Phòng học trực tuyến, mục Bản ghi | Mô phỏng |
 | 38 | Gamification | Cá nhân → Thành tích; ngọn lửa streak trên thanh tiêu đề | Chạy thật |
 | 39 | System Administration | Quản trị → Hệ thống | Chạy thật |
-| 40 | Security & Audit Management | Quản trị → Nhật ký hoạt động | Chạy thật |
+| 40 | Security & Audit Management | Nhật ký ghi ra `data/audit/audit.log` (đã bỏ trang xem trên web) | Chạy thật |
 
 Nhóm Giảng dạy chỉ hiện với giảng viên và quản trị viên, nhóm Quản trị chỉ hiện với quản trị viên. Mục Kho bài của tôi chỉ hiện với giảng viên.
 
@@ -203,7 +203,8 @@ Ví dụ với yêu cầu tạo lớp học: trình duyệt gửi `POST /api/cla
 |---|---|---|
 | Tài khoản, bài nộp, kết quả từng test | MySQL | Bộ nhớ |
 | Đề bài và test | `data/problems/` | `data/problems/` |
-| Lớp học, khóa học, bài tập giao, buổi học, kỳ thi, thông báo, chat, diễn đàn, giao dịch, cấu hình, nhật ký | Bộ nhớ | Bộ nhớ |
+| Tổ chức, lớp học, bài tập giao, lịch học, kỳ thi, nhật ký giám sát, thông báo, chat, bình luận, cấu hình | Bộ nhớ, tự lưu xuống `data/state/` vài giây một lần và nạp lại khi khởi động (`StateStore.java`) | Bộ nhớ (đặt `OJ_PERSIST_STATE=true` để lưu như chế độ MySQL) |
+| Nhật ký hoạt động, file minh chứng đăng ký | `data/audit/`, `data/evidence/` | `data/audit/`, `data/evidence/` |
 
 Bài của kho chung và bài kho riêng của giảng viên nằm cùng thư mục `data/problems/`. Bài kho riêng có thêm dòng `owner=<tên đăng nhập>` trong `problem.properties`, nên khởi động lại máy chủ vẫn biết bài của ai.
 
@@ -395,7 +396,7 @@ Các biến được đọc từ biến môi trường hoặc file `.env` (biế
 | `OJ_ADMIN_PASSWORD` | Mật khẩu admin lần đầu. Bỏ trống thì hệ thống tự sinh: chế độ `--no-db` in ra màn hình một lần; chạy với CSDL thật thì ghi vào `data/admin-password.txt` (không in ra log), đọc xong hãy xoá file |
 | `OJ_SEED_PASSWORD` | Mật khẩu của 4 tài khoản mẫu. Không có mật khẩu mặc định: bỏ trống thì chế độ `--no-db` sinh ngẫu nhiên và in ra, còn chạy với CSDL thật thì không tạo tài khoản mẫu |
 | `OJ_SANDBOX_USER` | Tên tài khoản hệ thống dùng để chạy bài nộp (image Docker đặt sẵn `ojrunner`). Máy chủ tự kiểm tra lúc khởi động và in dòng `Cô lập bài nộp: Bật / Tắt`; cũng hiện ở Quản trị → Hệ thống. Bỏ trống, hoặc máy không chạy được `sudo`, thì bài nộp chạy bằng chính tài khoản của máy chủ |
-| `OJ_BANNED_WORDS` | Từ cấm bổ sung cho bộ lọc bình luận, cách nhau dấu phẩy. Quản trị viên sửa được trong Quản trị → Hệ thống, nhưng cấu hình nằm trong RAM nên khởi động lại là quay về giá trị của biến này |
+| `OJ_BANNED_WORDS` | Từ cấm bổ sung cho bộ lọc bình luận, cách nhau dấu phẩy. Quản trị viên sửa được trong Quản trị → Hệ thống, giá trị đã sửa được lưu lại cùng dữ liệu lớp học; biến này chỉ là giá trị ban đầu |
 | `OJ_TRUST_PROXY` | Lấy địa chỉ người dùng từ đâu để giới hạn tần suất. `true` (image Docker đặt sẵn): máy chủ đứng sau một lớp proxy, lấy giá trị cuối của `X-Forwarded-For`. `cloudflare`: có Cloudflare đứng trước, lấy `CF-Connecting-IP` (nên đặt kèm `OJ_ORIGIN_SECRET`). Không đặt khi máy chủ nhận kết nối trực tiếp |
 | `OJ_ORIGIN_SECRET` | Chỉ nhận request đi qua Cloudflare: đặt một chuỗi bí mật ở đây, và trên Cloudflare tạo Transform Rule gắn header `X-Origin-Secret` với đúng chuỗi đó vào mọi request. Request thiếu hoặc sai header bị trả về 403 (trừ `/api/health`). Bỏ trống thì không kiểm tra |
 | `OJ_TURNSTILE_SITE_KEY`, `OJ_TURNSTILE_SECRET` | Bật CAPTCHA Cloudflare Turnstile cho form đăng nhập và đăng ký khi đặt cả hai (lấy ở trang Turnstile của Cloudflare). Máy chủ gọi Cloudflare để xác minh token trước khi kiểm tra mật khẩu hoặc tạo tài khoản. Nếu Cloudflare không gọi được thì không ai đăng nhập được: xoá hai biến này để tắt CAPTCHA |
@@ -451,12 +452,11 @@ Trừ 4 endpoint công khai, mọi request phải gửi header `Authorization: B
 
 ### Module mở rộng
 
-"Quản lý lớp" là quản trị viên, giảng viên phụ trách hoặc trợ giảng của lớp đó. "Thành viên lớp" gồm người quản lý lớp và học sinh của lớp. Ở các endpoint nhận danh sách mã bài (kỳ thi, bài tập giao, bài giảng), giảng viên chỉ dùng được bài kho chung và bài trong kho của mình.
+"Quản lý lớp" là quản trị viên hoặc giảng viên phụ trách lớp đó. "Thành viên lớp" gồm người quản lý lớp và học sinh của lớp. Ở các endpoint nhận danh sách mã bài (kỳ thi, bài tập giao, bài giảng), giảng viên chỉ dùng được bài kho chung và bài trong kho của mình.
 
 | Method | Endpoint | Quyền | Mô tả |
 |---|---|---|---|
 | GET | `/api/users` | admin | Danh sách tài khoản |
-| POST | `/api/admin/users` | admin | Tạo tài khoản với vai trò bất kỳ (dùng được ngay, không cần duyệt) |
 | POST | `/api/admin/users/{id}/approve` | admin | Duyệt giảng viên tự đăng ký; file minh chứng bị xoá |
 | POST | `/api/admin/users/{id}/reject` | admin | Từ chối: xoá tài khoản đang chờ duyệt và file minh chứng |
 | GET | `/api/admin/users/{id}/evidence` | admin | File minh chứng của tài khoản đang chờ duyệt (`contentType`, `data` dạng base64) |
@@ -467,14 +467,13 @@ Trừ 4 endpoint công khai, mọi request phải gửi header `Authorization: B
 | POST, DELETE | `/api/organizations`, `/api/organizations/{id}` | admin | Thêm, xoá tổ chức |
 | GET | `/api/classrooms` | đăng nhập | Các lớp mình thuộc về (admin thấy tất cả) |
 | POST | `/api/classrooms` | GV / admin | Tạo lớp |
-| GET | `/api/classrooms/{id}` | thành viên lớp | Chi tiết lớp: học sinh, trợ giảng |
-| DELETE | `/api/classrooms/{id}` | GV phụ trách / admin | Xoá lớp (trợ giảng không xoá được) |
+| GET | `/api/classrooms/{id}` | thành viên lớp | Chi tiết lớp: học sinh, lời mời đang chờ, bài luyện tập |
+| DELETE | `/api/classrooms/{id}` | GV phụ trách / admin | Xoá lớp |
 | POST | `/api/classrooms/{mã tham gia}/join` | học sinh | Tham gia lớp bằng mã tham gia (không phải mã lớp) |
 | POST | `/api/classrooms/{id}/students` | quản lý lớp | Mời học sinh bằng `username`. Học sinh chỉ vào lớp sau khi tự đồng ý |
 | DELETE | `/api/classrooms/{id}/students/{userId}` | GV phụ trách / admin | Xoá học sinh khỏi lớp, hoặc rút lời mời |
 | GET | `/api/classroom-invites` | đăng nhập | Các lời mời vào lớp đang chờ mình trả lời |
 | POST | `/api/classrooms/{id}/accept`, `.../decline` | người được mời | Đồng ý hoặc từ chối lời mời vào lớp |
-| POST, DELETE | `/api/classrooms/{id}/assistants`, `.../assistants/{userId}` | GV phụ trách / admin | Thêm, xoá trợ giảng |
 | POST, DELETE | `/api/classrooms/{id}/problems`, `.../problems/{mã bài}` | quản lý lớp | Thêm (`problemIds`), bỏ bài luyện tập riêng của lớp. Chi tiết lớp trả danh sách này trong `practice` |
 | GET | `/api/assignments` | đăng nhập | Bài tập giao của các lớp mình thuộc về, kèm tiến độ của mình |
 | POST, DELETE | `/api/assignments`, `/api/assignments/{id}` | quản lý lớp | Giao bài, xoá bài tập giao |
@@ -501,7 +500,7 @@ Trừ 4 endpoint công khai, mọi request phải gửi header `Authorization: B
 | GET | `/api/admin/comments` | admin; GV với bài kho riêng của mình | Các bình luận mình xoá được, mới nhất trước |
 | GET | `/api/settings` | đăng nhập | Cấu hình công khai |
 | PUT | `/api/admin/settings` | admin | Đổi cấu hình |
-| GET | `/api/admin/system`, `/api/admin/audit?q=...` | admin | Thông tin máy chủ; nhật ký hoạt động |
+| GET | `/api/admin/system` | admin | Thông tin máy chủ |
 | POST | `/api/run` | đăng nhập | Chạy thử mã nguồn |
 
 Tên kênh chat: `general`, `class-<mã lớp>`, `meeting-<mã buổi học>`.
@@ -562,7 +561,7 @@ Các module mở rộng mới được thử ở chế độ `--no-db`, bằng c
 - Giảng viên tự đăng ký là dùng được ngay, chưa có bước quản trị viên duyệt. Muốn chặn thì tắt tự đăng ký ở Quản trị → Hệ thống rồi tạo tài khoản giảng viên bằng tay.
 - Kho bài riêng gắn với tên đăng nhập. Ở chế độ `--no-db` tài khoản mất khi tắt máy chủ còn bài vẫn nằm trên đĩa, nên người đăng ký lại đúng tên đó sẽ nhận kho bài cũ.
 - Phiên đăng nhập lưu trong RAM; chưa có connection pool và phân trang cho lịch sử nộp bài.
-- Dữ liệu của các module mở rộng nằm trong RAM, khởi động lại là mất. Hướng phát triển: thêm bảng MySQL và lớp DAO cho từng thực thể.
+- Dữ liệu của các module mở rộng sống trong RAM và được chụp xuống `data/state/platform.bin` (tuần tự hoá của Java), không nằm trong MySQL. Khi triển khai phải gắn Volume vào `data/` thì deploy lại mới không mất. Đổi kiểu hoặc đổi tên trường của các lớp trong `model/` làm bản lưu cũ không đọc được (máy chủ giữ file cũ lại với đuôi `.bad` và bắt đầu từ trống); thêm trường mới thì không sao. Phiên đăng nhập không được lưu, khởi động lại là mọi người đăng nhập lại. Hướng phát triển: thêm bảng MySQL và lớp DAO cho từng thực thể.
 - Các module mở rộng chưa được chạy thử ở chế độ MySQL. Các trang phân tích, tổng quan, chi tiết lớp và xem lại kỳ thi đọc lại toàn bộ lịch sử nộp bài ở mỗi request, nên sẽ chậm dần khi CSDL lớn.
 - Phòng học đồng bộ bằng polling, và máy chủ chỉ mở trên localhost nên mới thử được trên một máy với nhiều tab. Bản thật cần WebSocket cho dữ liệu và WebRTC cho video.
 - Bộ test lớp Lộ trình nâng cao được giữ nhỏ cho repo gọn (khoảng 1 MB mỗi bài với V001 đến V026, dưới 100 KB mỗi bài với V027 đến V300), nên ở nhiều bài cách làm trâu viết bằng C++ vẫn kịp giới hạn thời gian; Java và Python thì thường không.
