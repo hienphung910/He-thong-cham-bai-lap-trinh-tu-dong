@@ -74,6 +74,20 @@ Mật khẩu được băm bằng PBKDF2-HMAC-SHA256 với salt riêng cho từn
 | Cơ sở dữ liệu | MySQL 8 |
 | Giao diện | React 19, TypeScript 5, Vite 7, Tailwind CSS 4 |
 
+## Tự chạy trên máy
+
+Cần JDK 11+, Node.js 20.19+, Maven và MySQL 8. Chạy `database/mysql/01_create_database.sql` để tạo CSDL, chép `.env.example` thành `.env` rồi điền mật khẩu MySQL và mật khẩu admin (để trống `OJ_SEED_PASSWORD` nếu không cần tài khoản mẫu). Sau đó chạy:
+
+```bash
+mvn -q dependency:copy-dependencies -DoutputDirectory=lib -DincludeScope=runtime
+javac -encoding UTF-8 -d out $(find src -name "*.java")
+npm --prefix frontend install
+npm --prefix frontend run build
+java "-Dfile.encoding=UTF-8" -cp "out;lib/*" com.ptit.oj.Main --serve
+```
+
+Rồi mở http://localhost:8080. Trên Linux, macOS thì đổi `;` thành `:` trong `-cp`.
+
 ## Nhóm phát triển
 
 Bài tập lớn môn Lập trình hướng đối tượng, Học viện Công nghệ Bưu chính Viễn thông (PTIT).
