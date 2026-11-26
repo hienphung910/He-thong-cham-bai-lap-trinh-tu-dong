@@ -6,6 +6,7 @@ import ProblemDetail from "../judge/ProblemDetail";
 import ContestProctor from "./Proctor";
 import type { AuthUser, LanguageInfo, Problem } from "../../shared/types";
 import type { Contest } from "../../shared/platformTypes";
+import { confirmDialog } from "../../shared/dialog";
 
 /** Muc "Bang xep hang" trong danh sach ben trai. */
 const STANDINGS = "__standings";
@@ -63,7 +64,11 @@ export default function ExamView({ contest, user, problems, languages, onChanged
   const clock = `${String(Math.floor(left / 3600)).padStart(2, "0")}:${String(Math.floor((left % 3600) / 60)).padStart(2, "0")}:${String(left % 60).padStart(2, "0")}`;
 
   async function finishEarly() {
-    if (!window.confirm("Nộp bài và kết thúc kỳ thi ngay bây giờ?\n\nSau khi kết thúc, bạn không vào lại kỳ thi này được và các bài nộp thêm sẽ không được tính.")) return;
+    if (!(await confirmDialog({
+      title: "Nộp bài và kết thúc kỳ thi?",
+      message: "Sau khi kết thúc, bạn không vào lại kỳ thi này được và các bài nộp thêm sẽ không được tính.",
+      confirmLabel: "Nộp bài", cancelLabel: "Tiếp tục làm", tone: "primary",
+    }))) return;
     setFinishing(true);
     setError("");
     try {

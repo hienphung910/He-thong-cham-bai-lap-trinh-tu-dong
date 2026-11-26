@@ -4,6 +4,7 @@ import { Btn, Card, ErrorBox, Field, INPUT, Modal, Muted, Page, Progress, Row, T
 import ProblemChip from "../../shared/ProblemChip";
 import type { AssignmentProgress } from "../../shared/platformTypes";
 import ProblemField from "../problem/ProblemField";
+import { confirmDialog } from "../../shared/dialog";
 
 /**
  * Module 13 (bai tap duoc giao): hoc sinh thay bai tap cua cac lop minh hoc kem tien do;
@@ -60,7 +61,7 @@ export default function Assignments() {
           <Tag color="blue">{a.classroomName}</Tag>
           <Tag color={a.overdue ? "red" : "green"}>{a.overdue ? "Đã hết hạn" : "Còn hạn"}</Tag>
           {a.canManage && <Btn small kind="ghost" onClick={() => void act(async () => setProgress(await papi.assignmentProgress(a.id)))}>Tiến độ lớp</Btn>}
-          {a.canManage && <Btn small kind="danger" onClick={() => { if (window.confirm(`Xoá bài tập "${a.title}"?`)) void act(() => papi.deleteAssignment(a.id)); }}>Xoá</Btn>}
+          {a.canManage && <Btn small kind="danger" onClick={() => void confirmDialog({ title: `Xoá bài tập "${a.title}"?`, confirmLabel: "Xoá bài tập" }).then((ok) => { if (ok) void act(() => papi.deleteAssignment(a.id)); })}>Xoá</Btn>}
         </>}>
           <div style={{ fontSize: 13, color: "#616161", marginBottom: 8 }}>
             Hạn nộp <b>{fmtTime(a.dueAt)}</b> - giao bởi {a.createdBy}{a.description ? ` - ${a.description}` : ""}

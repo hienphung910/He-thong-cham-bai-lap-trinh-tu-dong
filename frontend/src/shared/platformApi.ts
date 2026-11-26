@@ -115,6 +115,10 @@ export const papi = {
   // --- thong bao, chat, dien dan (Module 29, 30, 31) ---
   notifications: () => request<NotificationList>("/api/notifications"),
   markNotificationsRead: () => postJson<Ok>("/api/notifications/read", {}),
+  /** Danh dau mot thong bao da doc / chua doc, xoa mot thong bao, xoa het (onlyRead: chi xoa thong bao da doc). */
+  setNotificationRead: (id: string, read: boolean) => postJson<Ok>(`/api/notifications/${enc(id)}/${read ? "read" : "unread"}`, {}),
+  deleteNotification: (id: string) => del(`/api/notifications/${enc(id)}`),
+  deleteNotifications: (onlyRead: boolean) => del<Ok & { removed: number }>(`/api/notifications${onlyRead ? "?only=read" : ""}`),
   chat: (channel: string, after: number) => request<ChatMessage[]>(`/api/chat/${enc(channel)}?after=${after}`),
   sendChat: (channel: string, text: string) => postJson<Ok>(`/api/chat/${enc(channel)}`, { text }),
   // --- binh luan duoi bai tap (may chu loc tu bay va ma nguon loi giai luc gui, khong qua nguoi duyet) ---

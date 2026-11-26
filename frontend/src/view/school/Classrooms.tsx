@@ -9,6 +9,7 @@ import Analytics from "../profile/Analytics";
 import { DIFFICULTY_META } from "../problem/learningPath";
 import ProblemPicker from "../problem/ProblemPicker";
 import type { Classroom } from "../../shared/platformTypes";
+import { confirmDialog } from "../../shared/dialog";
 
 /** Khung noi bat hien ma tham gia cua lop, de giang vien doc / chep cho hoc sinh. */
 function JoinCode({ code }: { code: string }) {
@@ -163,7 +164,11 @@ function ClassroomDetail({ id, onBack }: { id: string; onBack: () => void }) {
   }
 
   async function removeClass() {
-    if (!window.confirm("Xoá lớp này? Bài tập giao, bài luyện tập và lịch học của lớp cũng bị xoá.")) return;
+    if (!(await confirmDialog({
+      title: "Xoá lớp này?",
+      message: "Bài tập giao, bài luyện tập, kỳ thi và lịch học của lớp cũng bị xoá, không khôi phục được.",
+      confirmLabel: "Xoá lớp",
+    }))) return;
     setError("");
     try { await papi.deleteClassroom(id); onBack(); } catch (e) { setError(errorText(e)); }
   }

@@ -34,4 +34,5 @@ public class Notification extends Entity {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public boolean isRead() { return read; }
     public void markRead() { this.read = true; }
+    public void markUnread() { this.read = false; }
 }

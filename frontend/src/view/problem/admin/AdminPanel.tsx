@@ -5,6 +5,7 @@ import type { Problem, Topic } from "../../../shared/types";
 import ProblemEditor from "./ProblemEditor";
 import ProblemMetaEditor from "./ProblemMetaEditor";
 import TestcaseManager from "./TestcaseManager";
+import { alertDialog, confirmDialog } from "../../../shared/dialog";
 
 /**
  * Trang quan ly bai tap: tao bai moi, sua bo test, doi chu de va do kho cua bai da co.
@@ -24,12 +25,16 @@ export default function AdminPanel({ problems, topics, onProblemsChanged, mine =
 
   /** Xoa han mot bai. May chu tu choi neu bai da co nguoi nop hoac dang nam trong ky thi / bai giao / lop. */
   async function removeProblem(p: Problem) {
-    if (!window.confirm(`Xoá bài ${p.id} - ${p.title}?\n\nĐề bài và toàn bộ test sẽ bị xoá, không khôi phục được.`)) return;
+    if (!(await confirmDialog({
+      title: `Xoá bài ${p.id} - ${p.title}?`,
+      message: "Đề bài và toàn bộ test sẽ bị xoá, không khôi phục được.",
+      confirmLabel: "Xoá bài",
+    }))) return;
     try {
       await api.deleteProblem(p.id);
       await onProblemsChanged();
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : String(e));
+      await alertDialog({ title: `Không xoá được bài ${p.id}`, message: e instanceof Error ? e.message : String(e) });
     }
   }
 

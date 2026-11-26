@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import "./notifications.css";
+import { confirmDialog } from "../../shared/dialog";
 import { papi } from "../../shared/platformApi";
-import { Muted, Page, Tag, fmtTime } from "../../shared/kit";
+import { ErrorBox, Page, fmtTime } from "../../shared/kit";
 import { useNav, type PageKey } from "../../shared/nav";
 import type { NotificationItem, NotificationList } from "../../shared/platformTypes";
 
@@ -34,67 +36,240 @@ function useOpenNotification() {
   };
 }
 
+/** Thay doi dang cho may chu: hien ngay tren giao dien, bo di khi danh sach tai lai da khop. */
+type Pending = Record<string, "read" | "unread" | "deleted">;
+
+/** "vừa xong", "5 phút trước", "3 giờ trước", "2 ngày trước"; cu hon 7 ngay thi ghi ngay gio. */
+function relativeTime(iso: string, now: number): string {
+  const at = Date.parse(iso);
+  if (Number.isNaN(at)) return fmtTime(iso);
+  const minutes = Math.floor((now - at) / 60000);
+  if (minutes < 1) return "vừa xong";
+  if (minutes < 60) return `${minutes} phút trước`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} giờ trước`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} ngày trước`;
+  return fmtTime(iso);
+}
+
 /**
  * Module 29 (thong bao): danh sach thong bao cua toi. May chu tu tao thong bao khi co bai tap
  * moi, lich hoc moi, bai luyen tap moi, binh luan duoc duyet, hoac khi giang vien gui thong bao
  * cho lop. Thong bao co trang dich thi bam vao la toi trang do.
  *
- * Danh sach do App.tsx tai lai vai giay mot lan va truyen xuong, nen thong bao moi tu hien ra
- * ma khong can tai lai trang. Mo trang nay la danh dau da doc het.
+ * Giong cac nen tang khac: mo trang KHONG tu danh dau da doc. Bam vao mot thong bao thi thong bao
+ * do thanh da doc; co nut danh dau tat ca da doc, danh dau lai chua doc, xoa tung thong bao, xoa
+ * cac thong bao da doc va xoa tat ca (hai muc sau nam trong menu "...").
+ *
+ * Danh sach do App.tsx tai lai vai giay mot lan va truyen xuong; sau moi thao tac goi onChanged
+ * de tai lai ngay (ca so thong bao chua doc tren thanh menu).
  */
-export default function Notifications({ data, onRead }: { data: NotificationList | null; onRead: () => void }) {
+export default function Notifications({ data, onChanged }: { data: NotificationList | null; onChanged: () => void }) {
   const open = useOpenNotification();
-  const [hover, setHover] = useState<string | null>(null);
-  // Thong bao chua doc luc minh nhin thay o trang nay: giu nhan "Moi" cho toi khi roi trang,
-  // du ngay sau do may chu da danh dau la da doc.
-  const freshIds = useRef(new Set<string>());
-  for (const item of data?.items ?? []) {
-    if (!item.read) freshIds.current.add(item.id);
+  const [onlyUnread, setOnlyUnread] = useState(false);
+  const [pending, setPending] = useState<Pending>({});
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+
+  // Cap nhat "x phut truoc" moi phut.
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  // Thay doi da duoc may chu ghi nhan (danh sach moi da khop) thi bo khoi pending.
+  useEffect(() => {
+    if (!data) return;
+    setPending((current) => {
+      const next: Pending = {};
+      for (const [id, change] of Object.entries(current)) {
+        const item = data.items.find((n) => n.id === id);
+        const settled = change === "deleted" ? !item : item !== undefined && item.read === (change === "read");
+        if (!settled) next[id] = change;
+      }
+      return Object.keys(next).length === Object.keys(current).length ? current : next;
+    });
+  }, [data]);
+
+  const items = (data?.items ?? [])
+    .filter((n) => pending[n.id] !== "deleted")
+    .map((n) => (pending[n.id] ? { ...n, read: pending[n.id] === "read" } : n));
+  const unread = items.filter((n) => !n.read).length;
+  const shown = onlyUnread ? items.filter((n) => !n.read) : items;
+  const readIds = items.filter((n) => n.read).map((n) => n.id);
+  const unreadIds = items.filter((n) => !n.read).map((n) => n.id);
+
+  async function change(ids: string[], kind: Pending[string], work: () => Promise<unknown>) {
+    setError("");
+    setPending((current) => {
+      const next = { ...current };
+      for (const id of ids) next[id] = kind;
+      return next;
+    });
+    try {
+      await work();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setPending((current) => {
+        const next = { ...current };
+        for (const id of ids) delete next[id];
+        return next;
+      });
+    }
+    onChanged();
   }
 
-  useEffect(() => {
-    if (!data || data.unread === 0) return;
-    papi.markNotificationsRead().then(onRead).catch(() => undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data]);
+  async function bulk(ids: string[], kind: Pending[string], work: () => Promise<unknown>) {
+    if (busy || ids.length === 0) return;
+    setBusy(true);
+    try { await change(ids, kind, work); } finally { setBusy(false); }
+  }
+
+  function clickItem(n: NotificationItem) {
+    if (!n.read) void change([n.id], "read", () => papi.setNotificationRead(n.id, true));
+    if (targetOf(n.link)) open(n);
+  }
 
   return (
     <Page title="Thông báo">
-      {data === null && <Muted>Đang tải thông báo...</Muted>}
-      {data?.items.length === 0 && <Muted>Bạn chưa có thông báo nào.</Muted>}
-      {(data?.items ?? []).map((n) => {
-        const target = targetOf(n.link);
-        const active = target !== null && hover === n.id;
-        return (
-          <div
-            key={n.id}
-            role={target ? "button" : undefined}
-            tabIndex={target ? 0 : undefined}
-            onClick={target ? () => open(n) : undefined}
-            onKeyDown={target ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(n); } } : undefined}
-            onMouseEnter={() => setHover(n.id)} onMouseLeave={() => setHover(null)}
-            title={target ? `Mở ${target.label}` : undefined}
-            style={{
-              background: active ? "var(--color-table-row-alt)" : "#fff", borderRadius: 8, padding: "16px 20px",
-              border: `1px solid ${active ? "var(--color-accent)" : "#E0E0E0"}`,
-              cursor: target ? "pointer" : "default", transition: "background 0.1s, border-color 0.1s",
-            }}
-          >
-            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-              <b style={{ fontSize: 14, color: "#212121" }}>{n.title}</b>
-              {freshIds.current.has(n.id) && <Tag color="red">Mới</Tag>}
-              <span style={{ flex: 1 }} />
-              <span style={{ fontSize: 12, color: "#9E9E9E" }}>{fmtTime(n.createdAt)}</span>
-            </div>
-            <div style={{ fontSize: 13.5, color: "#616161", marginTop: 4, whiteSpace: "pre-wrap" }}>{n.body}</div>
-            {target && (
-              <div style={{ marginTop: 8, fontSize: 12.5, fontWeight: 600, color: "var(--color-red)" }}>Mở {target.label} →</div>
-            )}
+      <ErrorBox text={error} />
+      <div className="ntf-panel">
+        <div className="ntf-toolbar">
+          <div className="ntf-tabs" role="tablist" aria-label="Lọc thông báo">
+            <button role="tab" aria-selected={!onlyUnread} className="ntf-tab" onClick={() => setOnlyUnread(false)}>
+              Tất cả <span className="ntf-count">{items.length}</span>
+            </button>
+            <button role="tab" aria-selected={onlyUnread} className="ntf-tab" onClick={() => setOnlyUnread(true)}>
+              Chưa đọc {unread > 0 && <span className="ntf-count ntf-count-accent">{unread}</span>}
+            </button>
           </div>
-        );
-      })}
+          <div className="ntf-toolbar-actions">
+            <button className="ntf-text-btn" disabled={busy || unread === 0}
+              onClick={() => void bulk(unreadIds, "read", () => papi.markNotificationsRead())}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="m1.5 8.5 3 3 6-7" /><path d="m7.5 11.5 1 0 6-7" />
+              </svg>
+              Đánh dấu tất cả đã đọc
+            </button>
+            <div className="ntf-menu-wrap">
+              <button className="ntf-icon-btn" aria-label="Thêm thao tác" title="Thêm thao tác" aria-haspopup="menu" aria-expanded={menuOpen}
+                disabled={items.length === 0} onClick={() => setMenuOpen((v) => !v)}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                  <circle cx="3" cy="8" r="1.4" /><circle cx="8" cy="8" r="1.4" /><circle cx="13" cy="8" r="1.4" />
+                </svg>
+              </button>
+              {menuOpen && (
+                <Menu onClose={() => setMenuOpen(false)}>
+                  <button role="menuitem" className="ntf-menu-item" disabled={busy || readIds.length === 0}
+                    onClick={() => { setMenuOpen(false); void bulk(readIds, "deleted", () => papi.deleteNotifications(true)); }}>
+                    <TrashIcon />Xoá thông báo đã đọc
+                    <span className="ntf-menu-hint">{readIds.length}</span>
+                  </button>
+                  <div className="ntf-menu-sep" />
+                  <button role="menuitem" className="ntf-menu-item ntf-menu-danger" disabled={busy}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      void confirmDialog({
+                        title: "Xoá tất cả thông báo?",
+                        message: `${items.length} thông báo sẽ bị xoá vĩnh viễn và không khôi phục được.`,
+                        confirmLabel: "Xoá tất cả",
+                      }).then((ok) => { if (ok) void bulk(items.map((n) => n.id), "deleted", () => papi.deleteNotifications(false)); });
+                    }}>
+                    <TrashIcon />Xoá tất cả thông báo
+                  </button>
+                </Menu>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {data === null && <div className="ntf-empty">Đang tải thông báo...</div>}
+        {data !== null && shown.length === 0 && (
+          <div className="ntf-empty">
+            <svg width="36" height="36" viewBox="0 0 16 16" fill="none" stroke="#BDBDBD" strokeWidth="1" aria-hidden="true">
+              <path d="M4 6a4 4 0 0 1 8 0c0 4 2 5 2 5H2s2-1 2-5" /><path d="M6.5 13a1.5 1.5 0 0 0 3 0" />
+            </svg>
+            <div>{onlyUnread && items.length > 0 ? "Bạn đã đọc hết thông báo." : "Bạn chưa có thông báo nào."}</div>
+          </div>
+        )}
+
+        {shown.map((n) => {
+          const target = targetOf(n.link);
+          return (
+            <div
+              key={n.id}
+              className={`ntf-row${n.read ? "" : " ntf-unread"}`}
+              role="button"
+              tabIndex={0}
+              onClick={() => clickItem(n)}
+              onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); clickItem(n); } }}
+            >
+              <span className="ntf-dot" aria-label={n.read ? undefined : "Chưa đọc"} />
+              <div className="ntf-body">
+                <div className="ntf-title">{n.title}</div>
+                <div className="ntf-text">{n.body}</div>
+                <div className="ntf-meta">
+                  <span title={fmtTime(n.createdAt)}>{relativeTime(n.createdAt, now)}</span>
+                  {target && <><span aria-hidden="true">·</span><span className="ntf-link">Mở {target.label}</span></>}
+                </div>
+              </div>
+              <div className="ntf-actions">
+                <IconBtn label={n.read ? "Đánh dấu chưa đọc" : "Đánh dấu đã đọc"}
+                  onClick={() => void change([n.id], n.read ? "unread" : "read", () => papi.setNotificationRead(n.id, !n.read))}>
+                  {n.read
+                    ? <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true"><rect x="2" y="3.5" width="12" height="9" rx="1.5" /><path d="m2.5 4.5 5.5 4 5.5-4" /></svg>
+                    : <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m3 8.5 3 3 7-7" /></svg>}
+                </IconBtn>
+                <IconBtn label="Xoá thông báo" onClick={() => void change([n.id], "deleted", () => papi.deleteNotification(n.id))}>
+                  <TrashIcon />
+                </IconBtn>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
     </Page>
   );
+}
+
+function TrashIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2.5 4.5h11M6.5 4.5V3h3v1.5M4 4.5l.7 8.5h6.6l.7-8.5M6.8 7v4M9.2 7v4" />
+    </svg>
+  );
+}
+
+/** Nut bieu tuong tren mot thong bao; khong lam mo thong bao khi bam. */
+function IconBtn({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
+  return (
+    <button className="ntf-icon-btn" aria-label={label} title={label}
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      onKeyDown={(e) => e.stopPropagation()}>
+      {children}
+    </button>
+  );
+}
+
+/** Menu tha xuong: dong khi bam ra ngoai hoac nhan Esc. */
+function Menu({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => {
+      const wrap = ref.current?.parentElement;
+      if (wrap && !wrap.contains(e.target as Node)) onClose();
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    ref.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
+    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
+  }, [onClose]);
+  return <div ref={ref} role="menu" className="ntf-menu">{children}</div>;
 }
 
 /**

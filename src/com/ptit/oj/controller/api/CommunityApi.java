@@ -59,6 +59,27 @@ public class CommunityApi extends ApiModule {
             req.sendOk();
             return true;
         }
+        // Xoa het thong bao cua minh; ?only=read thi chi xoa nhung thong bao da doc.
+        if (req.is("DELETE", "notifications")) {
+            int removed = community.deleteNotifications(req.user().getId(), "read".equals(req.query("only")));
+            req.send(Json.obj().put("ok", true).put("removed", removed).build());
+            return true;
+        }
+        if (req.is("POST", "notifications", "*", "read")) {
+            community.setRead(req.user().getId(), req.arg(0), true);
+            req.sendOk();
+            return true;
+        }
+        if (req.is("POST", "notifications", "*", "unread")) {
+            community.setRead(req.user().getId(), req.arg(0), false);
+            req.sendOk();
+            return true;
+        }
+        if (req.is("DELETE", "notifications", "*")) {
+            community.deleteNotification(req.user().getId(), req.arg(0));
+            req.sendOk();
+            return true;
+        }
         return false;
     }
 

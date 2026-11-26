@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { papi } from "../../shared/platformApi";
 import { Btn, Card, ErrorBox, Field, INPUT, Page, Row, Table, errorText, useLoad } from "../../shared/kit";
+import { confirmDialog } from "../../shared/dialog";
 
 /** Module 2 (quan ly trung tam, to chuc): moi to chuc gom nhieu lop hoc. Chi quan tri vien. */
 export default function Organizations() {
@@ -27,7 +28,7 @@ export default function Organizations() {
       <Table head={["Mã", "Tên", "Địa chỉ", "Mô tả", "Số lớp", ""]} empty="Chưa có tổ chức nào."
         rows={(list.data ?? []).map((o) => [
           o.id, <b>{o.name}</b>, o.address || "-", o.description || "-", o.classCount,
-          <Btn small kind="danger" onClick={() => { if (window.confirm(`Xoá tổ chức "${o.name}"?`)) void act(() => papi.deleteOrganization(o.id)); }}>Xoá</Btn>,
+          <Btn small kind="danger" onClick={() => void confirmDialog({ title: `Xoá tổ chức "${o.name}"?`, confirmLabel: "Xoá tổ chức" }).then((ok) => { if (ok) void act(() => papi.deleteOrganization(o.id)); })}>Xoá</Btn>,
         ])} />
     </Page>
   );

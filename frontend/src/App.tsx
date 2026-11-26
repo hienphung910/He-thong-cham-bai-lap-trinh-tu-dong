@@ -523,7 +523,7 @@ function AppShell() {
                 {page === "Analytics" && <Analytics />}
                 {page === "Account" && <MyAccount />}
                 {page === "Chat" && <ChatPage />}
-                {page === "Notifications" && <Notifications data={notifications} onRead={loadNotifications} />}
+                {page === "Notifications" && <Notifications data={notifications} onChanged={loadNotifications} />}
                 {page === "Submissions" && <Submissions reloadKey={reloadKey} />}
                 {page === "MySubmissions" && <MySubmissions />}
                 {page === "Leaderboard" && <Leaderboard reloadKey={reloadKey} problems={sharedProblems} />}

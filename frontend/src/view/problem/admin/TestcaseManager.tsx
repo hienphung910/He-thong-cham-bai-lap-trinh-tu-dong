@@ -3,6 +3,7 @@ import { papi } from "../../../shared/platformApi";
 import { Btn, ErrorBox, Field, INPUT, Modal, Row, TEXTAREA, Table, Tag, errorText, useLoad } from "../../../shared/kit";
 import type { Problem } from "../../../shared/types";
 import type { TestcaseItem } from "../../../shared/platformTypes";
+import { confirmDialog } from "../../../shared/dialog";
 
 const MONO: React.CSSProperties = { fontFamily: "var(--font-mono)", fontSize: 12, whiteSpace: "pre-wrap", maxHeight: 90, overflow: "auto", display: "block" };
 
@@ -34,7 +35,7 @@ export default function TestcaseManager({ problem, onClose }: { problem: Problem
           <code style={MONO}>{t.input}</code>,
           <code style={MONO}>{t.output}</code>,
           <Btn small kind="danger" disabled={tests.length <= 1}
-            onClick={() => { if (window.confirm(`Xoá test "${t.name}"?`)) void act(() => papi.deleteTestcase(problem.id, t.name)); }}>Xoá</Btn>,
+            onClick={() => void confirmDialog({ title: `Xoá test "${t.name}"?`, confirmLabel: "Xoá test" }).then((ok) => { if (ok) void act(() => papi.deleteTestcase(problem.id, t.name)); })}>Xoá</Btn>,
         ])} />
 
       <b style={{ fontSize: 13 }}>Thêm test</b>

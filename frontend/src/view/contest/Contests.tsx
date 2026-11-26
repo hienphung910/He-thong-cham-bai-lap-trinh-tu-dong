@@ -8,6 +8,7 @@ import type { Contest } from "../../shared/platformTypes";
 import { IpList, ProctorPanel } from "./Proctor";
 import ProblemPicker from "../problem/ProblemPicker";
 import ProblemField from "../problem/ProblemField";
+import { confirmDialog } from "../../shared/dialog";
 
 const STATUS: Record<Contest["status"], { label: string; color: string }> = {
   UPCOMING: { label: "Sắp diễn ra", color: "blue" },
@@ -71,7 +72,7 @@ export default function Contests() {
           <Tag color={STATUS[c.status].color}>{STATUS[c.status].label}</Tag>,
           <div style={{ display: "flex", gap: 6 }}>
             <Btn small onClick={() => setOpenId(c.id)}>Xem</Btn>
-            {c.canManage && <Btn small kind="danger" onClick={() => { if (window.confirm(`Xoá kỳ thi "${c.title}"?`)) void act(() => papi.deleteContest(c.id)); }}>Xoá</Btn>}
+            {c.canManage && <Btn small kind="danger" onClick={() => void confirmDialog({ title: `Xoá kỳ thi "${c.title}"?`, message: "Bảng xếp hạng và nhật ký giám sát của kỳ thi cũng bị xoá.", confirmLabel: "Xoá kỳ thi" }).then((ok) => { if (ok) void act(() => papi.deleteContest(c.id)); })}>Xoá</Btn>}
           </div>,
         ])} />
     </Page>
@@ -191,9 +192,11 @@ function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
                 </Btn>
                 {c.status === "RUNNING" && (
                   <Btn kind="danger" onClick={() => {
-                    if (window.confirm(`Kết thúc kỳ thi "${c.title}" ngay bây giờ? Bài nộp từ lúc này sẽ không được tính và không mở lại được.`)) {
-                      void edit(() => papi.endContest(c.id));
-                    }
+                    void confirmDialog({
+                      title: `Kết thúc kỳ thi "${c.title}" ngay bây giờ?`,
+                      message: "Bài nộp từ lúc này sẽ không được tính vào kỳ thi. Kỳ thi đã kết thúc thì không mở lại được.",
+                      confirmLabel: "Kết thúc kỳ thi",
+                    }).then((ok) => { if (ok) void edit(() => papi.endContest(c.id)); });
                   }}>Kết thúc kỳ thi</Btn>
                 )}
               </Row>

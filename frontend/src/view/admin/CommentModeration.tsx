@@ -2,6 +2,7 @@ import { useState } from "react";
 import { papi } from "../../shared/platformApi";
 import { Btn, ErrorBox, Page, Table, errorText, fmtTime, useLoad } from "../../shared/kit";
 import ProblemChip from "../../shared/ProblemChip";
+import { confirmDialog } from "../../shared/dialog";
 
 /**
  * Quan ly binh luan duoi cac bai tap. Binh luan khong con qua buoc duyet: may chu loc tu bay va ma
@@ -17,7 +18,7 @@ export default function CommentModeration() {
     || c.authorName.toLowerCase().includes(q) || c.problemId.toLowerCase().includes(q));
 
   async function remove(id: string) {
-    if (!window.confirm("Xoá bình luận này? Người viết sẽ nhận được thông báo.")) return;
+    if (!(await confirmDialog({ title: "Xoá bình luận này?", message: "Người viết sẽ nhận được thông báo.", confirmLabel: "Xoá bình luận" }))) return;
     setError("");
     try { await papi.deleteComment(id); list.reload(); } catch (e) { setError(errorText(e)); }
   }

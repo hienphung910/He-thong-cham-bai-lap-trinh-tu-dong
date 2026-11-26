@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { papi } from "../../shared/platformApi";
 import { Btn, Card, ErrorBox, Field, INPUT, Modal, Muted, Page, Row, Table, Tag, errorText, fmtTime, localDateTime, useLoad } from "../../shared/kit";
 import type { Meeting } from "../../shared/platformTypes";
+import { confirmDialog } from "../../shared/dialog";
 
 const PHASE: Record<Meeting["phase"], { label: string; color: string; order: number }> = {
   OPEN: { label: "Đang diễn ra", color: "green", order: 0 },
@@ -98,7 +99,7 @@ export default function Schedule() {
               {m.phase !== "ENDED" && (
                 <Btn small kind="ghost" onClick={() => setEditing({ meeting: m, link: m.link })}>{m.link ? "Sửa link" : "Dán link"}</Btn>
               )}
-              <Btn small kind="danger" onClick={() => { if (window.confirm(`Xoá lịch học "${m.title}"?`)) void act(() => papi.deleteMeeting(m.id)); }}>Xoá</Btn>
+              <Btn small kind="danger" onClick={() => void confirmDialog({ title: `Xoá lịch học "${m.title}"?`, confirmLabel: "Xoá lịch học" }).then((ok) => { if (ok) void act(() => papi.deleteMeeting(m.id)); })}>Xoá</Btn>
             </div>
           ) : "",
         ])} />

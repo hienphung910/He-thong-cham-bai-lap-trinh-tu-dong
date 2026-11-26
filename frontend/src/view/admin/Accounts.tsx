@@ -3,6 +3,7 @@ import { papi } from "../../shared/platformApi";
 import { Btn, Card, ErrorBox, INPUT, Modal, Page, Table, Tag, errorText, useLoad } from "../../shared/kit";
 import type { BasicUser } from "../../shared/platformTypes";
 import { useAuth } from "../account/auth";
+import { confirmDialog } from "../../shared/dialog";
 
 const ROLE_COLOR: Record<string, string> = { ADMIN: "red", TEACHER: "purple", STUDENT: "blue" };
 const ROLE_LABEL: Record<string, string> = { ADMIN: "Quản trị viên", TEACHER: "Giảng viên", STUDENT: "Học sinh" };
@@ -72,10 +73,10 @@ export default function Accounts() {
               <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
                 <Btn small onClick={() => void decide(() => papi.approveUser(u.id))}>{isPending(u) ? "Duyệt" : "Mở khoá"}</Btn>
                 <Btn small kind="danger" onClick={() => {
-                  const question = isPending(u)
-                    ? `Từ chối đăng ký giảng viên của @${u.username}? Tài khoản sẽ bị xoá.`
-                    : `Xoá hẳn tài khoản đang khoá @${u.username}?\n\nBài nộp của tài khoản này cũng bị xoá, không khôi phục được.`;
-                  if (window.confirm(question)) void decide(() => papi.rejectUser(u.id));
+                  const ask = isPending(u)
+                    ? { title: `Từ chối đăng ký của @${u.username}?`, message: "Tài khoản giảng viên đang chờ duyệt này sẽ bị xoá.", confirmLabel: "Từ chối" }
+                    : { title: `Xoá hẳn tài khoản @${u.username}?`, message: "Bài nộp của tài khoản này cũng bị xoá, không khôi phục được.", confirmLabel: "Xoá tài khoản" };
+                  void confirmDialog(ask).then((ok) => { if (ok) void decide(() => papi.rejectUser(u.id)); });
                 }}>{isPending(u) ? "Từ chối" : "Xoá"}</Btn>
               </div>,
             ])} />
@@ -108,21 +109,27 @@ export default function Accounts() {
               <select title="Đổi vai trò" style={{ ...INPUT, width: 132, height: 28, fontSize: 12 }} value={u.role}
                 onChange={(e) => {
                   const role = e.target.value;
-                  if (window.confirm(`Đổi vai trò của @${u.username} thành ${ROLE_LABEL[role]}?\n\nTài khoản sẽ bị đăng xuất và rời khỏi các lớp đang tham gia.`)) {
-                    void decide(() => papi.setUserRole(u.id, role));
-                  }
+                  void confirmDialog({
+                    title: `Đổi vai trò của @${u.username} thành ${ROLE_LABEL[role]}?`,
+                    message: "Tài khoản sẽ bị đăng xuất và rời khỏi các lớp đang tham gia.",
+                    confirmLabel: "Đổi vai trò", tone: "primary",
+                  }).then((ok) => { if (ok) void decide(() => papi.setUserRole(u.id, role)); });
                 }}>
                 {Object.keys(ROLE_LABEL).map((role) => <option key={role} value={role}>{ROLE_LABEL[role]}</option>)}
               </select>
               <Btn small kind="ghost" onClick={() => {
-                if (window.confirm(`Khoá tài khoản @${u.username}? Tài khoản bị đăng xuất ngay và không đăng nhập lại được cho tới khi bạn kích hoạt lại.`)) {
-                  void decide(() => papi.lockUser(u.id));
-                }
+                void confirmDialog({
+                  title: `Khoá tài khoản @${u.username}?`,
+                  message: "Tài khoản bị đăng xuất ngay và không đăng nhập lại được cho tới khi bạn kích hoạt lại.",
+                  confirmLabel: "Khoá tài khoản",
+                }).then((ok) => { if (ok) void decide(() => papi.lockUser(u.id)); });
               }}>Khoá</Btn>
               <Btn small kind="danger" onClick={() => {
-                if (window.confirm(`Xoá hẳn tài khoản @${u.username}?\n\nBài nộp của tài khoản này cũng bị xoá, không khôi phục được.`)) {
-                  void decide(() => papi.deleteUser(u.id));
-                }
+                void confirmDialog({
+                  title: `Xoá hẳn tài khoản @${u.username}?`,
+                  message: "Bài nộp của tài khoản này cũng bị xoá, không khôi phục được.",
+                  confirmLabel: "Xoá tài khoản",
+                }).then((ok) => { if (ok) void decide(() => papi.deleteUser(u.id)); });
               }}>Xoá</Btn>
             </div>
           ),

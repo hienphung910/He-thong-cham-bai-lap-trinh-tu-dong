@@ -81,6 +81,31 @@ public class CommunityService {
         }
     }
 
+    /** Danh dau mot thong bao CUA MINH la da doc / chua doc. Thong bao cua nguoi khac coi nhu khong co. */
+    public synchronized void setRead(String userId, String notificationId, boolean read) {
+        Notification n = ownNotification(userId, notificationId);
+        if (read) n.markRead(); else n.markUnread();
+    }
+
+    /** Xoa mot thong bao cua minh. */
+    public synchronized void deleteNotification(String userId, String notificationId) {
+        notifications.remove(ownNotification(userId, notificationId));
+    }
+
+    /** Xoa moi thong bao cua minh; onlyRead = true thi chi xoa thong bao da doc. Tra ve so thong bao da xoa. */
+    public synchronized int deleteNotifications(String userId, boolean onlyRead) {
+        int before = notifications.size();
+        notifications.removeIf(n -> n.getUserId().equals(userId) && (!onlyRead || n.isRead()));
+        return before - notifications.size();
+    }
+
+    private Notification ownNotification(String userId, String notificationId) {
+        for (Notification n : notifications) {
+            if (n.getId().equals(notificationId) && n.getUserId().equals(userId)) return n;
+        }
+        throw ApiException.notFound("Không có thông báo này");
+    }
+
     // ---------------------------------------------------------------- chat
 
     public synchronized ChatMessage postMessage(String channel, User sender, String text) {

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { papi } from "../../shared/platformApi";
 import { Btn, ErrorBox, Muted, TEXTAREA, errorText, fmtTime, useLoad } from "../../shared/kit";
+import { confirmDialog } from "../../shared/dialog";
 
 const MAX_LENGTH = 1000;
 
@@ -31,7 +32,7 @@ export default function ProblemComments({ problemId }: { problemId: string }) {
   }
 
   async function remove(id: string) {
-    if (!window.confirm("Xoá bình luận này?")) return;
+    if (!(await confirmDialog({ title: "Xoá bình luận này?", confirmLabel: "Xoá bình luận" }))) return;
     setError("");
     try { await papi.deleteComment(id); list.reload(); } catch (e) { setError(errorText(e)); }
   }
