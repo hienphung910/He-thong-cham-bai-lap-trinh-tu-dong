@@ -110,6 +110,27 @@ CREATE TABLE IF NOT EXISTS test_case_results (
   COLLATE = utf8mb4_0900_ai_ci;
 
 -- ---------------------------------------------------------------------
+--  user_sessions - phien dang nhap (tao boi MySqlSessionStore luc khoi dong)
+-- ---------------------------------------------------------------------
+--  Luu BAN BAM SHA-256 cua token, khong bao gio luu token goc: doc duoc bang
+--  nay cung khong dang nhap duoc bang phien cua nguoi khac. Thoi gian la mili
+--  giay epoch. Het han truot: "ghi nho dang nhap" 30 ngay, khong ghi nho 12 gio
+--  ke tu lan dung gan nhat. Deploy lai may chu khong dang xuat ai.
+CREATE TABLE IF NOT EXISTS user_sessions (
+    token_hash  CHAR(64)     NOT NULL,
+    user_id     VARCHAR(64)  NOT NULL,
+    remember    TINYINT(1)   NOT NULL DEFAULT 0,
+    created_ms  BIGINT       NOT NULL,
+    expires_ms  BIGINT       NOT NULL,
+    PRIMARY KEY (token_hash),
+    KEY idx_user_sessions_user (user_id),
+    KEY idx_user_sessions_expires (expires_ms),
+    CONSTRAINT fk_user_sessions_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE = InnoDB
+  DEFAULT CHARACTER SET = utf8mb4
+  COLLATE = utf8mb4_0900_ai_ci;
+
+-- ---------------------------------------------------------------------
 --  user_stats - so bai da giai, tinh lai tu du lieu that
 -- ---------------------------------------------------------------------
 --  CO Y khong them cot solved_count vao bang users: mot cot nhu the phai

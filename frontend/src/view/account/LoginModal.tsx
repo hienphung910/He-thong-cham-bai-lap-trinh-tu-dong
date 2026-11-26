@@ -30,6 +30,9 @@ function formatSize(bytes: number): string {
 export default function LoginModal() {
   const { login, register } = useAuth();
   const [mode, setMode] = useState<Mode>("login");
+  // "Ghi nho dang nhap": mac dinh bat nhu da so nen tang; tat thi dong tab la dang xuat.
+  const [remember, setRemember] = useState(true);
+  const [rememberFocus, setRememberFocus] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -121,7 +124,7 @@ export default function LoginModal() {
       if (!username || !password) { setError("Hãy nhập tên đăng nhập và mật khẩu."); return; }
       if (siteKey && !captcha) { setError("Hãy hoàn thành bước xác minh CAPTCHA."); return; }
       setBusy(true);
-      try { await login(username.trim(), password, captcha); }
+      try { await login(username.trim(), password, captcha, remember); }
       catch (e2) {
         setError(e2 instanceof Error ? e2.message : String(e2));
         // Token vua gui da bi dung: lay token moi cho lan thu sau. (Dang nhap thanh cong thi form nay dong luon.)
@@ -330,9 +333,36 @@ export default function LoginModal() {
               </button>
             </div>
             <FieldError text={shown("password")} />
-            {mode === "login" && canReset && (
-              <div style={{ textAlign: "right", marginTop: 6 }}>
-                <button type="button" onClick={() => switchMode("forgot")} style={{ background: "none", border: "none", padding: 0, fontSize: 12, color: "var(--color-red)", cursor: "pointer" }}>Quên mật khẩu?</button>
+            {mode === "login" && (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 12, minHeight: 22 }}>
+                {/* O danh dau tu ve: input that van giu (an di) de ban phim, trinh doc man hinh dung duoc. */}
+                <label style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: 8, fontSize: 13, color: "#424242", cursor: "pointer", userSelect: "none" }}>
+                  <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)}
+                    // Vien sang chi hien khi di toi bang ban phim (Tab), khong hien sau khi bam chuot - nhu :focus-visible.
+                    onFocus={(e) => setRememberFocus(e.currentTarget.matches(":focus-visible"))} onBlur={() => setRememberFocus(false)}
+                    style={{ position: "absolute", opacity: 0, width: 18, height: 18, margin: 0, cursor: "pointer" }} />
+                  <span aria-hidden="true" style={{
+                    width: 18, height: 18, flexShrink: 0, boxSizing: "border-box", borderRadius: 5,
+                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                    border: remember ? "1px solid var(--color-accent-dark)" : "1.5px solid #BDBDBD",
+                    background: remember ? "var(--color-accent)" : "#fff",
+                    boxShadow: rememberFocus ? "0 0 0 3px rgba(247, 147, 30, 0.25)" : "none",
+                    transition: "background-color 120ms, border-color 120ms, box-shadow 120ms",
+                  }}>
+                    {remember && (
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="var(--color-on-accent)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2.5 6.3 4.9 8.7 9.5 3.5" />
+                      </svg>
+                    )}
+                  </span>
+                  Ghi nhớ đăng nhập
+                </label>
+                {canReset && (
+                  <button type="button" onClick={() => switchMode("forgot")} style={{
+                    background: "none", border: "none", padding: 0, fontSize: 13, fontWeight: 600,
+                    color: "var(--color-red)", cursor: "pointer",
+                  }}>Quên mật khẩu?</button>
+                )}
               </div>
             )}
           </div>}

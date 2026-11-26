@@ -23,6 +23,7 @@ import java.util.List;
  *   PUT  /api/admin/users/{id}/role    - doi vai tro
  *   DELETE /api/admin/users/{id}       - xoa han tai khoan
  *   POST /api/auth/password    - doi mat khau cua chinh minh
+ *   POST /api/auth/logout-others - dang xuat moi thiet bi khac, giu phien dang dung
  *   PUT  /api/auth/email       - doi email khoi phuc cua chinh minh (phai nhap mat khau hien tai);
  *                                email moi chi co hieu luc sau khi xac minh qua thu
  *   POST /api/auth/email/resend - gui lai thu xac minh cho email dang cho
@@ -127,6 +128,12 @@ public class AccountApi extends ApiModule {
             platform.getLimiter().reset(passwordTryKey(user));
             // Lien ket dat lai mat khau xin truoc do khong con dung duoc nua.
             platform.getResets().revokeUser(user.getId());
+            req.sendOk();
+            return true;
+        }
+        if (req.is("POST", "auth", "logout-others")) {
+            User user = req.user();
+            judge.getAuth().logoutOthers(user, req.token());
             req.sendOk();
             return true;
         }

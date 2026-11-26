@@ -22,6 +22,8 @@ export const papi = {
   userEvidence: (id: string) => request<{ contentType: string; data: string }>(`/api/admin/users/${enc(id)}/evidence`),
   changePassword: (oldPassword: string, newPassword: string) =>
     postJson<Ok>("/api/auth/password", { oldPassword, newPassword }),
+  /** Dang xuat moi thiet bi khac, giu phien dang dung. */
+  logoutOthers: () => postJson<Ok>("/api/auth/logout-others", {}),
   /** Doi email khoi phuc cua chinh minh; phai nhap mat khau hien tai. */
   /** pendingEmail khac "": email moi con cho xac minh qua thu, email cu (neu co) van dang dung. */
   changeEmail: (password: string, email: string) =>

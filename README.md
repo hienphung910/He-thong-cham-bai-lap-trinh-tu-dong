@@ -64,7 +64,7 @@ Mỗi bài có phần bình luận ở cuối trang. Bình luận và tin nhắn
 
 ## Bảo mật
 
-Mật khẩu được băm bằng PBKDF2-HMAC-SHA256 với salt riêng cho từng tài khoản. Phiên đăng nhập hết hạn sau 8 giờ, và đổi mật khẩu sẽ đăng xuất các phiên khác. Đăng nhập sai nhiều lần thì bị tạm chặn. Form đăng nhập và đăng ký có CAPTCHA Cloudflare Turnstile, quên mật khẩu thì lấy lại qua email. Bài nộp chạy bằng một tài khoản hệ thống riêng, không đọc được thư mục chứa test ẩn. Mỗi ngôn ngữ còn bị giới hạn riêng về số tiến trình, số luồng và bộ nhớ. Bài Java chạy dưới Security Manager, bài JavaScript chạy ở chế độ phân quyền của Node, nên không gọi được chương trình khác hay đọc file ngoài thư mục bài.
+Mật khẩu được băm bằng PBKDF2-HMAC-SHA256 với salt riêng cho từng tài khoản. Phiên đăng nhập lưu trong cơ sở dữ liệu (chỉ lưu bản băm của token) nên deploy lại không ai bị đăng xuất. Tích "Ghi nhớ đăng nhập" thì phiên giữ 30 ngày kể từ lần dùng gần nhất, không tích thì đóng tab là đăng xuất. Đổi mật khẩu sẽ đăng xuất các phiên khác, và người dùng có thể tự đăng xuất các thiết bị khác. Đăng nhập sai nhiều lần thì bị tạm chặn. Form đăng nhập và đăng ký có CAPTCHA Cloudflare Turnstile, quên mật khẩu thì lấy lại qua email. Bài nộp chạy bằng một tài khoản hệ thống riêng, không đọc được thư mục chứa test ẩn. Mỗi ngôn ngữ còn bị giới hạn riêng về số tiến trình, số luồng và bộ nhớ. Bài Java chạy dưới Security Manager, bài JavaScript chạy ở chế độ phân quyền của Node, nên không gọi được chương trình khác hay đọc file ngoài thư mục bài.
 
 ## Công nghệ
 

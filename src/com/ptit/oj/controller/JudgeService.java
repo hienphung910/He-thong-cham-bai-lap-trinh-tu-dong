@@ -5,7 +5,10 @@ import com.ptit.oj.controller.judge.Language;
 import com.ptit.oj.controller.judge.LanguageRegistry;
 import com.ptit.oj.dao.InMemoryRepository;
 import com.ptit.oj.dao.InMemorySubmissionRepository;
+import com.ptit.oj.dao.InMemorySessionStore;
 import com.ptit.oj.dao.InMemoryUserRepository;
+import com.ptit.oj.dao.MySqlSessionStore;
+import com.ptit.oj.dao.SessionStore;
 import com.ptit.oj.dao.MySqlDatabaseManager;
 import com.ptit.oj.dao.MySqlSchemaInitializer;
 import com.ptit.oj.dao.MySqlSubmissionRepository;
@@ -59,13 +62,13 @@ public class JudgeService {
     private final List<Topic> topics = new CopyOnWriteArrayList<>();
 
     public JudgeService(Path dataDir, Repository<Problem> problems, UserRepository users,
-                        SubmissionRepository submissions, LanguageRegistry languages) {
+                        SubmissionRepository submissions, LanguageRegistry languages, SessionStore sessionStore) {
         this.dataDir = dataDir;
         this.problems = problems;
         this.users = users;
         this.submissions = submissions;
         this.languages = languages;
-        this.auth = new AuthService(users, new PasswordService(), new SessionService());
+        this.auth = new AuthService(users, new PasswordService(), new SessionService(sessionStore));
         this.problemAdmin = new ProblemAdminService(problems, dataDir.resolve("problems"),
                 id -> findTopic(id).isPresent());
         this.scoreboard = new ScoreboardService(submissions, problems);
@@ -84,7 +87,8 @@ public class JudgeService {
         MySqlUserRepository users = new MySqlUserRepository(database);
         MySqlSubmissionRepository submissions =
                 new MySqlSubmissionRepository(database, problems, users, languages);
-        return new JudgeService(dataDir, problems, users, submissions, languages);
+        // Phien dang nhap cung nam trong MySQL: deploy lai may chu khong dang xuat ai.
+        return new JudgeService(dataDir, problems, users, submissions, languages, new MySqlSessionStore(database));
     }
 
     /** Che do --no-db: day du tinh nang nhung moi thu nam trong RAM, tat may chu la mat. */
@@ -92,7 +96,8 @@ public class JudgeService {
         InMemoryUserRepository users = new InMemoryUserRepository();
         InMemorySubmissionRepository submissions = new InMemorySubmissionRepository();
         users.setSubmissionRepository(submissions);
-        return new JudgeService(dataDir, new InMemoryRepository<>(), users, submissions, new LanguageRegistry());
+        return new JudgeService(dataDir, new InMemoryRepository<>(), users, submissions, new LanguageRegistry(),
+                new InMemorySessionStore());
     }
 
     /** Nap lo trinh hoc va de bai tu o dia. */

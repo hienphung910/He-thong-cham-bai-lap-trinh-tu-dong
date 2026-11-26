@@ -437,7 +437,8 @@ public class AuthService {
         return dummy;
     }
 
-    public LoginResult login(String username, String rawPassword) {
+    /** remember = "Ghi nho dang nhap": phien song 30 ngay ke tu lan dung gan nhat thay vi 12 gio. */
+    public LoginResult login(String username, String rawPassword, boolean remember) {
         if (username == null || username.trim().isEmpty() || rawPassword == null || rawPassword.isEmpty()) {
             throw new AuthException(400, "Thiếu tên đăng nhập hoặc mật khẩu");
         }
@@ -462,7 +463,13 @@ public class AuthService {
                     ? "Tài khoản giảng viên của bạn đang chờ quản trị viên duyệt hoặc đã bị khoá"
                     : "Tài khoản của bạn đang bị khoá. Hãy liên hệ quản trị viên");
         }
-        return new LoginResult(sessions.createToken(user.getId()), user);
+        return new LoginResult(sessions.createToken(user.getId(), remember), user);
+    }
+
+    /** Dang xuat moi thiet bi khac cua tai khoan nay, giu lai phien dang dung. */
+    public void logoutOthers(User user, String currentToken) {
+        sessions.invalidateUser(user.getId(), currentToken);
+        userCache.remove(user.getId());
     }
 
     /** Tra ve tai khoan gan voi token, hoac rong neu token sai / het han. */

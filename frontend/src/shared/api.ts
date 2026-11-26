@@ -18,31 +18,61 @@ import type {
  * Khi chay "npm run dev", Vite chuyen tiep /api sang http://localhost:8080 (xem vite.config.ts).
  * Khi chay che do --serve, frontend duoc chinh may chu Java phuc vu nen cung duong dan.
  *
- * Token dang nhap duoc giu trong sessionStorage (dong tab la mat) va tu dong gan
- * vao header Authorization cua moi request.
+ * Token dang nhap tu dong gan vao header Authorization cua moi request. Noi giu token:
+ *  - "Ghi nho dang nhap": localStorage - dong tab, tat trinh duyet, mo tab moi van con dang nhap (may chu
+ *    giu phien 30 ngay ke tu lan dung gan nhat);
+ *  - khong ghi nho: sessionStorage - dong tab la mat.
  */
 
-const TOKEN_KEY = "oj.token";
+export const TOKEN_KEY = "oj.token";
 
 let token: string | null = readStoredToken();
 let onUnauthorized: (() => void) | null = null;
 
 function readStoredToken(): string | null {
   try {
-    return sessionStorage.getItem(TOKEN_KEY);
+    return sessionStorage.getItem(TOKEN_KEY) ?? localStorage.getItem(TOKEN_KEY);
   } catch {
-    return null; // trinh duyet chan sessionStorage (che do rieng tu) -> chi giu trong bo nho
+    return null; // trinh duyet chan bo nho trang (che do rieng tu) -> chi giu trong bo nho
   }
 }
 
-export function setToken(value: string | null) {
+/** remember = true: giu token qua ca khi dong tab / trinh duyet (localStorage). */
+export function setToken(value: string | null, remember = false) {
   token = value;
   try {
-    if (value) sessionStorage.setItem(TOKEN_KEY, value);
-    else sessionStorage.removeItem(TOKEN_KEY);
+    // Ghi de truc tiep (khong xoa roi ghi lai): cac tab khac nghe su kien "storage" se khong tuong la vua dang xuat.
+    if (value && remember) {
+      localStorage.setItem(TOKEN_KEY, value);
+      sessionStorage.removeItem(TOKEN_KEY);
+    } else if (value) {
+      sessionStorage.setItem(TOKEN_KEY, value);
+      localStorage.removeItem(TOKEN_KEY);
+    } else {
+      sessionStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(TOKEN_KEY);
+    }
   } catch {
     // khong luu duoc thi van dung duoc trong phien hien tai
   }
+}
+
+/** Tab khac vua dang xuat (xoa token trong localStorage): tab nay cung bo token dang giu. */
+export function forgetTokenFromOtherTab(storedToken: string | null): boolean {
+  if (storedToken !== null || token === null) return false;
+  let mine: string | null = null;
+  try { mine = sessionStorage.getItem(TOKEN_KEY); } catch { mine = null; }
+  // Tab nay dang nhap rieng (khong ghi nho) thi khong lien quan toi tab kia.
+  if (mine !== null) return false;
+  token = null;
+  return true;
+}
+
+/** Tab khac vua dang nhap co ghi nho: tab nay (dang o man hinh dang nhap) dung luon token do. */
+export function adoptTokenFromOtherTab(storedToken: string | null): boolean {
+  if (storedToken === null || token !== null) return false;
+  token = storedToken;
+  return true;
 }
 
 export function getToken(): string | null {
@@ -101,8 +131,9 @@ export const api = {
   /** Xac minh email bang ma trong link cua thu. */
   verifyEmail: (token: string) => postJson<{ ok: boolean; username: string; email: string }>("/api/auth/email/verify", { token }),
   /** captcha: token Turnstile, chi can khi may chu bat CAPTCHA (xem config()). */
-  login: (username: string, password: string, captcha = "") =>
-    postJson<LoginResponse>("/api/auth/login", { username, password, captcha }),
+  /** remember: "Ghi nho dang nhap" - may chu giu phien 30 ngay ke tu lan dung gan nhat thay vi 12 gio. */
+  login: (username: string, password: string, captcha = "", remember = false) =>
+    postJson<LoginResponse>("/api/auth/login", { username, password, captcha, remember }),
   me: () => request<AuthUser>("/api/auth/me"),
   /** Quen mat khau: account la ten dang nhap hoac email. May chu luon tra loi nhu nhau du tai khoan co hay khong. */
   forgotPassword: (account: string, captcha = "") =>

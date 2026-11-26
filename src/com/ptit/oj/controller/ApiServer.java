@@ -628,7 +628,7 @@ public class ApiServer {
 
         AuthService.LoginResult result;
         try {
-            result = service.getAuth().login(username, body.getString("password"));
+            result = service.getAuth().login(username, body.getString("password"), body.getBoolean("remember", false));
         } catch (AuthService.AuthException e) {
             platform.getSystem().log(username, "Đăng nhập thất bại", e.getMessage(), false);
             if (e.getHttpStatus() == 401) {

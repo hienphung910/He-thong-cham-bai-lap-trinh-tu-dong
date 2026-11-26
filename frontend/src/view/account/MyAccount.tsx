@@ -6,6 +6,21 @@ import { useAuth } from "./auth";
 /** Module 1 (tai khoan): thong tin tai khoan dang dang nhap va doi mat khau. */
 export default function MyAccount() {
   const { user, refresh } = useAuth();
+  // Dang xuat moi phien khac cua tai khoan (vd. quen dang xuat o may tinh phong lab), giu phien dang dung.
+  const [othersError, setOthersError] = useState("");
+  const [othersDone, setOthersDone] = useState(false);
+
+  async function logoutOthers() {
+    setOthersError("");
+    setOthersDone(false);
+    try {
+      await papi.logoutOthers();
+      setOthersDone(true);
+    } catch (e) {
+      setOthersError(errorText(e));
+    }
+  }
+
   // Email khoi phuc: doi phai nhap mat khau hien tai, vi ai giu email la dat lai duoc mat khau.
   const [email, setEmail] = useState(user?.email ?? "");
   const [emailPassword, setEmailPassword] = useState("");
@@ -94,6 +109,15 @@ export default function MyAccount() {
           </Row>
           <ErrorBox text={error} />
           {done && <div style={{ fontSize: 13, color: "#2E7D32" }}>Đã đổi mật khẩu.</div>}
+        </div>
+      </Card>
+      <Card title="Thiết bị đăng nhập">
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <Row>
+            <Btn kind="ghost" onClick={() => void logoutOthers()}>Đăng xuất các thiết bị khác</Btn>
+          </Row>
+          <ErrorBox text={othersError} />
+          {othersDone && <div style={{ fontSize: 13, color: "#2E7D32" }}>Đã đăng xuất các thiết bị khác.</div>}
         </div>
       </Card>
     </Page>
