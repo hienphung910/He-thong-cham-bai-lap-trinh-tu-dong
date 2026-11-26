@@ -90,13 +90,42 @@ public class CommunityApi extends ApiModule {
             User user = req.user();
             String channel = checkChannel(req.arg(0), user);
             int after = req.queryInt("after", 0);
+            boolean moderator = canModerate(user, channel);
             List<String> items = new ArrayList<>();
             for (ChatMessage m : community.messages(channel, after)) {
+                boolean mine = m.getSenderId().equals(user.getId());
                 items.add(Json.obj().put("id", m.getId()).put("seq", m.getSeq()).put("senderName", m.getSenderName())
                         .put("senderRole", m.getSenderRole()).put("text", m.getText())
-                        .put("sentAt", time(m.getSentAt())).build());
+                        .put("sentAt", time(m.getSentAt()))
+                        .put("mine", mine).put("canDelete", mine || moderator).build());
             }
-            req.send(Json.array(items));
+            // revision doi = co tin bi xoa: trinh duyet tai lai ca kenh (xem CommunityService.chatRevision).
+            req.send(Json.obj().put("revision", community.chatRevision(channel)).put("canModerate", moderator)
+                    .putRaw("items", Json.array(items)).build());
+            return true;
+        }
+        // Xoa mot tin: nguoi gui xoa tin cua minh; nguoi quan ly kenh xoa tin bat ky.
+        if (req.is("DELETE", "chat", "*", "*")) {
+            User user = req.user();
+            String channel = checkChannel(req.arg(0), user);
+            ChatMessage m = community.findMessage(channel, req.arg(1));
+            if (!m.getSenderId().equals(user.getId()) && !canModerate(user, channel)) {
+                throw ApiException.forbidden("Bạn chỉ xoá được tin nhắn của chính mình");
+            }
+            community.deleteMessage(channel, m.getId());
+            req.sendOk();
+            return true;
+        }
+        // Xoa toan bo lich su kenh: chi nguoi quan ly kenh.
+        if (req.is("DELETE", "chat", "*")) {
+            User user = req.user();
+            String channel = checkChannel(req.arg(0), user);
+            if (!canModerate(user, channel)) {
+                throw ApiException.forbidden("Chỉ quản trị viên hoặc giảng viên của lớp mới xoá được lịch sử kênh này");
+            }
+            int removed = community.clearChannel(channel);
+            platform.getSystem().log(user.getUsername(), "Xoá lịch sử chat", channel + " (" + removed + " tin)", true);
+            req.send(Json.obj().put("ok", true).put("removed", removed).build());
             return true;
         }
         if (req.is("POST", "chat", "*")) {
@@ -115,6 +144,21 @@ public class CommunityApi extends ApiModule {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Ai quan ly duoc mot kenh (xoa tin cua nguoi khac, xoa het lich su): quan tri vien moi kenh; giang
+     * vien phu trach lop voi kenh lop va kenh buoi hoc cua lop do. Kenh chung chi quan tri vien.
+     */
+    private boolean canModerate(User user, String channel) {
+        if (User.ROLE_ADMIN.equals(user.getRoleCode())) return true;
+        String classroomId = null;
+        if (channel.startsWith("class-")) classroomId = channel.substring("class-".length());
+        if (channel.startsWith("meeting-")) {
+            classroomId = platform.getMeetings().find(channel.substring("meeting-".length())).getClassroomId();
+        }
+        if (classroomId == null) return false;
+        return platform.getSchool().findClassroom(classroomId).isTaughtBy(user.getId());
     }
 
     /** Kiem tra nguoi dung duoc vao kenh nay: kenh lop / buoi hoc chi danh cho thanh vien cua lop. */

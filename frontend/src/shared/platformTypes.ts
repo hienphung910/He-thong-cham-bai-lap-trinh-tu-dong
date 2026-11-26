@@ -195,7 +195,13 @@ export interface NotificationList {
 }
 export type NotificationItem = NotificationList["items"][number];
 /** seq: so thu tu cua tin trong kenh; trinh duyet gui lai seq cua tin cuoi de chi nhan cac tin moi hon. */
-export interface ChatMessage { id: string; seq: number; senderName: string; senderRole: string; text: string; sentAt: string }
+export interface ChatMessage {
+  id: string; seq: number; senderName: string; senderRole: string; text: string; sentAt: string;
+  /** mine: tin cua chinh minh; canDelete: minh xoa duoc (tin cua minh, hoac minh quan ly kenh). */
+  mine: boolean; canDelete: boolean;
+}
+/** revision doi = co tin bi xoa tu lan hoi truoc: tai lai ca kenh. canModerate: xoa duoc tin bat ky va xoa het. */
+export interface ChatPage { revision: number; canModerate: boolean; items: ChatMessage[] }
 export interface ForumPost {
   id: string; title: string; authorId: string; authorName: string; problemId: string;
   createdAt: string; replyCount: number;

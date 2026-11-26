@@ -1,0 +1,65 @@
+/* Khung chat (ChatBox.tsx). */
+
+.chat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: auto;
+  padding: 6px;
+  border: 1px solid #E0E0E0;
+  border-radius: 6px;
+  background: #FAFAFA;
+}
+
+.chat-msg {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.chat-msg:hover { background: #F0F0F0; }
+.chat-msg-body { flex: 1; min-width: 0; }
+.chat-time { margin-left: 6px; font-size: 10.5px; color: #9E9E9E; }
+.chat-text { color: #424242; white-space: pre-wrap; word-break: break-word; }
+
+/* Nut xoa tung tin chi hien khi re chuot / focus; may cam ung thi luon hien. */
+.chat-del {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: #9E9E9E;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s, color 0.12s;
+}
+.chat-msg:hover .chat-del, .chat-del:focus-visible { opacity: 1; }
+.chat-del:hover { background: #FFEBEE; color: #C62828; }
+@media (hover: none) { .chat-del { opacity: 1; } }
+
+.chat-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #C62828;
+  cursor: pointer;
+}
+.chat-clear:hover:not(:disabled) { background: #FFEBEE; }
+.chat-clear:disabled { color: #BDBDBD; cursor: default; }
+
+.chat-del:focus-visible, .chat-clear:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 1px; }

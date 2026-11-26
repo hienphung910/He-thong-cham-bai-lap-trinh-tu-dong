@@ -16,15 +16,20 @@ public class ChatMessage extends Entity {
     /** So thu tu trong kenh (tu 1, tang dan): trinh duyet dung de chi hoi cac tin moi hon tin da nhan. */
     private volatile long seq;
 
-    public ChatMessage(String id, String channel, String senderName, String senderRole, String text) {
+    /** Ma tai khoan nguoi gui, de nguoi gui tu xoa tin cua minh. Tin luu tu ban cu chua co: null. */
+    private final String senderId;
+
+    public ChatMessage(String id, String channel, String senderId, String senderName, String senderRole, String text) {
         super(id);
         this.channel = channel;
+        this.senderId = senderId;
         this.senderName = senderName;
         this.senderRole = senderRole;
         this.text = text;
     }
 
     public String getChannel() { return channel; }
+    public String getSenderId() { return senderId == null ? "" : senderId; }
     public String getSenderName() { return senderName; }
     public String getSenderRole() { return senderRole; }
     public String getText() { return text; }

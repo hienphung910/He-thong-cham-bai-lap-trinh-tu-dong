@@ -1,6 +1,6 @@
 import { postJson, putJson, request } from "./api";
 import type {
-  Assignment, AssignmentProgress, BasicUser, ChatMessage, Classroom, Contest, ContestEvent, Dashboard, Meeting, NotificationList, Organization, ProctorEventType, ProctorLog, ProblemComment, Profile, RunResult, Settings, TestcaseItem,
+  Assignment, AssignmentProgress, BasicUser, ChatPage, Classroom, Contest, ContestEvent, Dashboard, Meeting, NotificationList, Organization, ProctorEventType, ProctorLog, ProblemComment, Profile, RunResult, Settings, TestcaseItem,
 } from "./platformTypes";
 import type { ScoreRow } from "./types";
 
@@ -119,7 +119,9 @@ export const papi = {
   setNotificationRead: (id: string, read: boolean) => postJson<Ok>(`/api/notifications/${enc(id)}/${read ? "read" : "unread"}`, {}),
   deleteNotification: (id: string) => del(`/api/notifications/${enc(id)}`),
   deleteNotifications: (onlyRead: boolean) => del<Ok & { removed: number }>(`/api/notifications${onlyRead ? "?only=read" : ""}`),
-  chat: (channel: string, after: number) => request<ChatMessage[]>(`/api/chat/${enc(channel)}?after=${after}`),
+  chat: (channel: string, after: number) => request<ChatPage>(`/api/chat/${enc(channel)}?after=${after}`),
+  deleteChatMessage: (channel: string, id: string) => del(`/api/chat/${enc(channel)}/${enc(id)}`),
+  clearChat: (channel: string) => del<Ok & { removed: number }>(`/api/chat/${enc(channel)}`),
   sendChat: (channel: string, text: string) => postJson<Ok>(`/api/chat/${enc(channel)}`, { text }),
   // --- binh luan duoi bai tap (may chu loc tu bay va ma nguon loi giai luc gui, khong qua nguoi duyet) ---
   comments: (problemId: string) => request<ProblemComment[]>(`/api/problems/${enc(problemId)}/comments`),

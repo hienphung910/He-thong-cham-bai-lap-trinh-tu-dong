@@ -109,7 +109,7 @@ public class CommunityService {
     // ---------------------------------------------------------------- chat
 
     public synchronized ChatMessage postMessage(String channel, User sender, String text) {
-        ChatMessage message = new ChatMessage(IdGenerator.next("MSG"), channel,
+        ChatMessage message = new ChatMessage(IdGenerator.next("MSG"), channel, sender.getId(),
                 sender.getFullName(), sender.getRole(), Check.text(text, "Tin nhắn", 2000));
         long seq = lastSeq.merge(channel, 1L, Long::sum);
         message.setSeq(seq);
@@ -129,6 +129,38 @@ public class CommunityService {
             if (m.getSeq() > after) result.add(m);
         }
         return result;
+    }
+
+    /**
+     * So lan kenh bi xoa tin (xoa mot tin hoac xoa het). Trinh duyet chi hoi tin MOI (theo seq) nen khong
+     * tu biet tin cu da bi xoa: thay so nay doi thi tai lai ca kenh. Khong luu xuong dia - may chu khoi dong
+     * lai thi ve 0, trinh duyet thay khac so cu va cung tai lai, khong sao.
+     */
+    private final Map<String, Long> chatRevision = new HashMap<>();
+
+    public synchronized long chatRevision(String channel) {
+        return chatRevision.getOrDefault(channel, 0L);
+    }
+
+    public synchronized ChatMessage findMessage(String channel, String messageId) {
+        for (ChatMessage m : channels.getOrDefault(channel, Collections.<ChatMessage>emptyList())) {
+            if (m.getId().equals(messageId)) return m;
+        }
+        throw ApiException.notFound("Không có tin nhắn này");
+    }
+
+    public synchronized void deleteMessage(String channel, String messageId) {
+        List<ChatMessage> list = channels.get(channel);
+        if (list != null && list.removeIf(m -> m.getId().equals(messageId))) {
+            chatRevision.merge(channel, 1L, Long::sum);
+        }
+    }
+
+    /** Xoa toan bo lich su mot kenh; tra ve so tin da xoa. So thu tu (seq) van tang tiep, khong dat lai. */
+    public synchronized int clearChannel(String channel) {
+        List<ChatMessage> list = channels.remove(channel);
+        chatRevision.merge(channel, 1L, Long::sum);
+        return list == null ? 0 : list.size();
     }
 
     // ------------------------------------------------- binh luan duoi bai tap
