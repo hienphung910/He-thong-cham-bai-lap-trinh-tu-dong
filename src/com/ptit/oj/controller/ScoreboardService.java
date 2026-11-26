@@ -94,6 +94,12 @@ public class ScoreboardService {
             rows.add(new Row(e.getKey(), e.getValue(), attempts.getOrDefault(e.getKey(), 0), solved, total));
         }
 
+        sortRows(rows);
+        return rows;
+    }
+
+    /** Tong diem cao hon xep truoc; bang diem thi it lan nop hon xep truoc; roi theo ten dang nhap. */
+    private static void sortRows(List<Row> rows) {
         rows.sort((a, b) -> {
             int byScore = Double.compare(b.getTotal(), a.getTotal());
             if (byScore != 0) return byScore;
@@ -101,6 +107,60 @@ public class ScoreboardService {
             if (byAttempts != 0) return byAttempts;
             return a.getUser().getUsername().compareTo(b.getUser().getUsername());
         });
-        return rows;
+    }
+
+    /** Mot dong cua bang xep hang lop, kem so bai khac nhau da tung AC trong tap bai cua lop. */
+    public static class ClassRow extends Row {
+        private final int accepted;
+
+        ClassRow(User user, Map<String, Double> bestPerProblem, int attempts, int solved, double total, int accepted) {
+            super(user, bestPerProblem, attempts, solved, total);
+            this.accepted = accepted;
+        }
+
+        public int getAccepted() { return accepted; }
+    }
+
+    /**
+     * Bang xep hang cua MOT LOP: chi tinh cac bai cua lop (problemIds - bai kho chung hay kho rieng cua giang
+     * vien deu duoc, vi chi thanh vien lop moi thay bang nay) va chi nhung nguoi trong members. Moi thanh vien
+     * deu co mat, ke ca chua nop bai nao (0 diem), de ca lop thay minh dung o dau.
+     */
+    public List<ClassRow> buildFor(List<User> members, java.util.Set<String> problemIds) {
+        Map<String, Map<String, Double>> best = new HashMap<>();
+        Map<String, java.util.Set<String>> accepted = new HashMap<>();
+        Map<String, Integer> attempts = new HashMap<>();
+        java.util.Set<String> memberIds = new java.util.HashSet<>();
+        for (User u : members) memberIds.add(u.getId());
+
+        for (Submission s : submissions.findAll()) {
+            if (!s.isJudged()) continue;
+            String uid = s.getAuthor().getId();
+            String pid = s.getProblem().getId();
+            if (!memberIds.contains(uid) || !problemIds.contains(pid)) continue;
+            attempts.merge(uid, 1, Integer::sum);
+            best.computeIfAbsent(uid, k -> new LinkedHashMap<>()).merge(pid, s.getResult().getScore(), Math::max);
+            if (s.getResult().getOverallVerdict().isAccepted()) {
+                accepted.computeIfAbsent(uid, k -> new java.util.HashSet<>()).add(pid);
+            }
+        }
+
+        List<Row> rows = new ArrayList<>();
+        for (User u : members) {
+            Map<String, Double> mine = best.getOrDefault(u.getId(), new LinkedHashMap<>());
+            double total = 0;
+            int solved = 0;
+            for (Map.Entry<String, Double> p : mine.entrySet()) {
+                total += p.getValue();
+                Problem problem = problems.findById(p.getKey()).orElse(null);
+                if (problem != null && p.getValue() >= problem.getMaxPoints() - SCORE_EPSILON) solved++;
+            }
+            int ac = accepted.getOrDefault(u.getId(), java.util.Collections.<String>emptySet()).size();
+            rows.add(new ClassRow(u, mine, attempts.getOrDefault(u.getId(), 0), solved, total, ac));
+        }
+        sortRows(rows);
+        List<ClassRow> result = new ArrayList<>();
+        for (Row r : rows) result.add((ClassRow) r);
+        return result;
     }
 }

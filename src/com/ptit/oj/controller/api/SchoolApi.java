@@ -96,6 +96,14 @@ public class SchoolApi extends ApiModule {
             req.send(classroomDetailJson(c, user));
             return true;
         }
+        // Bang xep hang rieng cua lop: chi thanh vien lop (va quan tri vien) xem duoc.
+        if (req.is("GET", "classrooms", "*", "scoreboard")) {
+            User user = req.user();
+            Classroom c = school.findClassroom(req.arg(0));
+            school.requireMember(user, c);
+            req.send(classScoreboardJson(c));
+            return true;
+        }
         if (req.is("DELETE", "classrooms", "*")) {
             User user = req.staff();
             Classroom c = school.findClassroom(req.arg(0));
@@ -278,6 +286,55 @@ public class SchoolApi extends ApiModule {
                 .put("isOwner", school.isOwner(viewer, c))
                 // Ma tham gia chi nguoi quan ly lop thay, de dua cho hoc sinh.
                 .put("joinCode", school.canManage(viewer, c) ? c.getJoinCode() : "");
+    }
+
+    /**
+     * Bang xep hang cua lop: tinh tren bai luyen tap cua lop va bai trong cac bai tap giao cho lop (bai ky thi
+     * da co bang xep hang rieng cua ky thi). Moi hoc sinh cua lop deu co mat, ke ca chua nop bai nao.
+     * Cung dang voi /api/scoreboard de giao dien dung chung mot bang.
+     */
+    private String classScoreboardJson(Classroom c) {
+        java.util.Set<String> problemIds = new java.util.LinkedHashSet<>();
+        for (String id : c.getPracticeProblemIds()) {
+            if (judge.findProblem(id).isPresent()) problemIds.add(id);
+        }
+        for (com.ptit.oj.model.Assignment a : platform.getAssignments().ofClassrooms(java.util.Collections.singletonList(c))) {
+            for (String id : a.getProblemIds()) {
+                if (judge.findProblem(id).isPresent()) problemIds.add(id);
+            }
+        }
+        Map<String, User> users = usersById();
+        List<User> members = new ArrayList<>();
+        for (String id : c.getStudentIds()) {
+            User u = users.get(id);
+            if (u != null) members.add(u);
+        }
+        List<String> rows = new ArrayList<>();
+        int rank = 1;
+        for (com.ptit.oj.controller.ScoreboardService.ClassRow row : judge.buildClassScoreboard(members, problemIds)) {
+            List<String> perProblem = new ArrayList<>();
+            for (Map.Entry<String, Double> e : row.getBestPerProblem().entrySet()) {
+                perProblem.add(Json.obj().put("problemId", e.getKey()).put("score", e.getValue()).build());
+            }
+            rows.add(Json.obj()
+                    .put("rank", rank++)
+                    .put("username", row.getUser().getUsername())
+                    .put("fullName", row.getUser().getFullName())
+                    .put("role", row.getUser().getRoleCode())
+                    .put("roleName", row.getUser().getRole())
+                    .put("total", row.getTotal())
+                    .put("solved", row.getSolved())
+                    .put("solvedCount", row.getAccepted())
+                    .put("attempts", row.getAttempts())
+                    .putRaw("perProblem", Json.array(perProblem))
+                    .build());
+        }
+        return Json.obj()
+                .put("classroomId", c.getId())
+                .put("name", c.getName())
+                .put("problemCount", problemIds.size())
+                .putRaw("rows", Json.array(rows))
+                .build();
     }
 
     private String classroomDetailJson(Classroom c, User viewer) {

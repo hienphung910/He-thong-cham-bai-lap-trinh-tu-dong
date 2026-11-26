@@ -269,4 +269,9 @@ public class JudgeService {
     public Map<String, Integer> getSolvedCountByUser() { return users.solvedCountByUser(); }
 
     public List<ScoreboardService.Row> buildScoreboard() { return scoreboard.buildScoreboard(); }
+
+    /** Bang xep hang cua mot lop: chi cac bai cua lop, moi thanh vien deu co mat (xem ScoreboardService.buildFor). */
+    public List<ScoreboardService.ClassRow> buildClassScoreboard(List<User> members, java.util.Set<String> problemIds) {
+        return scoreboard.buildFor(members, problemIds);
+    }
 }

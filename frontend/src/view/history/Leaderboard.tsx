@@ -1,20 +1,63 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../shared/api";
+import { papi } from "../../shared/platformApi";
+import type { Classroom } from "../../shared/platformTypes";
 import type { Problem, ScoreRow } from "../../shared/types";
 
+/** Bang dang xem duoc nho trong trinh duyet: "" = lo trinh chung, con lai la ma lop. */
+const SCOPE_KEY = "oj.leaderboard.scope";
+
+function readScope(): string {
+  try { return localStorage.getItem(SCOPE_KEY) ?? ""; } catch { return ""; }
+}
+
+function saveScope(scope: string) {
+  try { localStorage.setItem(SCOPE_KEY, scope); } catch { /* trinh duyet chan bo nho trang: bo qua */ }
+}
+
+/**
+ * Bang xep hang: chon "Lo trinh chung" (moi nguoi, bai kho chung) hoac mot lop minh thuoc ve (hoc sinh
+ * cua lop, tren bai luyen tap va bai tap giao cua lop).
+ */
 export default function Leaderboard({ reloadKey, problems }: { reloadKey: number; problems: Problem[] }) {
   const [rows, setRows] = useState<ScoreRow[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [classes, setClasses] = useState<Classroom[]>([]);
+  const [scope, setScope] = useState<string>(readScope);
+  /** So bai tinh diem cua bang dang xem (lop); null = lo trinh chung. */
+  const [classProblemCount, setClassProblemCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    papi.classrooms().then(setClasses).catch(() => setClasses([]));
+  }, []);
+
+  // Lop da nho khong con (bi xoa, roi lop): quay ve lo trinh chung.
+  const activeScope = scope && classes.some((c) => c.id === scope) ? scope : "";
 
   const load = useCallback(async () => {
     setLoading(true);
-    try { setRows(await api.scoreboard()); setError(""); }
+    try {
+      if (activeScope) {
+        const board = await papi.classScoreboard(activeScope);
+        setRows(board.rows);
+        setClassProblemCount(board.problemCount);
+      } else {
+        setRows(await api.scoreboard());
+        setClassProblemCount(null);
+      }
+      setError("");
+    }
     catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     finally { setLoading(false); }
-  }, []);
+  }, [activeScope]);
 
   useEffect(() => { void load(); }, [load, reloadKey]);
+
+  function changeScope(next: string) {
+    setScope(next);
+    saveScope(next);
+  }
 
   const top3 = rows.slice(0, 3);
   // Reorder for podium display: [#2, #1, #3]
@@ -29,17 +72,26 @@ export default function Leaderboard({ reloadKey, problems }: { reloadKey: number
     <div aria-busy={loading} style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "auto" }}>
       {/* Header */}
       <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
+        display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
         padding: "16px 24px", background: "#fff", borderBottom: "1px solid #E0E0E0", flexShrink: 0,
       }}>
-        <div style={{ fontSize: 16, fontWeight: 700, color: "#212121" }}>Bảng xếp hạng lớp</div>
-        <div style={{ fontSize: 12, color: "#757575", background: "#fff", border: "1px solid #E0E0E0", borderRadius: 6, padding: "6px 14px" }}>
-          CodeHub - Luyện tập lập trình
-        </div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: "#212121", whiteSpace: "nowrap" }}>Bảng xếp hạng</div>
+        {classes.length > 0 && (
+          <select aria-label="Chọn bảng xếp hạng" value={activeScope} onChange={(e) => changeScope(e.target.value)} style={{
+            height: 34, width: 260, minWidth: 0, maxWidth: "100%", textOverflow: "ellipsis", padding: "0 34px 0 12px", fontSize: 13, fontWeight: 600, color: "#212121",
+            border: "1px solid #E0E0E0", borderRadius: 8, outline: "none", cursor: "pointer", appearance: "none",
+            background: "#fff url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23757575' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5'/%3E%3C/svg%3E\") no-repeat right 12px center",
+          }}>
+            <option value="">Lộ trình chung</option>
+            <optgroup label="Lớp của tôi">
+              {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </optgroup>
+          </select>
+        )}
       </div>
 
       <div style={{ fontSize: 13, color: "#9E9E9E", padding: "12px 24px 0" }}>
-        Tổng {problems.length} bài luyện tập
+        {classProblemCount === null ? `Tổng ${problems.length} bài luyện tập` : `Tổng ${classProblemCount} bài của lớp`}
       </div>
 
       {error && (

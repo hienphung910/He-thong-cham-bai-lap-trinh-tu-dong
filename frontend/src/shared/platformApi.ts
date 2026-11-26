@@ -2,6 +2,7 @@ import { postJson, putJson, request } from "./api";
 import type {
   Assignment, AssignmentProgress, BasicUser, ChatMessage, Classroom, Contest, ContestEvent, Dashboard, Meeting, NotificationList, Organization, ProctorEventType, ProctorLog, ProblemComment, Profile, RunResult, Settings, TestcaseItem,
 } from "./platformTypes";
+import type { ScoreRow } from "./types";
 
 /** Goi REST API cua cac module mo rong (cac lop ...Api.java). Moi ham ung voi mot endpoint. */
 
@@ -38,6 +39,9 @@ export const papi = {
 
   classrooms: () => request<Classroom[]>("/api/classrooms"),
   classroom: (id: string) => request<Classroom>(`/api/classrooms/${enc(id)}`),
+  /** Bang xep hang rieng cua lop: bai luyen tap + bai tap giao cua lop, moi hoc sinh deu co mat. */
+  classScoreboard: (id: string) =>
+    request<{ classroomId: string; name: string; problemCount: number; rows: ScoreRow[] }>(`/api/classrooms/${enc(id)}/scoreboard`),
   createClassroom: (body: { name: string; organizationId: string; courseId: string }) =>
     postJson<Classroom>("/api/classrooms", body),
   deleteClassroom: (id: string) => del(`/api/classrooms/${enc(id)}`),
