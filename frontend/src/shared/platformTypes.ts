@@ -148,7 +148,8 @@ export interface Contest {
   /** Nguoi dang xem la hoc sinh dang trong bai thi: giao dien chi con man hinh ky thi. */
   sitting: boolean;
   /** Chi nguoi tao ky thi nhan duoc: thi sinh da vao thi. */
-  participants?: { username: string; fullName: string; joinedAt: string; finishedAt: string }[];
+  /** ips: cac IP cua thi sinh trong luc thi (vao thi, giam sat, nop bai), theo thu tu gap lan dau. */
+  participants?: { username: string; fullName: string; joinedAt: string; finishedAt: string; ips: string[] }[];
 }
 // ---- giam sat ky thi ----
 export type ProctorEventType =
@@ -160,9 +161,9 @@ export interface ProctorLog {
   /** Mot dong cho moi thi sinh co ghi nhan, nhieu vi pham nhat dung truoc. */
   students: {
     username: string; fullName: string; violations: number;
-    tabHidden: number; windowBlur: number; copy: number; paste: number; pageClosed: number; lastAt: string;
+    tabHidden: number; windowBlur: number; copy: number; paste: number; pageClosed: number; lastAt: string; ips: string[];
   }[];
-  events: { id: string; at: string; username: string; fullName: string; type: ProctorEventType; detail: string; problemId: string }[];
+  events: { id: string; at: string; username: string; fullName: string; type: ProctorEventType; detail: string; problemId: string; ip: string }[];
 }
 export interface ContestEvent { minute: number; username: string; fullName: string; problemId: string; verdict: string }
 

@@ -33,6 +33,16 @@ public class Request {
     /** Gia tri cua cac dau * trong lan goi is() khop gan nhat. */
     private final List<String> args = new ArrayList<>();
 
+    /** ApiServer gan dia chi nguoi gui (da xu ly proxy / Cloudflare) vao request duoi ten nay. */
+    public static final String CLIENT_IP_ATTRIBUTE = "oj.clientIp";
+
+    /** Dia chi IP cua nguoi gui request. */
+    public String ip() {
+        Object ip = exchange.getAttribute(CLIENT_IP_ATTRIBUTE);
+        if (ip instanceof String && !((String) ip).isEmpty()) return (String) ip;
+        return exchange.getRemoteAddress().getAddress().getHostAddress();
+    }
+
     public Request(HttpExchange exchange, JudgeService judge) {
         this.exchange = exchange;
         this.judge = judge;

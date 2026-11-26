@@ -135,6 +135,17 @@ function clockOf(iso: string): string {
  * thi sinh va nhat ky tung su kien. Tu tai lai moi 5 giay khi ky thi dang dien ra.
  * toggle la nut bat / tat giam sat do trang ky thi truyen vao.
  */
+/** Cac IP cua mot thi sinh trong ky thi; co tu hai IP tro len thi danh dau "Đổi IP". */
+export function IpList({ ips }: { ips: string[] }) {
+  if (!ips || ips.length === 0) return <span style={{ color: "#9E9E9E" }}>-</span>;
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+      {ips.length > 1 && <Tag color="orange">Đổi IP ({ips.length})</Tag>}
+      <span style={{ fontFamily: "var(--font-mono)", fontSize: 12 }} title={ips.join(", ")}>{ips.join(", ")}</span>
+    </span>
+  );
+}
+
 export function ProctorPanel({ contestId, running, enabled, toggle }: {
   contestId: string; running: boolean; enabled: boolean; toggle: ReactNode;
 }) {
@@ -181,13 +192,14 @@ export function ProctorPanel({ contestId, running, enabled, toggle }: {
             </span>
           </div>
           <div style={{ maxHeight: 320, overflow: "auto" }}>
-            <Table head={["Lúc", "Thí sinh", "Sự kiện", "Chi tiết", "Bài đang mở"]} empty="Không có sự kiện nào."
+            <Table head={["Lúc", "Thí sinh", "Sự kiện", "Chi tiết", "Bài đang mở", "IP"]} empty="Không có sự kiện nào."
               rows={events.map((e) => [
                 <span style={{ fontFamily: "var(--font-mono)", fontSize: 12.5 }}>{clockOf(e.at)}</span>,
                 <span><b>{e.fullName}</b> <span style={{ color: "#9E9E9E" }}>@{e.username}</span></span>,
                 <Tag color={EVENT_LABEL[e.type]?.color ?? "gray"}>{EVENT_LABEL[e.type]?.label ?? e.type}</Tag>,
                 e.detail || "-",
                 e.problemId ? <span style={{ fontFamily: "var(--font-mono)" }}>{e.problemId}</span> : "-",
+                e.ip ? <span style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>{e.ip}</span> : "-",
               ])} />
           </div>
         </>

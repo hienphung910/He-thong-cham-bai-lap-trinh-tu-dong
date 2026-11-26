@@ -146,7 +146,7 @@ public class ContestApi extends ApiModule {
             if (!classroomOf(c).getStudentIds().contains(user.getId())) {
                 throw ApiException.forbidden("Chỉ học sinh của lớp " + classroomOf(c).getName() + " mới vào thi được");
             }
-            contests.join(c, user);
+            contests.join(c, user, req.ip());
             req.send(contestJson(c, user).build());
             return true;
         }
@@ -163,7 +163,7 @@ public class ContestApi extends ApiModule {
             Contest c = contests.find(req.arg(0));
             Json.Value body = req.body();
             ProctorEvent event = contests.recordProctorEvent(c, user, body.getString("type"),
-                    body.getString("detail", ""), body.getString("problemId", ""));
+                    body.getString("detail", ""), body.getString("problemId", ""), req.ip());
             if (event != null && event.isViolation()) notifyOwner(c, user);
             req.sendOk();
             return true;
@@ -232,8 +232,16 @@ public class ContestApi extends ApiModule {
             java.time.LocalDateTime finished = c.getFinishedAt().get(e.getKey());
             items.add(Json.obj().put("username", u.getUsername()).put("fullName", u.getFullName())
                     .put("joinedAt", time(e.getValue()))
+                    .putRaw("ips", ipsJson(c, e.getKey()))
                     .put("finishedAt", finished == null ? "" : time(finished)).build());
         }
+        return Json.array(items);
+    }
+
+    /** Cac IP cua thi sinh trong ky thi, theo thu tu gap lan dau. */
+    private static String ipsJson(Contest c, String userId) {
+        List<String> items = new ArrayList<>();
+        for (String ip : c.ipsOf(userId)) items.add(Json.quote(ip));
         return Json.array(items);
     }
 
@@ -266,6 +274,7 @@ public class ContestApi extends ApiModule {
                     .put("paste", counts.getOrDefault(ProctorEvent.PASTE, 0).intValue())
                     .put("pageClosed", counts.getOrDefault(ProctorEvent.PAGE_CLOSED, 0).intValue())
                     .put("lastAt", time(lastByUser.get(userId).getAt()))
+                    .putRaw("ips", ipsJson(c, userId))
                     .build());
         }
 
@@ -281,6 +290,7 @@ public class ContestApi extends ApiModule {
                     .put("type", e.getType())
                     .put("detail", e.getDetail())
                     .put("problemId", e.getProblemId())
+                    .put("ip", e.getIp())
                     .build());
         }
         return Json.obj()

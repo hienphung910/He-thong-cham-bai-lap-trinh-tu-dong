@@ -118,7 +118,7 @@ public class ContestService {
     // --------------------------------------------------- thi sinh vao thi, nop bai som
 
     /** Hoc sinh bam "Vao thi": tu day giao dien cua hoc sinh chi con man hinh ky thi. */
-    public synchronized void join(Contest contest, User student) {
+    public synchronized void join(Contest contest, User student, String ip) {
         if (!User.ROLE_STUDENT.equals(student.getRoleCode())) {
             throw ApiException.badRequest("Chỉ tài khoản học sinh mới vào thi");
         }
@@ -129,6 +129,7 @@ public class ContestService {
             throw ApiException.badRequest("Bạn đã nộp bài và kết thúc kỳ thi này rồi");
         }
         contest.getJoinedAt().putIfAbsent(student.getId(), LocalDateTime.now());
+        contest.noteIp(student.getId(), ip);
     }
 
     /** Hoc sinh nop bai som: ket thuc bai thi cua minh truoc gio. Bai nop sau do khong con duoc tinh. */
@@ -267,11 +268,12 @@ public class ContestService {
      * nguoi quan ly ky thi, hoac thi sinh da cham gioi han) - nguoi goi khong can bao loi.
      */
     public synchronized ProctorEvent recordProctorEvent(Contest contest, User user, String type,
-                                                        String detail, String problemId) {
+                                                        String detail, String problemId, String ip) {
         if (!ProctorEvent.isKnownType(type)) throw ApiException.badRequest("Loại sự kiện giám sát không hợp lệ");
         // Chi ghi khi ky thi bat giam sat va thi sinh dang trong bai thi (da vao, chua nop bai som).
-        if (!contest.isProctored() || !contest.isSitting(user.getId())) return null;
-        if (!User.ROLE_STUDENT.equals(user.getRoleCode())) return null;
+        if (!contest.isSitting(user.getId()) || !User.ROLE_STUDENT.equals(user.getRoleCode())) return null;
+        contest.noteIp(user.getId(), ip);
+        if (!contest.isProctored()) return null;
 
         List<ProctorEvent> events = proctorEvents.computeIfAbsent(contest.getId(), k -> new ArrayList<>());
         int mine = 0;
@@ -286,7 +288,7 @@ public class ContestService {
         if (!contest.getProblemIds().contains(cleanProblem)) cleanProblem = "";
 
         ProctorEvent event = new ProctorEvent(IdGenerator.next("PRC"), contest.getId(), user.getId(),
-                type, cleanDetail, cleanProblem);
+                type, cleanDetail, cleanProblem, ip);
         events.add(event);
         if (events.size() > MAX_PROCTOR_EVENTS_PER_CONTEST) events.remove(0);
         return event;

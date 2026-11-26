@@ -67,6 +67,34 @@ public class Contest extends Entity {
 
     public Map<String, LocalDateTime> getJoinedAt() { return joinedAt; }
     public Map<String, LocalDateTime> getFinishedAt() { return finishedAt; }
+    /**
+     * Cac dia chi IP cua tung thi sinh trong luc thi (luc vao thi, bao giam sat, nop bai), theo thu
+     * tu gap lan dau, moi nguoi toi da MAX_IPS_PER_USER dia chi. Khong final: ban luu cu chua co truong
+     * nay thi doc ra null, getter tao moi.
+     */
+    private volatile Map<String, List<String>> ipsByUser;
+    private static final int MAX_IPS_PER_USER = 20;
+
+    public synchronized Map<String, List<String>> getIpsByUser() {
+        if (ipsByUser == null) ipsByUser = new ConcurrentHashMap<>();
+        return ipsByUser;
+    }
+
+    /** Ghi them mot dia chi cua thi sinh (bo qua neu da co). */
+    public void noteIp(String userId, String ip) {
+        if (ip == null || ip.isEmpty()) return;
+        List<String> ips = getIpsByUser().computeIfAbsent(userId, k -> new CopyOnWriteArrayList<>());
+        synchronized (ips) {
+            if (!ips.contains(ip) && ips.size() < MAX_IPS_PER_USER) ips.add(ip);
+        }
+    }
+
+    /** Cac IP da gap cua thi sinh (ban sao); rong neu chua co. */
+    public List<String> ipsOf(String userId) {
+        List<String> ips = getIpsByUser().get(userId);
+        return ips == null ? new java.util.ArrayList<>() : new java.util.ArrayList<>(ips);
+    }
+
     public boolean hasJoined(String userId) { return joinedAt.containsKey(userId); }
     public boolean hasFinished(String userId) { return finishedAt.containsKey(userId); }
 

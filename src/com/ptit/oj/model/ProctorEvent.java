@@ -35,14 +35,18 @@ public class ProctorEvent extends Entity {
     private final String detail;       // vi du "vang 12 giay", "dan 340 ky tu"
     private final String problemId;    // bai dang mo luc xay ra; "" neu khong o trang lam bai
     private final LocalDateTime at = LocalDateTime.now();
+    /** IP cua thi sinh luc gui su kien; null voi su kien ghi tu ban cu (chua co truong nay). */
+    private final String ip;
 
-    public ProctorEvent(String id, String contestId, String userId, String type, String detail, String problemId) {
+    public ProctorEvent(String id, String contestId, String userId, String type, String detail, String problemId,
+                        String ip) {
         super(id);
         this.contestId = contestId;
         this.userId = userId;
         this.type = type;
         this.detail = detail;
         this.problemId = problemId;
+        this.ip = ip;
     }
 
     public static boolean isKnownType(String type) {
@@ -62,4 +66,5 @@ public class ProctorEvent extends Entity {
     public String getDetail() { return detail; }
     public String getProblemId() { return problemId; }
     public LocalDateTime getAt() { return at; }
+    public String getIp() { return ip == null ? "" : ip; }
 }

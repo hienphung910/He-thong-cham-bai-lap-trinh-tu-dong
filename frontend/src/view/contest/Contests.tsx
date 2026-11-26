@@ -5,7 +5,7 @@ import { useBackState } from "../../shared/nav";
 import ProblemChip from "../../shared/ProblemChip";
 import { useAuth } from "../account/auth";
 import type { Contest } from "../../shared/platformTypes";
-import { ProctorPanel } from "./Proctor";
+import { IpList, ProctorPanel } from "./Proctor";
 import ProblemPicker from "../problem/ProblemPicker";
 import ProblemField from "../problem/ProblemField";
 
@@ -202,10 +202,11 @@ function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
 
           {c.canManage && (
             <Card title={`Thí sinh tham gia (${c.participants?.length ?? 0})`}>
-              <Table head={["Thí sinh", "Vào thi lúc", "Trạng thái"]} empty="Chưa có thí sinh nào bấm Vào thi."
+              <Table head={["Thí sinh", "Vào thi lúc", "IP", "Trạng thái"]} empty="Chưa có thí sinh nào bấm Vào thi."
                 rows={(c.participants ?? []).map((p) => [
                   <span><b>{p.fullName}</b> <span style={{ color: "#9E9E9E" }}>@{p.username}</span></span>,
                   fmtTime(p.joinedAt),
+                  <IpList ips={p.ips} />,
                   p.finishedAt ? <Tag color="gray">Đã nộp bài lúc {fmtTime(p.finishedAt).slice(11)}</Tag>
                     : c.status === "RUNNING" ? <Tag color="green">Đang thi</Tag> : <Tag color="gray">Hết giờ</Tag>,
                 ])} />

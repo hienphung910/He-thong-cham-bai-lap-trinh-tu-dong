@@ -464,6 +464,8 @@ public class ApiServer {
         }
 
         // ---- cac module mo rong (lop hoc, khoa hoc, phong hoc, cuoc thi...) ----
+        // Dia chi nguoi gui (da xu ly proxy / Cloudflare) cho cac module can, vi du nhat ky ky thi.
+        ex.setAttribute(Request.CLIENT_IP_ATTRIBUTE, clientIp(ex));
         Request request = new Request(ex, service);
         for (ApiModule module : modules) {
             if (module.handle(request)) return;
@@ -1098,6 +1100,9 @@ public class ApiServer {
         if (code == null || code.trim().isEmpty()) {
             throw ApiException.badRequest("Mã nguồn rỗng");
         }
+
+        // Dang trong bai thi: ghi lai dia chi nop bai vao nhat ky ky thi (ca khi ky thi khong bat giam sat).
+        if (access.getSitting() != null) access.getSitting().noteIp(author.getId(), clientIp(ex));
 
         JudgeResult result;
         // Moi nguoi mot bai mot luc, ca he thong co tran so bai dang cho: xem SubmissionGate.
