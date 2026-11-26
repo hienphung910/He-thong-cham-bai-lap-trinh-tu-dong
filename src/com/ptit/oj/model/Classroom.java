@@ -66,6 +66,24 @@ public class Classroom extends Entity {
     public Set<String> getRemovedIds() { return removedIds; }
     public Set<String> getInvitedIds() { return invitedIds; }
 
+    /**
+     * Tai khoan hoc sinh do giang vien cua lop TAO HANG LOAT (lop pho thong, khong email): giang vien dat lai
+     * mat khau duoc cho nhung tai khoan nay - khong dung duoc voi tai khoan rieng hoc sinh tu dang ky.
+     * Them sau: ban luu cu doc len la null - xem getManagedIds().
+     */
+    private volatile Set<String> managedIds = new CopyOnWriteArraySet<>();
+
+    public Set<String> getManagedIds() {
+        Set<String> ids = managedIds;
+        if (ids == null) {
+            synchronized (this) {
+                if (managedIds == null) managedIds = new CopyOnWriteArraySet<>();
+                ids = managedIds;
+            }
+        }
+        return ids;
+    }
+
     public Set<String> getPendingIds() {
         Set<String> ids = pendingIds;
         if (ids == null) {

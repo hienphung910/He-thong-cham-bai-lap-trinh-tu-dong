@@ -48,7 +48,8 @@ export interface Classroom {
   /** Bai luyen tap giang vien them rieng cho lop - chi co khi lay chi tiet mot lop. */
   practice?: { id: string; title: string; difficulty: number; solved: boolean }[];
   /** Chi co khi lay chi tiet mot lop. */
-  students?: (BasicUser & { solved: number })[];
+  /** managed: tai khoan do lop tao hang loat (giao vien dat lai mat khau duoc) - chi nguoi quan ly lop thay. */
+  students?: (BasicUser & { solved: number; managed?: boolean })[];
 }
 
 export interface ParentContact {
@@ -229,3 +230,25 @@ export interface RunResult {
 export interface StressResult { found: boolean; rounds: number; message: string; input: string; expected: string; actual: string }
 export interface TestcaseItem { name: string; sample: boolean; points: number; input: string; output: string }
 export interface AssistantReply { simulated: boolean; lines: string[] }
+
+// ---- cong cu giao vien (TeachingApi) ----
+export interface StudentReport {
+  fullName: string; username: string; classroomName: string; teacherName: string;
+  days: number; from: string; to: string;
+  submissions: number; accepted: number; acRate: number; activeDays: number;
+  newSolved: number; prevNewSolved: number; totalSolved: number; streak: number;
+  classRank: number; classSize: number; classSolved: number; classAverageSolved: number; classProblemCount: number;
+  /** state: DONE dung han / LATE co bai nop muon / MISSED qua han chua xong / OPEN chua toi han. */
+  assignments: { title: string; dueAt: string; done: number; late: number; total: number; state: "DONE" | "LATE" | "MISSED" | "OPEN" }[];
+  contests: { title: string; startAt: string; rank: number; participants: number; solved: number; problemCount: number }[];
+  strongTopics: string[]; weakTopics: string[];
+  /** Nhan xet viet san (theo quy tac) - giao vien sua lai truoc khi gui. */
+  comment: string;
+}
+export interface CreatedAccount { userId: string; fullName: string; username: string; password: string }
+export interface Gradebook {
+  classroomName: string;
+  columns: { kind: "assignment" | "contest"; title: string; date: string }[];
+  /** scores[i] ung voi columns[i], he 10; null = bai tap chua toi han va chua xong. */
+  rows: { fullName: string; username: string; scores: (number | null)[]; average: number | null }[];
+}

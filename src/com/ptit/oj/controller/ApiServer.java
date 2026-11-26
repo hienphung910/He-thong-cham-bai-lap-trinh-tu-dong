@@ -2,6 +2,7 @@ package com.ptit.oj.controller;
 
 import com.ptit.oj.controller.api.AccountApi;
 import com.ptit.oj.controller.api.AnalyticsApi;
+import com.ptit.oj.controller.api.TeachingApi;
 import com.ptit.oj.controller.api.ApiModule;
 import com.ptit.oj.controller.api.AssignmentApi;
 import com.ptit.oj.controller.api.CommunityApi;
@@ -224,7 +225,7 @@ public class ApiServer {
                 new AssignmentApi(platform), new MeetingApi(platform), new ContestApi(platform),
                 new AnalyticsApi(platform), new CommunityApi(platform),
                 new SystemApi(platform), new PlaygroundApi(platform),
-                new TestcaseApi(platform));
+                new TestcaseApi(platform), new TeachingApi(platform));
     }
 
     public void start() throws IOException {

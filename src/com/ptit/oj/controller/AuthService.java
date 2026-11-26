@@ -278,6 +278,61 @@ public class AuthService {
         return found.get();
     }
 
+    // ------------------------------------- tai khoan hoc sinh do giao vien tao
+
+    /**
+     * Giao vien tao tai khoan hoc sinh cho lop pho thong: hoc sinh khong can email, giao vien giu va dat
+     * lai mat khau. Ten dang nhap sinh tu ho ten ("Nguyễn Văn An" -> "annv", trung thi "annv2"...).
+     */
+    public synchronized User createManagedStudent(String fullName, String className, String rawPassword) {
+        String cleanFullName = requireText(fullName, "Họ tên", MAX_FULL_NAME).replaceAll("\\s+", " ");
+        if (cleanFullName.length() < 2 || !FULL_NAME.matcher(cleanFullName).matches()) {
+            throw new AuthException(400, "Họ tên \"" + cleanFullName + "\" chỉ được gồm chữ cái và khoảng trắng");
+        }
+        String cleanClass = optionalText(className, "Lớp", MAX_CODE);
+        requirePlainLabel(cleanClass, "Lớp");
+        String username = suggestUsername(cleanFullName);
+        passwords.validateChosen(rawPassword, username);
+        User user = new Student(newUserId(), username, cleanFullName, "", cleanClass);
+        users.saveWithCredentials(user, passwords.hash(rawPassword));
+        return user;
+    }
+
+    /** Loi cua mot ho ten khi tao tai khoan hang loat (null neu dung): chu cai va khoang trang, it nhat 2 tu. */
+    public String checkStudentName(String fullName) {
+        String clean = fullName == null ? "" : fullName.trim().replaceAll("\\s+", " ");
+        if (clean.length() > MAX_FULL_NAME) return "họ tên tối đa " + MAX_FULL_NAME + " ký tự";
+        if (!FULL_NAME.matcher(clean).matches()) return "chỉ được gồm chữ cái và khoảng trắng";
+        if (clean.split(" ").length < 2) return "cần ghi đủ họ và tên";
+        return null;
+    }
+
+    /** Ten dang nhap con trong tu ho ten: ten + chu cai dau cua ho va dem, khong dau, them so neu trung. */
+    String suggestUsername(String fullName) {
+        String folded = java.text.Normalizer.normalize(fullName, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "").replace('đ', 'd').replace('Đ', 'D').toLowerCase(Locale.ROOT);
+        String[] parts = folded.replaceAll("[^a-z ]", " ").trim().split("\\s+");
+        StringBuilder base = new StringBuilder(parts[parts.length - 1]);
+        for (int i = 0; i < parts.length - 1; i++) {
+            if (!parts[i].isEmpty()) base.append(parts[i].charAt(0));
+        }
+        while (base.length() < 3) base.append('x');
+        String stem = base.length() > 24 ? base.substring(0, 24) : base.toString();
+        for (int n = 1; n < 100000; n++) {
+            String candidate = n == 1 ? stem : stem + n;
+            if (!RESERVED_USERNAMES.contains(candidate) && !users.existsByUsername(candidate)) return candidate;
+        }
+        throw new AuthException(409, "Không sinh được tên đăng nhập cho " + fullName);
+    }
+
+    /** Dat mat khau moi cho mot tai khoan (giao vien dat lai cho hoc sinh minh quan ly); dang xuat moi phien. */
+    public synchronized void setPasswordFor(String userId, String rawPassword) {
+        User user = findById(userId).orElseThrow(() -> new AuthException(404, "Không có tài khoản này"));
+        passwords.validateChosen(rawPassword, user.getUsername());
+        users.saveWithCredentials(user, passwords.hash(rawPassword));
+        dropSessions(userId);
+    }
+
     /** Tao tai khoan cho vai tro bat ky - chi dung tu phia may chu (seed, bootstrap). */
     public synchronized User createAccount(User user, String rawPassword) {
         passwords.validate(rawPassword);

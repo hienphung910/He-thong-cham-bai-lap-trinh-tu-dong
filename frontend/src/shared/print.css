@@ -1,0 +1,9 @@
+/* PrintArea (print.tsx): chi hien khi in; khi in thi an ca ung dung. */
+.print-root { display: none; }
+
+@media print {
+  body > *:not(.print-root) { display: none !important; }
+  .print-root { display: block !important; }
+  html, body { background: #fff !important; }
+  @page { size: A4; margin: 14mm 12mm; }
+}

@@ -1,6 +1,6 @@
 import { postJson, putJson, request } from "./api";
 import type {
-  Assignment, AssignmentProgress, BasicUser, ChatPage, Classroom, Contest, ContestEvent, Dashboard, Meeting, NotificationList, Organization, ProctorEventType, ProctorLog, ProblemComment, Profile, RunResult, Settings, TestcaseItem,
+  Assignment, AssignmentProgress, BasicUser, ChatPage, CreatedAccount, Gradebook, StudentReport, Classroom, Contest, ContestEvent, Dashboard, Meeting, NotificationList, Organization, ProctorEventType, ProctorLog, ProblemComment, Profile, RunResult, Settings, TestcaseItem,
 } from "./platformTypes";
 import type { ScoreRow } from "./types";
 
@@ -40,6 +40,14 @@ export const papi = {
   classrooms: () => request<Classroom[]>("/api/classrooms"),
   classroom: (id: string) => request<Classroom>(`/api/classrooms/${enc(id)}`),
   /** Bang xep hang rieng cua lop: bai luyen tap + bai tap giao cua lop, moi hoc sinh deu co mat. */
+  /** Cong cu giao vien (TeachingApi): bao cao hoc tap, tao tai khoan hang loat, dat lai mat khau, bang diem. */
+  studentReport: (id: string, userId: string, days: number) =>
+    request<StudentReport>(`/api/classrooms/${enc(id)}/students/${enc(userId)}/report?days=${days}`),
+  bulkCreateStudents: (id: string, names: string, className: string) =>
+    postJson<{ classroomName: string; created: CreatedAccount[] }>(`/api/classrooms/${enc(id)}/students/bulk`, { names, className }),
+  resetStudentPassword: (id: string, userId: string) =>
+    postJson<{ fullName: string; username: string; password: string }>(`/api/classrooms/${enc(id)}/students/${enc(userId)}/password`, {}),
+  gradebook: (id: string) => request<Gradebook>(`/api/classrooms/${enc(id)}/gradebook`),
   classScoreboard: (id: string) =>
     request<{ classroomId: string; name: string; problemCount: number; rows: ScoreRow[] }>(`/api/classrooms/${enc(id)}/scoreboard`),
   createClassroom: (body: { name: string; organizationId: string; courseId: string }) =>

@@ -1,0 +1,73 @@
+/* Bao cao hoc tap (StudentReport.tsx) va the dang nhap (BulkAccounts.tsx): dung cho ca man hinh va ban in. */
+
+.rp-periods { display: inline-flex; padding: 3px; border: 1px solid #E0E0E0; border-radius: 8px; background: #fff; }
+.rp-period {
+  height: 28px; padding: 0 12px; border: none; border-radius: 6px; background: none;
+  font-size: 12.5px; font-weight: 600; color: #616161; cursor: pointer;
+}
+.rp-period[aria-selected="true"] { background: var(--color-accent); color: var(--color-on-accent); }
+
+.rp-screen .rp-sheet { max-width: 860px; padding: 28px 32px; background: #fff; border: 1px solid #E0E0E0; border-radius: 10px; }
+
+.rp-sheet { color: #212121; font-size: 13.5px; line-height: 1.5; }
+.rp-head { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; padding-bottom: 14px; border-bottom: 2px solid var(--color-accent); }
+.rp-brand { font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-accent-dark); }
+.rp-title { margin: 2px 0 0; font-size: 22px; font-weight: 800; }
+.rp-sub { margin-top: 2px; font-size: 13px; color: #616161; }
+.rp-info { border-collapse: collapse; font-size: 13px; }
+.rp-info th { padding: 2px 12px 2px 0; text-align: left; font-weight: 600; color: #757575; white-space: nowrap; }
+.rp-info td { padding: 2px 0; font-weight: 700; }
+
+.rp-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
+.rp-kpi { padding: 12px 14px; border: 1px solid #EEEEEE; border-radius: 8px; background: #FAFAFA; }
+.rp-kpi-value { font-size: 22px; font-weight: 800; }
+.rp-kpi-label { margin-top: 2px; font-size: 12px; color: #616161; }
+.rp-kpi-note { margin-top: 4px; font-size: 11.5px; font-weight: 600; color: var(--color-red); }
+
+.rp-section { margin-top: 20px; }
+.rp-section h3 { margin: 0 0 8px; font-size: 14px; font-weight: 700; }
+.rp-empty { margin: 0; color: #9E9E9E; }
+.rp-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rp-table th { padding: 7px 10px; text-align: left; font-size: 12px; font-weight: 700; color: #616161; background: #F5F5F5; border-bottom: 1px solid #E0E0E0; }
+.rp-table td { padding: 7px 10px; border-bottom: 1px solid #F0F0F0; }
+.rp-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+.rp-ok { background: #E8F5E9; color: #2E7D32; }
+.rp-warn { background: #FFF3E0; color: #E65100; }
+.rp-bad { background: #FFEBEE; color: #C62828; }
+
+.rp-open { background: #E3F2FD; color: #1565C0; }
+
+.rp-topics { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.rp-topics ul { margin: 0; padding-left: 18px; }
+
+.rp-comment { margin: 0; white-space: pre-wrap; }
+.rp-comment-edit {
+  width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #E0E0E0; border-radius: 8px;
+  font: inherit; font-size: 13.5px; line-height: 1.55; color: #212121; resize: vertical; outline: none;
+}
+.rp-comment-edit:focus { border-color: var(--color-accent); }
+
+.rp-foot { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-top: 24px; font-size: 12px; color: #757575; }
+.rp-sign { text-align: center; font-size: 13px; color: #212121; font-weight: 600; }
+
+@media (max-width: 640px) {
+  .rp-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rp-screen .rp-sheet { padding: 18px 16px; }
+}
+
+@media print {
+  .rp-kpi { background: #fff; }
+  .rp-table th { background: #F2F2F2 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .rp-badge, .rp-head { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .rp-section, .rp-kpis { break-inside: avoid; }
+}
+
+/* ---- the dang nhap ---- */
+.ac-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8mm; }
+.ac-card { padding: 5mm 6mm; border: 1px dashed #9E9E9E; border-radius: 3mm; break-inside: avoid; font-size: 12pt; color: #000; }
+.ac-card-brand { font-size: 9pt; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #E07F0A; }
+.ac-card-name { margin: 1mm 0 3mm; font-size: 13pt; font-weight: 800; }
+.ac-card table { border-collapse: collapse; }
+.ac-card th { padding: 0.8mm 4mm 0.8mm 0; text-align: left; font-weight: 600; color: #555; font-size: 10.5pt; }
+.ac-card td { padding: 0.8mm 0; font-family: "JetBrains Mono", Consolas, monospace; font-weight: 700; font-size: 12.5pt; }
+.ac-card-url { margin-top: 2mm; font-size: 9pt; color: #555; }

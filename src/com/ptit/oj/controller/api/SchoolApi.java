@@ -346,7 +346,10 @@ public class SchoolApi extends ApiModule {
             User u = users.get(id);
             if (u == null) continue;
             Set<String> solved = solvedByUser.get(id);
-            students.add(userJson(u).put("solved", solved == null ? 0 : solved.size()).build());
+            Json.Obj row = userJson(u).put("solved", solved == null ? 0 : solved.size());
+            // Tai khoan do lop tao hang loat: giang vien dat lai mat khau duoc (xem TeachingApi).
+            if (school.canManage(viewer, c)) row.put("managed", c.getManagedIds().contains(id));
+            students.add(row.build());
         }
         // Hoc sinh da duoc moi nhung chua dong y: chi nguoi quan ly lop thay.
         List<String> invited = new ArrayList<>();

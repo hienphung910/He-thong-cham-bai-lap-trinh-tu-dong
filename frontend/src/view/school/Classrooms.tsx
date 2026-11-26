@@ -9,7 +9,10 @@ import Analytics from "../profile/Analytics";
 import { DIFFICULTY_META } from "../problem/learningPath";
 import ProblemPicker from "../problem/ProblemPicker";
 import type { Classroom } from "../../shared/platformTypes";
-import { confirmDialog } from "../../shared/dialog";
+import { alertDialog, confirmDialog } from "../../shared/dialog";
+import { downloadXlsx } from "../../shared/xlsx";
+import StudentReport from "./StudentReport";
+import BulkAccounts from "./BulkAccounts";
 
 /** Khung noi bat hien ma tham gia cua lop, de giang vien doc / chep cho hoc sinh. */
 function JoinCode({ code }: { code: string }) {
@@ -156,6 +159,9 @@ function ClassroomDetail({ id, onBack }: { id: string; onBack: () => void }) {
   const [picking, setPicking] = useState(false);
   /** Hoc sinh dang duoc xem phan tich hoc tap (ten dang nhap); null = dang o trang lop. */
   const [viewing, setViewing] = useBackState<string | null>("classStudent", null);
+  /** Hoc sinh dang xem bao cao hoc tap (ma tai khoan); null = dang o trang lop. */
+  const [reporting, setReporting] = useBackState<string | null>("classReport", null);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const c: Classroom | null = detail.data;
 
   async function act(work: () => Promise<unknown>) {
@@ -174,6 +180,35 @@ function ClassroomDetail({ id, onBack }: { id: string; onBack: () => void }) {
   }
 
   if (viewing) return <Analytics username={viewing} onBack={() => setViewing(null)} />;
+  if (reporting) return <StudentReport classroomId={id} userId={reporting} onBack={() => setReporting(null)} />;
+
+  /** Dat lai mat khau tai khoan do lop tao; mat khau moi chi hien mot lan. */
+  async function resetPassword(userId: string, fullName: string) {
+    if (!(await confirmDialog({
+      title: `Đặt lại mật khẩu cho ${fullName}?`,
+      message: "Mật khẩu cũ hết hiệu lực và em sẽ bị đăng xuất trên mọi thiết bị.",
+      confirmLabel: "Đặt lại", tone: "primary",
+    }))) return;
+    setError("");
+    try {
+      const res = await papi.resetStudentPassword(id, userId);
+      await alertDialog({ title: `Mật khẩu mới của ${res.fullName}`, message: `Tên đăng nhập: ${res.username}
+Mật khẩu: ${res.password}` });
+    } catch (e) { setError(errorText(e)); }
+  }
+
+  /** Bang diem he 10 cua lop ra file Excel. */
+  async function exportGrades() {
+    setError("");
+    try {
+      const g = await papi.gradebook(id);
+      const head = ["STT", "Họ và tên", "Tên đăng nhập",
+        ...g.columns.map((col) => `${col.kind === "contest" ? "Kỳ thi" : "Bài tập"}: ${col.title}`), "Trung bình"];
+      const rows = g.rows.map((row, i) => [i + 1, row.fullName, row.username, ...row.scores, row.average]);
+      downloadXlsx(`Bang diem - ${g.classroomName}`, "Bảng điểm", [head, ...rows],
+        [6, 28, 16, ...g.columns.map(() => 16), 12]);
+    } catch (e) { setError(errorText(e)); }
+  }
 
   const practice = c?.practice ?? [];
   const solved = practice.filter((p) => p.solved).length;
@@ -239,7 +274,10 @@ function ClassroomDetail({ id, onBack }: { id: string; onBack: () => void }) {
               onPick={(ids) => { setPicking(false); void act(() => papi.addPracticeProblems(id, ids)); }} />
           )}
 
-          <Card title={`Học sinh (${c.students?.length ?? 0})`}>
+          <Card title={`Học sinh (${c.students?.length ?? 0})`} right={c.canManage ? <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <Btn small kind="ghost" onClick={() => setBulkOpen(true)}>Tạo tài khoản cho lớp</Btn>
+            <Btn small kind="ghost" disabled={(c.students?.length ?? 0) === 0} onClick={() => void exportGrades()}>Xuất bảng điểm</Btn>
+          </div> : undefined}>
             {c.canManage && (
               <div style={{ marginBottom: 12 }}>
                 <Row>
@@ -275,12 +313,18 @@ function ClassroomDetail({ id, onBack }: { id: string; onBack: () => void }) {
                 s.fullName, s.solved,
                 c.canManage ? (
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    <Btn small onClick={() => setReporting(s.id)}>Báo cáo</Btn>
                     <Btn small kind="ghost" onClick={() => setViewing(s.username)}>Xem phân tích</Btn>
+                    {s.managed && <Btn small kind="ghost" onClick={() => void resetPassword(s.id, s.fullName)}>Đặt lại mật khẩu</Btn>}
                     {c.isOwner && <Btn small kind="danger" onClick={() => void act(() => papi.removeStudent(id, s.id))}>Xoá khỏi lớp</Btn>}
                   </div>
                 ) : "",
               ])} />
           </Card>
+
+          {bulkOpen && (
+            <BulkAccounts classroomId={id} classroomName={c.name} onClose={() => setBulkOpen(false)} onCreated={() => detail.reload()} />
+          )}
 
           <Card title="Chat của lớp">
             <ChatBox channel={`class-${c.id}`} />
