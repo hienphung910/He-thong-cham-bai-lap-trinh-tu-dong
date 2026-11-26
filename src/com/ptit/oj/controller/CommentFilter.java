@@ -89,6 +89,7 @@ public final class CommentFilter {
     private static final List<String> PLAIN = Arrays.asList(
             // viet tat, teencode
             "dm", "dmm", "dcm", "dcmm", "dkm", "dkmm", "dmcs", "dmml", "dmconcho", "vcl", "vkl", "vl", "vcc",
+            "cc", "cl",
             "vler", "vlz", "vloz", "vlon", "vlol", "vailol", "vailoz", "clgt", "clm", "clmm", "clg", "ccj", "cdj",
             "cmm", "cmn", "cmnr", "cmnl", "dit", "djt", "djtme", "ditme", "ditmemay", "ditconme", "ditconmemay",
             "disme", "dismia", "dume", "duma", "dmay", "condime", "condimemay", "condicho", "dilon", "diloz", "dilol",
@@ -104,6 +105,89 @@ public final class CommentFilter {
             "bullshit", "shitty", "bitches", "asshole", "ass hole", "bastard", "cunt", "dick", "dickhead", "pussy",
             "whore", "slut", "faggot", "fag", "nigger", "nigga", "retard", "retarded", "stfu", "gtfo", "wtf",
             "dafuq", "kys", "twat", "wanker", "jerk off", "son of a bitch", "piss off", "dumbass", "jackass");
+
+    /**
+     * Bo sung sau khi doi chieu voi danh sach cong khai (blue-eyes-vn/vietnamese-offensive-words,
+     * behitek/vietnam-sensitive-words) va bo cau thu: CO DAU (ban khong dau trung tu binh thuong).
+     * Cac cum ghep "tien to x bien the" (dit/du/dis x me/ma/cha, ngu/mat/xam x lol...) sinh o duoi.
+     */
+    private static final List<String> ACCENTED_EXTRA = Arrays.asList(
+            // bien the cua "me" chi dung khi chui
+            "mịa", "mịe", "moẹ", "moạ", "mẹ kiếp", "má kiếp", "kệ mẹ", "kệ má", "bỏ mẹ", "bỏ bố", "chết mẹ",
+            "mẹ cha nhà mày", "mẹ cha anh", "đậu mẹ", "dou má", "đou má", "duo má", "á đìu", "cđĩ",
+            "mõm lol", "mồm lol", "lòi lol", "mõm loz", "mồm loz",
+            "á đù", "đờ ma ma", "đờ mama", "đê ma ma", "đê mama", "đề ma ma",
+            // cac bien the lồn, cặc, buồi, đĩ
+            "cặt", "kặt", "bòi", "đầu bùi", "đầu bòy", "cái lờ", "vãi lờ", "đĩ điếm", "đĩ thõa", "đĩ đực",
+            "hòn dái", "bìu dái", "vcđ", "vkđ", "vãi cả đái", "vãi cả lồn",
+            // lang ma, xuc pham
+            "óc heo", "óc bò", "não heo", "não chó", "đồ đần", "thằng đần độn", "đồ hãm", "thằng hãm", "con hãm",
+            "đồ thần kinh", "thằng thần kinh", "chó điên", "cờ hó", "súc sản", "xúc sinh", "bố láo",
+            "câm miệng", "câm họng", "câm mõm", "sủa bậy", "sủa càn", "sủa láo", "sủa nhiều", "cút xéo", "cút mẹ",
+            "bố mày", "thằng bóng", "bóng lộ",
+            // de doa
+            "giết chết mày", "đánh chết mày", "chém chết mày", "đập chết mày", "đâm chết mày",
+            // vung mien
+            "bắc kỳ chó", "nam kỳ chó", "bake chó", "ba que xỏ lá", "tàu khựa");
+
+    /** Bo sung KHONG DAU (khong trung tu binh thuong nao). */
+    private static final List<String> PLAIN_EXTRA = Arrays.asList(
+            "mje", "mja", "vleu", "vlin", "vle", "sml", "smlm", "thml", "thangml", "dcl", "dkml", "ccmm",
+            "dauboy", "caidauboy", "dau boy", "chym", "trym", "bym", "shjt", "sh1t", "pede", "condi cho",
+            "deohieu", "dellhieu", "deobiet", "dellbiet", "dellhieukieugi", "deohieukieugi", "dellnoinhieu",
+            "dell an", "dell di", "dell ngui", "deo ngui", "dou ma", "duo ma", "duoma", "condi", "condimay",
+            "dimemay", "dismje", "chetme", "matlol", "sapmatlol", "sapmatloz", "nuglol", "nuglon", "vailon",
+            "nug lol", "loi lol", "mu lol", "cao lol", "tung lol", "dach lol", "xam lon", "xao lon", "nug lon",
+            "me cha may", "ma cha may", "me cha nha may", "chich choac", "thang dien");
+
+    /**
+     * Tu khong dau CHI chan khi ca cum duoc go khong dau: ban co dau cua chung la cau binh thuong
+     * ("đít chảo", "đủ mà", "dù mà", "mặt dây chuyền", "vài lon bia").
+     */
+    private static final Set<String> ASCII_ONLY = new java.util.HashSet<>(Arrays.asList(
+            "dit", "du ma", "du me", "mat day", "vai lon", "thang dien"));
+
+    /** Cac cum ghep sinh tu dong, de khong phai liet ke tay tung to hop. */
+    private static final List<String> ACCENTED_COMBOS = new ArrayList<>();
+    private static final List<String> PLAIN_COMBOS = new ArrayList<>();
+
+    static {
+        // "đù má", "dis mẹ", "đjt cha"...: dong tu chui x me / ma / cha / bo.
+        for (String verb : new String[] { "địt", "đụ", "đù", "đú", "đủ", "đìu", "dis", "đis", "đjt", "djt" }) {
+            for (String who : new String[] { "mẹ", "má", "cha", "bố" }) {
+                // "đủ mẹ", "đủ cha", "đít mẹ" khong phai chui: chi giu cac to hop chac chan.
+                if (verb.equals("đủ") && !who.equals("má")) continue;
+                ACCENTED_COMBOS.add(verb + " " + who);
+                ACCENTED_COMBOS.add(verb + " con " + who);
+            }
+        }
+        for (String verb : new String[] { "dit", "djt", "dis" }) {
+            for (String who : new String[] { "me", "ma", "cha", "mia", "mie" }) {
+                PLAIN_COMBOS.add(verb + " " + who);
+                PLAIN_COMBOS.add(verb + " con " + who);
+                PLAIN_COMBOS.add(verb + who);
+            }
+        }
+        // "mịa mày", "con mẹ mày".
+        for (String who : new String[] { "mịa", "mịe", "moẹ", "mje", "mja" }) ACCENTED_COMBOS.add(who + " mày");
+        // "đéo hiểu", "dell biết", "deo quan tam": phu dinh tuc + dong tu.
+        for (String neg : new String[] { "deo", "dell", "del", "deck", "dek" }) {
+            for (String verb : new String[] { "hieu", "biet", "chiu", "quan tam", "thich", "care", "muon", "nghe",
+                    "noi", "can", "lam", "hieu kieu gi", "ai them" }) {
+                // "đeo cận", "đeo làm": ban khong dau cua "deo" trung "đeo" (kinh).
+                // "Dell" con la hang may tinh ("máy Dell cần sửa", "Dell làm ra"): bo cac dong tu de trung.
+                if (verb.equals("can") || verb.equals("lam") || verb.equals("noi")) continue;
+                PLAIN_COMBOS.add(neg + " " + verb);
+            }
+        }
+        // "ngu lol", "mặt loz", "xàm lìn": tu ghep voi "lol" (Anh: cuoi to) chi chan khi di sau cac tu nay.
+        for (String before : new String[] { "ngu", "mat", "xam", "xao", "cai", "nhu", "cu", "oc", "vai", "nung",
+                "mon", "an", "tuoi", "ranh", "dau", "ham", "banh", "tet", "vach", "sap mat", "con",
+                "thang", "phe", "luoi", "lieu", "hon", "kho", "de", "hay", "dep", "xau", "dien" }) {
+            PLAIN_COMBOS.add(before + " lol");
+            PLAIN_COMBOS.add(before + " lolz");
+        }
+    }
 
     /**
      * Goc tu tieng Anh: mot tu CHUA goc nay la bi chan ("fucking", "bullshit", "motherfucker"). Tu viet kieu
@@ -201,6 +285,15 @@ public final class CommentFilter {
         return " " + SEPARATORS.matcher(text).replaceAll(" ").trim() + " ";
     }
 
+    /** Thay moi tu co chu ngoai ASCII (tu go co dau) bang dau cach, giu lai cac tu go khong dau. */
+    private static String asciiWordsOnly(String text) {
+        StringBuilder out = new StringBuilder();
+        for (String word : text.split(" ")) {
+            out.append(' ').append(isAscii(word) ? word : "");
+        }
+        return out.toString();
+    }
+
     /** Gop cac chu lap lien tiep thanh mot: "fuuuck" -> "fuck", "dmmm" -> "dm", "lồnnn" -> "lồn". */
     private static String squeeze(String text) {
         StringBuilder out = new StringBuilder(text.length());
@@ -238,6 +331,10 @@ public final class CommentFilter {
         final Map<String, String> plainSolid = new HashMap<>();
 
         Words(Collection<String> extraWords) {
+            accented.addAll(ACCENTED_EXTRA);
+            accented.addAll(ACCENTED_COMBOS);
+            plain.addAll(PLAIN_EXTRA);
+            plain.addAll(PLAIN_COMBOS);
             for (String extra : extraWords) {
                 String w = normalize(extra == null ? "" : extra);
                 w = SEPARATORS.matcher(w).replaceAll(" ").trim();
@@ -304,17 +401,22 @@ public final class CommentFilter {
         String plainSqueezed = joined(squeeze(plain));
         // Tu ngan khong dau ("dm", "vl", "dit") con hay la ten bien trong doan code duoc trich ("vl[i]",
         // "dm = 0", "a.vl") hoac don vi do ("1 dm" = 1 de-xi-met): so tu ngan tren ban da bo cac cho do.
-        String plainShort = joined(fold(CODE_IDENTIFIER.matcher(UNIT_DM.matcher(lower).replaceAll(" ")).replaceAll(" ")));
+        String noUnits = UNIT_DM.matcher(lower).replaceAll(" ");
+        // Cau dang noi ve don vi do ("đổi cm và dm", "mm, cm, dm"): "dm" la de-xi-met.
+        if (UNIT_WORDS.matcher(lower).find()) noUnits = noUnits.replaceAll("(?<![\\p{L}\\p{N}])dm(?![\\p{L}\\p{N}])", " ");
+        String plainShort = joined(fold(CODE_IDENTIFIER.matcher(noUnits).replaceAll(" ")));
         for (String phrase : ALLOWED_PHRASES) plainShort = plainShort.replace(" " + fold(phrase) + " ", " ");
         String plainShortSqueezed = joined(squeeze(plainShort));
         for (String w : words.accented) {
             if (accented.contains(" " + w + " ")) return w;
             if (squeeze(w).equals(w) && accentedSqueezed.contains(" " + w + " ")) return w;
         }
+        // Ban chi giu cac tu go KHONG DAU, cho cac tu trong ASCII_ONLY.
+        String asciiOnly = joined(asciiWordsOnly(SEPARATORS.matcher(CODE_IDENTIFIER.matcher(lower).replaceAll(" ")).replaceAll(" ")));
         for (String w : words.plain) {
             boolean shortWord = w.length() <= 4 && !w.contains(" ");
-            String in = shortWord ? plainShort : plain;
-            String inSqueezed = shortWord ? plainShortSqueezed : plainSqueezed;
+            String in = ASCII_ONLY.contains(w) ? asciiOnly : shortWord ? plainShort : plain;
+            String inSqueezed = ASCII_ONLY.contains(w) ? joined(squeeze(asciiOnly)) : shortWord ? plainShortSqueezed : plainSqueezed;
             // Chi so voi ban da gop chu lap khi ban than tu cam khong co chu lap: gop "cmm" thanh "cm" roi di
             // tim thi "10 cm" cung bi chan oan.
             if (in.contains(" " + w + " ")) return w;
@@ -334,10 +436,19 @@ public final class CommentFilter {
      */
     private static final Pattern CODE_IDENTIFIER = Pattern.compile(
             "(?<![\\p{L}\\p{N}_])[a-z_][a-z0-9_]*(?=\\s*(?:\\[|\\(|[+\\-*/%]?=(?!=)))"
-          + "|(?<=[a-z0-9_)\\]]\\.)[a-z_][a-z0-9_]*(?![\\p{L}\\p{N}_])");
+          + "|(?<=[a-z0-9_)\\]]\\.)[a-z_][a-z0-9_]*(?![\\p{L}\\p{N}_])"
+          // ve phai cua phep gan / phep tinh trong code: "x = cc + 1", "a[i] * dm;"
+          + "|(?<=[=+\\-*/%<>\\[(,;{!][ ]{0,3})[a-z_][a-z0-9_]*(?=\\s*(?:[+\\-*/%<>;,)\\]]|==|!=))");
 
-    /** "1 dm", "2,5dm": de-xi-met trong bai doi don vi, khong phai "đm". */
-    private static final Pattern UNIT_DM = Pattern.compile("(?<=\\d)\\s*dm(?![\\p{L}\\p{N}_])");
+    /**
+     * Don vi do dung sau so, khong phai tu viet tat tuc: "1 dm", "2,5dm" (de-xi-met), "100 cc", "xe 50cc"
+     * (phan khoi / ml), "3 cl" (xen-ti-lit).
+     */
+    private static final Pattern UNIT_DM = Pattern.compile("(?<=\\d)\\s*(?:dm|cc|cl)(?![\\p{L}\\p{N}_])");
+
+    /** Don vi do do dai / dien tich / the tich khac di cung "dm" trong mot cau. */
+    private static final Pattern UNIT_WORDS = Pattern.compile(
+            "(?<![\\p{L}\\p{N}])(?:mm|cm|km|m2|m3|cm2|dm2|dm3|mét|met|lít|lit|xăng-ti-mét|đề-xi-mét)(?![\\p{L}\\p{N}])");
 
     private static final Pattern WORD = Pattern.compile("[\\p{L}\\p{N}]+");
 
@@ -379,6 +490,8 @@ public final class CommentFilter {
             Matcher m = RUN_LETTER.matcher(text);
             while (m.find()) letters.add(m.group());
             if (letters.size() < 2) continue;
+            // Chu tach bang ngoac, phep so sanh, phep gan ("d[i][t]", "a<b>c", "x=y+z") la bieu thuc trong code.
+            if (text.matches("(?s).*[\\[\\](){}<>=+].*")) continue;
             // Cach bang dau cach, dau phay, phep tinh ("d m", "d, m", "n - m") co the la bien trong mot bieu thuc
             // nen bo qua tu ngan chi co chu Latin; chen dau cham / sao / gach duoi ("d.m", "v*l") la co y tach chu.
             boolean spacedOnly = !text.matches("(?s).*[.*_~^'`|#].*");
