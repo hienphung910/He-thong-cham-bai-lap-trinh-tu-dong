@@ -11,7 +11,7 @@ public class Problem extends Entity {
     private final String statement;
     private final long timeLimitMs;
     private final int memoryLimitMb;
-    private final String comparatorSpec;   // "exact" | "token" | "lines" | "float:1e-6"
+    private final String comparatorSpec;   // "exact" | "token" | "lines" | "linetokens" | "float:1e-6"
     /** Ma chu de trong lo trinh hoc (data/topics.txt), "" neu bai chua phan loai. */
     private final String topic;
     /** 1 = De, 2 = Vua, 3 = Kho; 0 = chua danh gia. */

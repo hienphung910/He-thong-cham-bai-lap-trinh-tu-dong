@@ -60,6 +60,9 @@ public class Main {
             return;
         }
 
+        // Sua cau hinh de bai da co san tren may chu (truoc khi nap de bai) - xem ProblemMigrations.
+        com.ptit.oj.dao.ProblemMigrations.run(dataDir);
+
         try {
             JudgeService service;
             if (noDatabase) {

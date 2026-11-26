@@ -4,7 +4,7 @@ import { Select } from "../../../shared/ui";
 import { DIFFICULTY_META } from "../learningPath";
 import type { NewTestInput, Topic } from "../../../shared/types";
 
-const COMPARATORS = ["token", "lines", "exact", "float", "float:1e-6", "float:1e-9"];
+const COMPARATORS = ["token", "linetokens", "lines", "exact", "float", "float:1e-6", "float:1e-9"];
 
 let nextKey = 1;
 interface TestRow extends NewTestInput {
