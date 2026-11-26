@@ -18,11 +18,9 @@ import java.util.Set;
  *  - Bai kho chung: ai cung mo duoc. Bai kho rieng: chi mo duoc qua LOP cua minh - bai luyen tap
  *    cua lop, bai tap giao cho lop, ky thi cua lop. Hoc sinh lop khac khong thay.
  *  - Ky thi chua bat dau: hoc sinh chua thay de. Giang vien phu trach lop thi thay.
- *  - Ky thi DANG DIEN RA: hoc sinh cua lop chi mo duoc bai thi khi dang o trong bai thi (da bam
- *    Vao thi, chua nop bai som). Chua vao thi hoac da nop bai thi cac bai do bi khoa, ke ca bai
- *    kho chung - neu khong, hoc sinh lam truoc ben ngoai (khong bi giam sat) roi moi vao thi dan vao.
+ *  - Ky thi DANG DIEN RA hoac da ket thuc: hoc sinh cua lop mo duoc bai thi o trang luyen tap nhu
+ *    bai thuong. Chi bai nop SAU luc bam "Vao thi" (va truoc luc nop som) moi tinh vao ky thi.
  *  - Dang o trong bai thi: CHI mo duoc bai cua ky thi do, moi bai khac bi khoa cho toi khi thi xong.
- *  - Ky thi da ket thuc: ca lop mo duoc bai de xem lai.
  */
 public final class ProblemAccess {
 
@@ -32,8 +30,6 @@ public final class ProblemAccess {
     private Contest sitting;
     /** Bai kho rieng duoc mo qua lop cua nguoi nay. */
     private final Set<String> granted = new HashSet<>();
-    /** Bai cua ky thi dang dien ra ma nguoi nay (hoc sinh cua lop) khong o trong bai thi. */
-    private final Set<String> locked = new HashSet<>();
 
     private ProblemAccess(User viewer) {
         this.viewer = viewer;
@@ -54,16 +50,9 @@ public final class ProblemAccess {
             for (Contest k : platform.getContests().getContests()) {
                 if (!c.getId().equals(k.getClassroomId())) continue;
                 String status = k.getStatus();
-                if (staff || "ENDED".equals(status)) {
-                    access.granted.addAll(k.getProblemIds());
-                } else if ("RUNNING".equals(status)) {
-                    if (k.isSitting(me)) {
-                        if (access.sitting == null) access.sitting = k;
-                    } else {
-                        access.locked.addAll(k.getProblemIds());
-                    }
-                }
-                // UPCOMING voi hoc sinh: chua cong bo de, khong cap quyen gi.
+                if (!staff && "UPCOMING".equals(status)) continue;   // chua cong bo de
+                if (k.isSitting(me) && access.sitting == null) access.sitting = k;
+                access.granted.addAll(k.getProblemIds());
             }
         }
         return access;
@@ -76,7 +65,6 @@ public final class ProblemAccess {
         if (admin || viewer.canEditProblem(problem)) return true;
         String id = problem.getId();
         if (sitting != null) return sitting.getProblemIds().contains(id);
-        if (locked.contains(id)) return false;
         return problem.isShared() || granted.contains(id);
     }
 
@@ -84,9 +72,6 @@ public final class ProblemAccess {
     public String lockReason(Problem problem) {
         if (sitting != null) {
             return "Bạn đang trong bài thi \"" + sitting.getTitle() + "\": chỉ làm được các bài của kỳ thi này cho tới khi nộp bài hoặc hết giờ";
-        }
-        if (locked.contains(problem.getId())) {
-            return "Bài " + problem.getId() + " đang nằm trong một kỳ thi của lớp bạn. Hãy bấm Vào thi để làm bài; bài mở lại sau khi kỳ thi kết thúc";
         }
         return null;
     }

@@ -116,6 +116,21 @@ public class ContestApi extends ApiModule {
             req.send(contestJson(c, user).build());
             return true;
         }
+        // Nguoi quan ly ket thuc ky thi ngay luc dang thi.
+        if (req.is("POST", "contests", "*", "end")) {
+            User user = req.staff();
+            Contest c = contests.find(req.arg(0));
+            contests.endNow(user, c);
+            Classroom classroom = classroomOf(c);
+            if (classroom != null) {
+                platform.getCommunity().notifyMany(classroom.getStudentIds(), "Kỳ thi đã kết thúc: " + c.getTitle(),
+                        "Giảng viên đã kết thúc kỳ thi lúc " + time(c.getEndAt()).replace('T', ' ')
+                                + ". Bài nộp sau thời điểm này không được tính vào kỳ thi.",
+                        "Contests");
+            }
+            req.send(contestJson(c, user).build());
+            return true;
+        }
         // Nguoi quan ly ky thi bat / tat giam sat.
         if (req.is("PUT", "contests", "*", "proctoring")) {
             User user = req.staff();
@@ -340,6 +355,7 @@ public class ContestApi extends ApiModule {
                 .put("startAt", time(c.getStartAt()))
                 .put("endAt", time(c.getEndAt()))
                 .put("durationMin", c.getDurationMin())
+                .put("endedEarly", c.getEndedEarlyAt() != null)
                 .put("status", c.getStatus())
                 .put("problemCount", c.getProblemIds().size())
                 .put("problemsHidden", hidden)

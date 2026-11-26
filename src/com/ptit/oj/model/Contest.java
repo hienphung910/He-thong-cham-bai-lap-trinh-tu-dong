@@ -75,7 +75,19 @@ public class Contest extends Entity {
         return "RUNNING".equals(getStatus()) && hasJoined(userId) && !hasFinished(userId);
     }
 
-    public LocalDateTime getEndAt() { return startAt.plusMinutes(durationMin); }
+    /**
+     * Luc nguoi quan ly bam "Ket thuc ky thi" khi dang thi (ContestService.endNow); null = ket thuc
+     * dung gio. Ban luu cu chua co truong nay thi doc ra null, nghia la ket thuc dung gio.
+     */
+    private volatile LocalDateTime endedEarlyAt;
+
+    public LocalDateTime getEndedEarlyAt() { return endedEarlyAt; }
+    public void setEndedEarlyAt(LocalDateTime endedEarlyAt) { this.endedEarlyAt = endedEarlyAt; }
+
+    public LocalDateTime getEndAt() {
+        LocalDateTime early = endedEarlyAt;
+        return early != null ? early : startAt.plusMinutes(durationMin);
+    }
 
     /** UPCOMING (chua bat dau) / RUNNING (dang thi) / ENDED (da ket thuc). */
     public String getStatus() {

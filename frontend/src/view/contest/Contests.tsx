@@ -125,7 +125,7 @@ function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
       <ErrorBox text={editError || contest.error || events.error} />
       {c && (
         <>
-          <Card title="Đề thi" right={<Tag color={STATUS[c.status].color}>{STATUS[c.status].label}</Tag>}>
+          <Card title="Đề thi" right={<Tag color={STATUS[c.status].color}>{c.endedEarly ? "Đã kết thúc sớm" : STATUS[c.status].label}</Tag>}>
             {c.problemsHidden && (
               <div style={{ fontSize: 13, color: "#757575" }}>
                 Kỳ thi có {c.problemCount} bài.
@@ -174,7 +174,7 @@ function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
           </Card>
 
           {c.canManage && c.status !== "ENDED" && (
-            <Card title={c.status === "RUNNING" ? "Gia hạn kỳ thi" : "Giờ thi"}>
+            <Card title={c.status === "RUNNING" ? "Gia hạn hoặc kết thúc kỳ thi" : "Giờ thi"}>
               <Row>
                 <Field label="Bắt đầu">
                   <input type="datetime-local" style={INPUT} disabled={c.status === "RUNNING"} value={shownSchedule.startAt}
@@ -189,6 +189,13 @@ function ContestDetail({ id, onBack }: { id: string; onBack: () => void }) {
                   c.status === "RUNNING" ? c.startAt : shownSchedule.startAt, shownSchedule.durationMin))}>
                   {c.status === "RUNNING" ? "Gia hạn" : "Lưu giờ thi"}
                 </Btn>
+                {c.status === "RUNNING" && (
+                  <Btn kind="danger" onClick={() => {
+                    if (window.confirm(`Kết thúc kỳ thi "${c.title}" ngay bây giờ? Bài nộp từ lúc này sẽ không được tính và không mở lại được.`)) {
+                      void edit(() => papi.endContest(c.id));
+                    }
+                  }}>Kết thúc kỳ thi</Btn>
+                )}
               </Row>
             </Card>
           )}

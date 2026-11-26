@@ -206,6 +206,26 @@ public class ContestService {
         contest.setDurationMin(durationMin);
     }
 
+    /**
+     * Ket thuc ky thi NGAY khi dang dien ra (su co, ca lop da lam xong...). Bai nop tu luc nay khong
+     * con tinh vao ky thi; thoi luong rut lai thanh so phut da thi (lam tron len) de thanh xem lai
+     * bang xep hang theo phut van khop. Khong mo lai duoc.
+     */
+    public synchronized void endNow(User actor, Contest contest) {
+        requireManage(actor, contest);
+        String status = contest.getStatus();
+        if ("UPCOMING".equals(status)) {
+            throw ApiException.badRequest("Kỳ thi chưa bắt đầu. Muốn huỷ thì xoá kỳ thi");
+        }
+        if ("ENDED".equals(status)) {
+            throw ApiException.badRequest("Kỳ thi đã kết thúc rồi");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        long seconds = java.time.Duration.between(contest.getStartAt(), now).getSeconds();
+        contest.setDurationMin((int) Math.max(1, (seconds + 59) / 60));
+        contest.setEndedEarlyAt(now);
+    }
+
     /** Them mot bai vao cuoc thi. Bai phai la bai kho chung hoac bai trong kho cua nguoi them. */
     public synchronized void addProblem(User actor, Contest contest, Problem problem) {
         requireManage(actor, contest);

@@ -293,10 +293,14 @@ function AppShell() {
     return () => { clearInterval(timer); window.removeEventListener("oj-contests-changed", loadContests); };
   }, [isStudentUser, loadContests]);
   const exam = isStudentUser ? contests.find((c) => c.sitting && Date.parse(c.endAt) > Date.now()) ?? null : null;
-  // Vua vao thi: tai lai danh sach bai, vi de thi co the gom bai kho rieng luc dang nhap chua thay.
+  // Vao thi hoac ra khoi bai thi (nop som, het gio, giang vien ket thuc): tai lai danh sach bai, vi
+  // tap bai mo duoc doi theo - de thi co the gom bai kho rieng, va bai thi mo lai sau khi thi xong.
   const examId = exam?.id ?? "";
+  const lastExamId = useRef(examId);
   useEffect(() => {
-    if (examId) void loadProblems().catch(() => undefined);
+    if (lastExamId.current === examId) return;
+    lastExamId.current = examId;
+    void loadProblems().catch(() => undefined);
   }, [examId, loadProblems]);
 
   /** Tai lai thong bao; co thong bao chua tung thay thi bat khung bao o goc man hinh. */

@@ -97,6 +97,8 @@ export const papi = {
   /** Doi gio thi (truoc khi thi) hoac gia han thoi luong (khi dang thi). */
   rescheduleContest: (id: string, startAt: string, durationMin: number) =>
     putJson<Contest>(`/api/contests/${enc(id)}/schedule`, { startAt, durationMin }),
+  /** Nguoi quan ly ket thuc ky thi ngay khi dang thi. */
+  endContest: (id: string) => postJson<Contest>(`/api/contests/${enc(id)}/end`, {}),
   setProctoring: (id: string, on: boolean) => putJson<Contest>(`/api/contests/${enc(id)}/proctoring`, { on }),
   deleteContest: (id: string) => del(`/api/contests/${enc(id)}`),
   /** Them / bot mot bai trong ky thi do chinh minh tao. */

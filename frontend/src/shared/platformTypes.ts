@@ -132,6 +132,8 @@ export interface ContestRow {
 export interface Contest {
   id: string; title: string; description: string; startAt: string; endAt: string;
   durationMin: number; status: "UPCOMING" | "RUNNING" | "ENDED"; problems: ProblemRef[];
+  /** Nguoi quan ly da bam "Ket thuc ky thi" truoc gio. */
+  endedEarly?: boolean;
   /** So bai cua ky thi. problemsHidden = true: ky thi chua bat dau nen danh sach bai chua duoc gui ve. */
   problemCount: number; problemsHidden: boolean;
   /** Ho ten nguoi tao; canManage = nguoi dang xem duoc them / bot bai va xoa ky thi nay. */
