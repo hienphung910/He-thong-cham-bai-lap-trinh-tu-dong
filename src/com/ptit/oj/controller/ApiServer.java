@@ -1105,19 +1105,20 @@ public class ApiServer {
         // Dang trong bai thi: ghi lai dia chi nop bai vao nhat ky ky thi (ca khi ky thi khong bat giam sat).
         if (access.getSitting() != null) access.getSitting().noteIp(author.getId(), clientIp(ex));
 
-        JudgeResult result;
         // Moi nguoi mot bai mot luc, ca he thong co tran so bai dang cho: xem SubmissionGate.
+        // Bai vao hang doi cham va tra ve ngay o trang thai "Chờ chấm"; giao dien tu hoi lai ket qua
+        // (GET /api/submissions/{ma}). Cong mo lai cho nguoi nay khi bai cham xong.
         platform.getGate().enter(author.getId());
+        Submission queued;
         try {
-            result = service.submitCode(problem, author, language, code);
+            queued = service.enqueueSubmission(problem, author, language, code,
+                    done -> platform.getGate().leave(author.getId()));
         } catch (RuntimeException e) {
-            // Vi du khong luu duoc vao CSDL: ghi log de sua, chi bao cho nguoi dung mot cau chung.
-            System.err.println("Lỗi khi chấm bài: " + e);
-            throw new ApiException(500, "Lỗi máy chủ khi chấm bài");
-        } finally {
             platform.getGate().leave(author.getId());
+            System.err.println("Lỗi khi nhận bài: " + e);
+            throw new ApiException(500, "Lỗi máy chủ khi nhận bài");
         }
-        sendJson(ex, 200, submissionJson(result.getSubmission(), true));
+        sendJson(ex, 200, submissionJson(queued, true));
     }
 
     /**

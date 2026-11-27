@@ -42,12 +42,17 @@ import java.util.regex.Pattern;
  * nang quyen), lop nay tu tat va bo cham chay nhu truoc; trang thai in ra luc khoi dong va hien o
  * Quan tri -> He thong. Tat ca cac ham deu an toan khi sandbox tat (khong lam gi).
  *
- * Moi lan chi co MOT bai duoc cham / chay thu (JudgeService khoa tuan tu), nen viec "diet moi tien
- * trinh cua tai khoan sandbox" khong dung nham vao bai cua nguoi khac.
+ * CHAM SONG SONG: moi "o cham" (JudgeSlots) dung MOT tai khoan sandbox rieng (OJ_SANDBOX_USERS =
+ * "ojrunner,ojrunner2,..."), nen "diet moi tien trinh cua tai khoan sandbox", gioi han so tien trinh
+ * (tinh theo tai khoan) va don file sau khi chay khong dung vao bai dang chay o o khac. Thu muc lam
+ * viec cua moi lan cham nam trong mot thu muc cha quyen 711 (khong liet ke duoc) voi ten ngau nhien:
+ * chuong trinh o o khac khong tim ra duoc de doc ma nguon hay test an cua nguoi khac.
  */
 public final class Sandbox {
 
     public static final String USER_ENV = "OJ_SANDBOX_USER";
+    /** Danh sach tai khoan sandbox, cach nhau dau phay - moi tai khoan mot o cham song song. */
+    public static final String USERS_ENV = "OJ_SANDBOX_USERS";
 
     private static final long FILE_LIMIT_BYTES = 64L * 1024 * 1024;
 
@@ -98,8 +103,39 @@ public final class Sandbox {
         public int getDataMb() { return dataMb; }
     }
 
-    /** null = sandbox tat. */
-    private static volatile String user;
+    /** Cac tai khoan sandbox dung duoc, moi o cham mot tai khoan; rong = sandbox tat. */
+    private static volatile List<String> users = Collections.emptyList();
+    /** Tai khoan cua o cham ma luong hien tai dang giu (JudgeSlots gan truoc khi chay). */
+    private static final ThreadLocal<String> CURRENT = new ThreadLocal<>();
+    /** Thu muc cha (quyen 711) chua thu muc lam viec cua moi lan cham; null = dung /tmp nhu cu. */
+    private static volatile Path workRoot;
+
+    /** Tai khoan sandbox cho lan chay nay: cua o cham dang giu, hoac tai khoan dau tien. null = sandbox tat. */
+    private static String currentUser() {
+        String bound = CURRENT.get();
+        if (bound != null) return bound;
+        List<String> list = users;
+        return list.isEmpty() ? null : list.get(0);
+    }
+
+    /** So tai khoan sandbox dung duoc (= so o cham toi da khi sandbox bat). */
+    public static int userCount() { return users.size(); }
+
+    /** Gan tai khoan cua o cham thu slot cho luong hien tai (JudgeSlots goi); slot < 0 = bo gan. */
+    static void bindSlot(int slot) {
+        List<String> list = users;
+        if (slot < 0 || list.isEmpty()) CURRENT.remove();
+        else CURRENT.set(list.get(slot % list.size()));
+    }
+
+    /**
+     * Tao thu muc lam viec cho mot lan cham / chay thu. Sandbox bat: nam trong thu muc cha 711 voi ten
+     * ngau nhien, de chuong trinh chay song song o o khac khong liet ke / doan duoc.
+     */
+    public static Path newWorkDir(String prefix) throws IOException {
+        Path root = workRoot;
+        return root == null ? Files.createTempDirectory(prefix) : Files.createTempDirectory(root, prefix);
+    }
     private static volatile String status = "Tắt (chưa khởi tạo)";
     /** Moi buoc chay trong mot network namespace trong (khong ket noi ra ngoai duoc). */
     private static volatile boolean networkIsolated;
@@ -114,17 +150,19 @@ public final class Sandbox {
 
     /** Goi mot lan luc khoi dong: doc cau hinh va THU chay mot lenh bang tai khoan sandbox. */
     public static synchronized void init() {
-        user = null;
+        users = Collections.emptyList();
         networkIsolated = false;
         networkStatus = "";
         javaSecurityArgs = Collections.emptyList();
         nodePermissionFlag = "";
-        String configured = DatabaseConfig.setting(USER_ENV);
+        String many = DatabaseConfig.setting(USERS_ENV);
+        String configured = many != null && !many.trim().isEmpty() ? many : DatabaseConfig.setting(USER_ENV);
         if (configured == null || configured.trim().isEmpty()) {
             status = "Tắt: chưa đặt " + USER_ENV + " (bài nộp chạy bằng chính tài khoản của máy chủ)";
             return;
         }
-        String name = configured.trim();
+        String[] names = configured.trim().split("\\s*,\\s*");
+        String name = names[0];
         if (!name.matches("[a-z_][a-z0-9_-]{0,30}")) {
             status = "Tắt: " + USER_ENV + " không phải tên tài khoản hợp lệ";
             return;
@@ -161,8 +199,20 @@ public final class Sandbox {
         }
         javaSecurityArgs = prepareJavaSecurity();
         detectNodePermission();
-        user = name;
-        status = "Bật: bài nộp chạy bằng tài khoản hệ thống riêng \"" + name + "\"; " + networkStatus
+        // Cac tai khoan con lai (o cham thu 2, 3...): chi nhan neu chay duoc sudo va prlimit nhu tai khoan dau.
+        List<String> ok = new ArrayList<>();
+        ok.add(name);
+        for (int i = 1; i < names.length; i++) {
+            String extra = names[i];
+            if (!extra.matches("[a-z_][a-z0-9_-]{0,30}") || ok.contains(extra)) continue;
+            String[] id = exec(10, "sudo", "-n", "-u", extra, "--", "id", "-u");
+            if (id == null || !"0".equals(id[0]) || (mine != null && mine[1].trim().equals(id[1].trim()))) continue;
+            String[] lim = exec(10, "sudo", "-n", "-u", extra, "--", "prlimit", "--nproc=4", "--data=67108864", "--", "true");
+            if (lim != null && "0".equals(lim[0])) ok.add(extra);
+        }
+        workRoot = prepareWorkRoot();
+        users = Collections.unmodifiableList(ok);
+        status = "Bật: bài nộp chạy bằng " + ok.size() + " tài khoản hệ thống riêng " + ok + "; " + networkStatus
                 + "; Java: " + (javaSecurityArgs.isEmpty() ? "không có Security Manager" : "Security Manager")
                 + "; Node: " + (nodePermissionFlag.isEmpty() ? "không có chế độ phân quyền" : nodePermissionFlag);
     }
@@ -218,14 +268,25 @@ public final class Sandbox {
         nodeDisableWarning = text.contains("--disable-warning");
     }
 
-    public static boolean isActive() { return user != null; }
+    public static boolean isActive() { return !users.isEmpty(); }
+
+    /** Thu muc cha cho thu muc lam viec: quyen 711 - tai khoan sandbox di qua duoc nhung khong liet ke duoc. */
+    private static Path prepareWorkRoot() {
+        try {
+            Path root = Files.createTempDirectory("codehub-judge-");
+            Files.setPosixFilePermissions(root, PosixFilePermissions.fromString("rwx--x--x"));
+            return root;
+        } catch (IOException | UnsupportedOperationException e) {
+            return null;
+        }
+    }
 
     /** Mot dong mo ta trang thai, de in luc khoi dong va hien o trang quan tri. */
     public static String describe() { return status; }
 
     /** Tham so them cho lenh "java" chay bai nop (Security Manager); rong khi sandbox tat. */
     public static List<String> javaRunArgs() {
-        return user == null ? Collections.<String>emptyList() : javaSecurityArgs;
+        return !isActive() ? Collections.<String>emptyList() : javaSecurityArgs;
     }
 
     /**
@@ -233,7 +294,7 @@ public final class Sandbox {
      * muc bai (ma nguon, file input) va /dev/stdin - nhieu loi giai doc input bang readFileSync("/dev/stdin").
      */
     public static List<String> nodeRunArgs(Path workDir) {
-        if (user == null || nodePermissionFlag.isEmpty()) return Collections.emptyList();
+        if (!isActive() || nodePermissionFlag.isEmpty()) return Collections.emptyList();
         List<String> args = new ArrayList<>();
         args.add(nodePermissionFlag);
         args.add("--allow-fs-read=" + workDir);
@@ -244,7 +305,7 @@ public final class Sandbox {
 
     /** Boc lenh de chay bang tai khoan sandbox kem gioi han tai nguyen. */
     static List<String> wrap(List<String> command, Limits limits) {
-        String name = user;
+        String name = currentUser();
         if (name == null) return command;
         List<String> out = new ArrayList<>(Arrays.asList("sudo", "-n", "-H", "-u", name, "--"));
         if (networkIsolated) out.addAll(Arrays.asList("unshare", "--user", "--net", "--"));
@@ -263,7 +324,7 @@ public final class Sandbox {
 
     /** Thu muc lam viec do may chu tao (chi chu so huu vao duoc): mo cho tai khoan sandbox doc / ghi. */
     public static void prepareWorkDir(Path dir) {
-        if (user == null || dir == null) return;
+        if (!isActive() || dir == null) return;
         // Truoc khi bat dau mot lan cham moi: bao dam khong con tien trinh nao cua lan truoc de
         // can thiep vao thu muc lam viec cua nguoi nay.
         killAll();
@@ -272,7 +333,7 @@ public final class Sandbox {
 
     /** Mo mot thu muc con (vd. thu muc cua tung chuong trinh trong stress test) cho tai khoan sandbox. */
     public static void openDir(Path dir) {
-        if (user == null || dir == null) return;
+        if (!isActive() || dir == null) return;
         try {
             Files.setPosixFilePermissions(dir, PosixFilePermissions.fromString("rwxrwxrwx"));
         } catch (IOException | UnsupportedOperationException e) {
@@ -282,7 +343,7 @@ public final class Sandbox {
 
     /** Diet moi tien trinh cua tai khoan sandbox - dung khi bai chay qua gio, vi may chu khong tu kill duoc tien trinh cua tai khoan khac. */
     static void killAll() {
-        String name = user;
+        String name = currentUser();
         if (name == null) return;
         exec(10, "sudo", "-n", "-u", name, "--", "sh", "-c", "kill -9 -1 2>/dev/null; exit 0");
     }
@@ -292,7 +353,7 @@ public final class Sandbox {
      * (trong thu muc lam viec va cac thu muc tam). Phan con lai cua thu muc lam viec do may chu xoa.
      */
     public static void cleanup(Path workDir) {
-        String name = user;
+        String name = currentUser();
         if (name == null) return;
         String script = "kill -9 -1 2>/dev/null; "
                 + "find /tmp /var/tmp /dev/shm \"$1\" \"$3\" -mindepth 1 -user \"$2\" -delete 2>/dev/null; exit 0";

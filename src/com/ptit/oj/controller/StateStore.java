@@ -49,6 +49,9 @@ import java.util.concurrent.TimeUnit;
  * null / 0 / false - neu la tap hop thi phai tu khoi tao lai); DOI KIEU hoac doi ten truong thi ban
  * luu cu khong doc duoc nua, may chu se bao loi, giu file cu lai voi duoi .bad va bat dau tu trong.
  *
+ * Ban sao trong MySQL (MySqlStateBlob, khi chay voi CSDL): ghi toi da moi DB_SAVE_EVERY_MS mot lan va
+ * mot lan cuoi khi may chu dung. Khoi dong ma file tren o dia mat (Volume bi xoa / hong) thi nap tu do.
+ *
  * Phien dang nhap KHONG duoc luu (token nam tren dia la rui ro): sau khi khoi dong lai moi nguoi
  * dang nhap lai.
  */
@@ -62,6 +65,17 @@ public final class StateStore {
     private final Platform platform;
     private final Path file;
     private volatile boolean dirty;
+    /** Ban sao trong MySQL; null = chi luu file (che do --no-db). */
+    private com.ptit.oj.dao.MySqlStateBlob database;
+    private static final long DB_SAVE_EVERY_MS = 30_000;
+    private long lastDbSave;
+    /** Co thay doi chua chep sang MySQL. */
+    private boolean dbDirty;
+
+    /** Bat ban sao trong MySQL. Goi truoc load(). */
+    public void setDatabase(com.ptit.oj.dao.MySqlStateBlob database) {
+        this.database = database;
+    }
     private ScheduledExecutorService timer;
 
     public StateStore(Platform platform, Path file) {
@@ -99,12 +113,31 @@ public final class StateStore {
                 }
             }
         }
+        // Khong co file (Volume moi / bi xoa): lay ban sao trong MySQL neu co.
+        if (database != null) {
+            try {
+                java.util.Optional<byte[]> saved = database.load();
+                if (saved.isPresent()) {
+                    apply(read(saved.get()));
+                    System.out.println("Đã nạp dữ liệu lớp học, kỳ thi... từ bản sao trong MySQL");
+                    dirty = true;       // ghi lai ra file ngay o lan luu dau
+                    return true;
+                }
+            } catch (IOException | ClassNotFoundException | RuntimeException e) {
+                System.err.println("Không đọc được bản sao dữ liệu lớp học trong MySQL: " + e);
+            }
+        }
         return false;
     }
 
     @SuppressWarnings("unchecked")
     private Map<String, Object> read(Path source) throws IOException, ClassNotFoundException {
-        try (ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(Files.readAllBytes(source)))) {
+        return read(Files.readAllBytes(source));
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> read(byte[] bytes) throws IOException, ClassNotFoundException {
+        try (ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(bytes))) {
             in.setObjectInputFilter(ObjectInputFilter.Config.createFilter(ALLOWED_CLASSES));
             return (Map<String, Object>) in.readObject();
         }
@@ -153,12 +186,19 @@ public final class StateStore {
 
     /** Ghi ngay (bo qua co dirty). Tra ve false neu khong ghi duoc. */
     public synchronized boolean saveNow() {
+        return saveNow(false);
+    }
+
+    /** forceDb: chep sang MySQL ngay (luc may chu dung), khong cho du DB_SAVE_EVERY_MS. */
+    private synchronized boolean saveNow(boolean forceDb) {
         dirty = false;      // ha co TRUOC khi chup: thay doi xay ra trong luc ghi se duoc ghi o lan sau
         try {
             ByteArrayOutputStream buffer = new ByteArrayOutputStream(1 << 16);
             try (ObjectOutputStream out = new ObjectOutputStream(buffer)) {
                 out.writeObject(snapshot());
             }
+            dbDirty = true;
+            copyToDatabase(buffer.toByteArray(), forceDb);
             Files.createDirectories(file.getParent());
             Path temp = file.resolveSibling(file.getFileName() + ".tmp");
             Files.write(temp, buffer.toByteArray());
@@ -178,6 +218,20 @@ public final class StateStore {
         }
     }
 
+    /** Chep ban chup sang MySQL, toi da moi DB_SAVE_EVERY_MS mot lan (tru khi force). Loi thi thu lai lan sau. */
+    private void copyToDatabase(byte[] bytes, boolean force) {
+        if (database == null || !dbDirty) return;
+        long now = System.currentTimeMillis();
+        if (!force && now - lastDbSave < DB_SAVE_EVERY_MS) return;
+        try {
+            database.save(bytes);
+            lastDbSave = now;
+            dbDirty = false;
+        } catch (RuntimeException e) {
+            System.err.println("Không chép được dữ liệu lớp học sang MySQL (sẽ thử lại): " + e.getMessage());
+        }
+    }
+
     private Path backupFile() {
         return file.resolveSibling(file.getFileName() + ".bak");
     }
@@ -192,9 +246,10 @@ public final class StateStore {
         });
         timer.scheduleWithFixedDelay(() -> {
             if (dirty) saveNow();
+            else if (dbDirty) saveNow(false);   // file da moi, chi con thieu ban sao MySQL (bi gian cach)
         }, SAVE_EVERY_SECONDS, SAVE_EVERY_SECONDS, TimeUnit.SECONDS);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            if (dirty) saveNow();
+            if (dirty || dbDirty) saveNow(true);
         }, "state-store-shutdown"));
     }
 }

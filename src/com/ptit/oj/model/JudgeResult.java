@@ -77,4 +77,14 @@ public class JudgeResult {
 
     public long getJudgeTimeMs() { return judgeTimeMs; }
     public void setJudgeTimeMs(long judgeTimeMs) { this.judgeTimeMs = judgeTimeMs; }
+
+    /** Ban sao ket qua gan vao bai nop khac (ban nhe trong bo nho dem, xem Submission.lightCopy()). */
+    public JudgeResult copyFor(Submission other) {
+        JudgeResult copy = new JudgeResult(other);
+        copy.testResults.addAll(testResults);
+        copy.globalVerdict = globalVerdict;
+        copy.globalMessage = globalMessage;
+        copy.judgeTimeMs = judgeTimeMs;
+        return copy;
+    }
 }

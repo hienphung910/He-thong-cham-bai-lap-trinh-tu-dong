@@ -40,20 +40,23 @@ FROM eclipse-temurin:17-jdk-jammy@sha256:96ac8197b2cbc2bb0f9fbcbf91dbb0015f43b3c
 
 # Hai tai khoan he thong:
 #   codehub  - chay may chu, so huu /app/data (de bai, test an, file minh chung).
-#   ojrunner - CHI de chay trinh bien dich va chuong trinh thi sinh nop len (xem Sandbox.java).
-# May chu goi "sudo -u ojrunner ..." cho tung lan chay; file sudoers duoi day chi cho phep dung
-# mot huong do (codehub -> ojrunner), khong cho len root.
+#   ojrunner, ojrunner2..4 - CHI de chay trinh bien dich va chuong trinh thi sinh nop len (xem Sandbox.java).
+#              Moi tai khoan la mot "o cham": 4 bai cham song song, khong dung vao tien trinh cua nhau.
+# May chu goi "sudo -u ojrunnerN ..." cho tung lan chay; file sudoers duoi day chi cho phep dung
+# mot huong do (codehub -> cac tai khoan ojrunner), khong cho len root.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends g++ python3 sudo \
  && rm -rf /var/lib/apt/lists/* \
  && useradd --system --create-home --home-dir /home/codehub codehub \
- && useradd --system --create-home --home-dir /home/ojrunner --shell /usr/sbin/nologin ojrunner \
+ && for u in ojrunner ojrunner2 ojrunner3 ojrunner4; do \
+      useradd --system --create-home --home-dir /home/$u --shell /usr/sbin/nologin $u; \
+    done \
  && chmod 750 /home/codehub \
  && printf '%s\n' \
       'Defaults:codehub !requiretty, !syslog, !use_pty, env_reset' \
       'Defaults:codehub secure_path="/opt/java/openjdk/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"' \
       'Defaults:codehub env_keep += "LANG LC_ALL LANGUAGE"' \
-      'codehub ALL=(ojrunner) NOPASSWD: ALL' \
+      'codehub ALL=(ojrunner,ojrunner2,ojrunner3,ojrunner4) NOPASSWD: ALL' \
       > /etc/sudoers.d/codehub \
  && chmod 440 /etc/sudoers.d/codehub \
  && visudo -cf /etc/sudoers.d/codehub
@@ -75,12 +78,14 @@ RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
  && chmod 700 /app/data-seed
 
 # Trong container phai nghe tren moi dia chi thi nen tang moi chuyen request vao duoc.
-# OJ_SANDBOX_USER: chay bai nop bang tai khoan ojrunner (may chu tu kiem tra luc khoi dong va in ket qua).
+# OJ_SANDBOX_USER(S): chay bai nop bang cac tai khoan ojrunner (may chu tu kiem tra luc khoi dong va in ket qua);
+#                     so bai cham cung luc = min(so tai khoan, so nhan CPU), dat OJ_JUDGE_WORKERS de doi.
 # OJ_TRUST_PROXY : image nay chay sau proxy cua nen tang (Railway...), lay dia chi nguoi dung tu X-Forwarded-For.
 #                  Dat false neu container nhan ket noi truc tiep tu Internet.
 # OJ_ALLOW_REGISTER khong dat o day: mac dinh mo khi viec co lap bai nop bat duoc, dong khi khong bat duoc.
 ENV OJ_BIND_ADDRESS=0.0.0.0 \
     OJ_SANDBOX_USER=ojrunner \
+    OJ_SANDBOX_USERS=ojrunner,ojrunner2,ojrunner3,ojrunner4 \
     OJ_TRUST_PROXY=true \
     TZ=Asia/Ho_Chi_Minh \
     JAVA_OPTS="-Xmx256m"

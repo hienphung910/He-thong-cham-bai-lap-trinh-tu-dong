@@ -120,6 +120,8 @@ public class Main {
         // Phai goi TRUOC khi tao Platform: gia tri mac dinh cua "cho tu dang ky" phu thuoc vao viec sandbox co bat khong.
         com.ptit.oj.controller.judge.Sandbox.init();
         System.out.println("Cô lập bài nộp: " + com.ptit.oj.controller.judge.Sandbox.describe());
+        com.ptit.oj.controller.judge.JudgeSlots.init();
+        System.out.println("Chấm bài: " + com.ptit.oj.controller.judge.JudgeSlots.describe());
 
         Platform platform = new Platform(service);
         // Lop hoc, ky thi, bai giao, lich hoc, thong bao, chat, binh luan song trong RAM. Khi chay voi
@@ -130,10 +132,18 @@ public class Main {
         if (persist) {
             com.ptit.oj.controller.StateStore store = new com.ptit.oj.controller.StateStore(platform,
                     service.getDataDir().resolve("state").resolve("platform.bin"));
+            if (service.getDatabase() != null) {
+                try {
+                    store.setDatabase(new com.ptit.oj.dao.MySqlStateBlob(service.getDatabase()));
+                } catch (RuntimeException e) {
+                    System.err.println("Không bật được bản sao dữ liệu lớp học trong MySQL: " + e.getMessage());
+                }
+            }
             restored = store.load();
             platform.setStateStore(store);
             store.start();
-            System.out.println("Lưu dữ liệu lớp học, kỳ thi: bật (data/state)"
+            System.out.println("Lưu dữ liệu lớp học, kỳ thi: bật (data/state"
+                    + (service.getDatabase() != null ? " + bản sao trong MySQL)" : ")")
                     + (restored ? "" : ", chưa có dữ liệu cũ"));
         }
         // Du lieu mau (lop, ky thi, bai giao mau) chi danh cho che do chay thu --no-db va chi khi chua

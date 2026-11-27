@@ -69,7 +69,7 @@ public class ProcessRunner {
      * test an de may chu ghi de len. Tra ve thu muc do de xoa sau khi chay.
      */
     private static Path stdinFromFile(ProcessBuilder pb, String stdin) throws IOException {
-        Path dir = Files.createTempDirectory("oj-in-");
+        Path dir = Sandbox.newWorkDir("oj-in-");
         try {
             Files.setPosixFilePermissions(dir, PosixFilePermissions.fromString("rwx--x--x"));
             Path file = dir.resolve("stdin");

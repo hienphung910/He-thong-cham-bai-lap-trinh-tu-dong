@@ -370,6 +370,7 @@ public class AuthService {
         users.deleteById(userId);
         sessions.invalidateUser(userId, null);
         userCache.remove(userId);
+        for (java.util.function.Consumer<String> l : deleteListeners) l.accept(userId);
         return user;
     }
 
@@ -410,8 +411,16 @@ public class AuthService {
         requireNotLastAdmin(target);
         users.deleteById(userId);
         dropSessions(userId);
+        for (java.util.function.Consumer<String> l : deleteListeners) l.accept(userId);
         return target;
     }
+
+    /** Lang nghe tai khoan bi xoa / doi vai tro - bo nho dem bai nop (CachedSubmissionRepository) can biet. */
+    private final List<java.util.function.Consumer<String>> deleteListeners = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private final List<java.util.function.Consumer<String>> changeListeners = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+    public void onUserDeleted(java.util.function.Consumer<String> listener) { deleteListeners.add(listener); }
+    public void onUserChanged(java.util.function.Consumer<String> listener) { changeListeners.add(listener); }
 
     /** Doi vai tro (STUDENT / TEACHER / ADMIN), giu nguyen ten dang nhap va mat khau. */
     public synchronized User changeRole(User actor, String userId, String role) {
@@ -435,6 +444,7 @@ public class AuthService {
         users.saveWithCredentials(changed, credentials.get());
         // Phien cu con giu vai tro cu trong bo nho dem: buoc dang nhap lai de nhan vai tro moi.
         dropSessions(userId);
+        for (java.util.function.Consumer<String> l : changeListeners) l.accept(userId);
         return changed;
     }
 

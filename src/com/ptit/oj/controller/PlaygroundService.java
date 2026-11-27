@@ -81,10 +81,10 @@ public class PlaygroundService {
 
     public RunResult run(Language language, String code, String input) {
         requireUsable(language, code);
-        synchronized (judge) {
+        return inSlot(() -> {
             Path workDir = null;
             try {
-                workDir = Files.createTempDirectory("oj-run-");
+                workDir = Sandbox.newWorkDir("oj-run-");
                 Sandbox.prepareWorkDir(workDir);
                 Path source = writeSource(language, code, workDir);
                 CompileResult compile = language.compile(source, workDir);
@@ -99,6 +99,20 @@ public class PlaygroundService {
                 Sandbox.cleanup(workDir);
                 deleteRecursively(workDir);
             }
+        });
+    }
+
+    /** Chay trong mot o cham (JudgeSlots): cung luc chi co so bai bang so o, moi o mot tai khoan sandbox. */
+    private static <T> T inSlot(java.util.concurrent.Callable<T> work) {
+        try {
+            return com.ptit.oj.controller.judge.JudgeSlots.run(work);
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ApiException(500, "Quá trình chạy bị ngắt");
+        } catch (Exception e) {
+            throw new ApiException(500, "Lỗi khi chạy: " + e.getMessage());
         }
     }
 
@@ -116,10 +130,10 @@ public class PlaygroundService {
         int totalRounds = Math.max(1, Math.min(rounds, MAX_ROUNDS));
         TokenComparator comparator = new TokenComparator();
 
-        synchronized (judge) {
+        return inSlot(() -> {
             Path workDir = null;
             try {
-                workDir = Files.createTempDirectory("oj-stress-");
+                workDir = Sandbox.newWorkDir("oj-stress-");
                 Sandbox.prepareWorkDir(workDir);
                 Path solutionSrc = compileInto(language, solution, workDir.resolve("solution"), "lời giải cần kiểm tra");
                 Path bruteSrc = compileInto(language, brute, workDir.resolve("brute"), "lời giải vét cạn");
@@ -166,7 +180,7 @@ public class PlaygroundService {
                 Sandbox.cleanup(workDir);
                 deleteRecursively(workDir);
             }
-        }
+        });
     }
 
     // ----------------------------------------------------------------- tien ich

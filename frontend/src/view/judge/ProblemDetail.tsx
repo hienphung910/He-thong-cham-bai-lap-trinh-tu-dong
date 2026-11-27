@@ -145,14 +145,24 @@ export default function ProblemDetail({
   const unavailable = useMemo(() => languages.filter((l) => !l.available).map((l) => l.name), [languages]);
   const currentLang = languages.find((l) => l.name === language);
 
-  /** Gui bai len may chu va cho cham xong; ket qua tra ve kem bang tung test. */
+  /**
+   * Gui bai len may chu. May chu nhan bai vao hang doi va tra ve ngay o trang thai "Chờ chấm"; trang nay hoi
+   * lai moi giay cho toi khi co ket qua (kem bang tung test).
+   */
   async function doSubmit() {
     setError(""); setResult(null);
     if (!language) return setError("Chưa chọn ngôn ngữ.");
     if (!code.trim()) return setError("Mã nguồn đang rỗng.");
     setBusy(true);
     try {
-      setResult(await api.submit({ problemId: problem.id, language, code }));
+      let sub = await api.submit({ problemId: problem.id, language, code });
+      const deadline = Date.now() + 5 * 60_000;
+      while (sub.verdict === "PENDING" && Date.now() < deadline) {
+        await new Promise((resolve) => window.setTimeout(resolve, 1000));
+        sub = await api.submission(sub.id);
+      }
+      if (sub.verdict === "PENDING") throw new Error(`Bài ${sub.id} vẫn đang chờ chấm, hãy xem kết quả ở Lịch sử nộp bài sau ít phút.`);
+      setResult(sub);
       onSubmitted();
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     finally { setBusy(false); }

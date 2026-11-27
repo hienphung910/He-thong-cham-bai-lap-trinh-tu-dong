@@ -52,4 +52,14 @@ public class Submission extends Entity {
     public void setResult(JudgeResult result) { this.result = result; }
 
     public boolean isJudged() { return result != null; }
+
+    /**
+     * Ban sao KHONG co ma nguon, de giu trong bo nho dem (CachedSubmissionRepository): bang xep hang, thong
+     * ke chi can ket qua; ma nguon chiem phan lon dung luong va chi can khi mo xem mot bai.
+     */
+    public Submission lightCopy() {
+        Submission copy = new Submission(getId(), problem, author, language, fileName, submittedAt);
+        if (result != null) copy.result = result.copyFor(copy);
+        return copy;
+    }
 }

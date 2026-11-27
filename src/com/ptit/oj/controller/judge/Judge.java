@@ -50,7 +50,7 @@ public class Judge {
                 return result;
             }
 
-            workDir = Files.createTempDirectory("oj-judge-");
+            workDir = Sandbox.newWorkDir("oj-judge-");
             Sandbox.prepareWorkDir(workDir);
             Path source = workDir.resolve(submission.getFileName());
             Files.write(source, submission.getSourceCode().getBytes(StandardCharsets.UTF_8));

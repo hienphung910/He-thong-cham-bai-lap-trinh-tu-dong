@@ -21,4 +21,12 @@ public interface SubmissionRepository extends Repository<Submission> {
 
     /** Lich su cua rieng mot nguoi, moi nhat truoc. */
     List<Submission> findByUserId(String userId);
+
+    /**
+     * Bai nop vua nhan, dang cho cham (hang doi cham). Kho trong RAM luu luon; kho co bo nho dem chi giu
+     * trong bo nho cho toi khi cham xong moi ghi CSDL (xem CachedSubmissionRepository.putPending).
+     */
+    default void putPending(Submission submission) {
+        save(submission);
+    }
 }
